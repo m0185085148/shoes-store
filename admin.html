@@ -233,7 +233,7 @@
             </div>
         </div>
 
-        <!-- كروت الإحصائيات -->
+       <!-- كروت الإحصائيات -->
         <div class="stats-grid">
             <div class="stat-card">
                 <div class="stat-icon"><i class="fa-solid fa-boxes-stacked"></i></div>
@@ -243,17 +243,10 @@
                 </div>
             </div>
             <div class="stat-card">
-                <div class="stat-icon"><i class="fa-solid fa-mars"></i></div>
+                <div class="stat-icon"><i class="fa-solid fa-tags"></i></div>
                 <div class="stat-data">
-                    <h3 id="statMen">0</h3>
-                    <p>قسم الرجالي</p>
-                </div>
-            </div>
-            <div class="stat-card">
-                <div class="stat-icon"><i class="fa-solid fa-venus"></i></div>
-                <div class="stat-data">
-                    <h3 id="statWomen">0</h3>
-                    <p>قسم الحريمي</p>
+                    <h3 id="statCategories">4</h3>
+                    <p>عدد الأقسام النشطة</p>
                 </div>
             </div>
         </div>
@@ -351,9 +344,7 @@
             tbody.innerHTML = '';
 
             document.getElementById('statTotal').textContent = products.length;
-            document.getElementById('statMen').textContent = products.filter(p => p.category === 'رجالي').length;
-            document.getElementById('statWomen').textContent = products.filter(p => p.category === 'حريمي').length;
-
+         
             products.forEach(p => {
                 const tr = document.createElement('tr');
                 tr.innerHTML = `
