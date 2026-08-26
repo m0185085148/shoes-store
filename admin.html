@@ -209,11 +209,52 @@
         .badge-classic { background-color: #fff3e0; color: #e65100; }
         .badge-slides { background-color: #f3e5f5; color: #4a148c; }
 
-        /* تلوين النص فقط داخل القائمة المنسدلة بدون خلفية */
-        select#category option[value="Casual"] { color: #0d47a1; background-color: #ffffff; font-weight: bold; }
-        select#category option[value="Sports"] { color: #1b5e20; background-color: #ffffff; font-weight: bold; }
-        select#category option[value="Classic"] { color: #e65100; background-color: #ffffff; font-weight: bold; }
-        select#category option[value="Slides"] { color: #4a148c; background-color: #ffffff; font-weight: bold; }
+       /* تنسيق القائمة المنسدلة المخصصة */
+.custom-select-container {
+    position: relative;
+    width: 100%;
+}
+
+.select-btn {
+    width: 100%;
+    padding: 8px 12px;
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    background: #fff;
+    cursor: pointer;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    min-height: 42px;
+}
+
+.select-options {
+    display: none;
+    position: absolute;
+    top: 108%;
+    right: 0;
+    width: 100%;
+    background: #fff;
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.08);
+    z-index: 100;
+    padding: 6px 0;
+}
+
+.select-options.show {
+    display: block;
+}
+
+.option-item {
+    padding: 8px 12px;
+    cursor: pointer;
+    transition: background 0.2s;
+}
+
+.option-item:hover {
+    background-color: #f8fafc;
+}
     </style>
 </head>
 <body>
@@ -296,14 +337,22 @@
                     </div>
                     <div style="display: flex; gap: 10px;">
                         <div class="form-group" style="flex:1;">
-                            <label>القسم</label>
-                  <select id="category" required>
-                             <option value="" disabled selected>اختر القسم</option>
-                             <option value="Casual">Casual</option>
-                             <option value="Sports">Sports</option>
-                             <option value="Classic">Classic</option>
-                             <option value="Slides">Slides</option>
-                     </select>
+    <label>القسم</label>
+    <!-- حقل خفي لحفظ القيمة المحددة ليعمل مع Form Submit بنفس الاسم القديم -->
+    <input type="hidden" id="category" required>
+    
+    <div class="custom-select-container">
+        <div class="select-btn" id="selectBtn">
+            <span id="selectedCategoryText" style="color: var(--text-muted);">اختر القسم</span>
+            <i class="fa-solid fa-chevron-down" style="font-size: 12px; color: var(--text-muted);"></i>
+        </div>
+        <div class="select-options" id="selectOptions">
+            <div class="option-item" data-value="Casual"><span class="badge badge-casual">Casual</span></div>
+            <div class="option-item" data-value="Sports"><span class="badge badge-sports">Sports</span></div>
+            <div class="option-item" data-value="Classic"><span class="badge badge-classic">Classic</span></div>
+            <div class="option-item" data-value="Slides"><span class="badge badge-slides">Slides</span></div>
+        </div>
+    </div>
 </div>
                         <div class="form-group" style="flex:1;">
                             <label>السعر (ج.م)</label>
@@ -346,6 +395,32 @@
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="script.js"></script>
     <script>
+
+        // التحكم في فتح واختيار القائمة المنسدلة المخصصة
+const selectBtn = document.getElementById('selectBtn');
+const selectOptions = document.getElementById('selectOptions');
+const categoryInput = document.getElementById('category');
+const selectedCategoryText = document.getElementById('selectedCategoryText');
+
+selectBtn.addEventListener('click', () => {
+    selectOptions.classList.toggle('show');
+});
+
+document.querySelectorAll('.option-item').forEach(item => {
+    item.addEventListener('click', function() {
+        const val = this.getAttribute('data-value');
+        categoryInput.value = val;
+        selectedCategoryText.innerHTML = this.innerHTML; // نسخ نفس شكل الكبسولة الملونة للزر الرئيسي
+        selectOptions.classList.remove('show');
+    });
+});
+
+// إغلاق القائمة عند النقر خارجها
+document.addEventListener('click', (e) => {
+    if (!selectBtn.contains(e.target) && !selectOptions.contains(e.target)) {
+        selectOptions.classList.remove('show');
+    }
+});
         // إحضار وتحديث إحصائيات وجدول المنتجات في لوحة التحكم
         async function loadAdminDashboard() {
             await fetchProductsFromSupabase();
@@ -407,6 +482,7 @@
                 });
 
                 e.target.reset();
+                selectedCategoryText.innerHTML = 'اختر القسم';
                 await loadAdminDashboard();
             } catch (err) {
                 alert("حدث خطأ أثناء الإضافة: " + err.message);
