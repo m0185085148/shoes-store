@@ -196,14 +196,24 @@
         .products-table th { color: var(--text-muted); font-weight: 500; }
         .product-img-mini { width: 40px; height: 40px; border-radius: 6px; object-fit: cover; }
         
+        /* الشارة البيضاوية وتنسيق الألوان للأقسام الجديدة */
         .badge {
-            padding: 4px 8px;
-            border-radius: 6px;
-            font-size: 12px;
-            font-weight: 500;
+            padding: 6px 14px;
+            border-radius: 20px;
+            font-size: 13px;
+            font-weight: 600;
+            display: inline-block;
         }
-        .badge-male { background: #e0f2fe; color: #0369a1; }
-        .badge-female { background: #fce7f3; color: #be185d; }
+        .badge-casual { background-color: #e3f2fd; color: #0d47a1; }
+        .badge-sports { background-color: #e8f5e9; color: #1b5e20; }
+        .badge-classic { background-color: #fff3e0; color: #e65100; }
+        .badge-slides { background-color: #f3e5f5; color: #4a148c; }
+
+        /* تلوين خيارات القائمة المنسدلة */
+        select#category option[value="Casual"] { background-color: #e3f2fd; color: #0d47a1; font-weight: bold; }
+        select#category option[value="Sports"] { background-color: #e8f5e9; color: #1b5e20; font-weight: bold; }
+        select#category option[value="Classic"] { background-color: #fff3e0; color: #e65100; font-weight: bold; }
+        select#category option[value="Slides"] { background-color: #f3e5f5; color: #4a148c; font-weight: bold; }
     </style>
 </head>
 <body>
@@ -350,8 +360,7 @@
                 tr.innerHTML = `
                     <td><img src="${p.image}" class="product-img-mini" alt=""></td>
                     <td><strong>${p.name}</strong></td>
-                    <td><span class="badge ${p.category === 'رجالي' ? 'badge-male' : 'badge-female'}">${p.category}</span></td>
-                    <td>${p.price} ج.م</td>
+                    <td><span class="badge badge-${p.category ? p.category.toLowerCase() : 'default'}">${p.category || 'غير محدد'}</span></td>                    <td>${p.price} ج.م</td>
                 `;
                 tbody.appendChild(tr);
             });
