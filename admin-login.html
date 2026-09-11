@@ -1,0 +1,621 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>تسجيل الدخول - STEP Admin</title>
+
+    <link
+        rel="stylesheet"
+        href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"
+    >
+
+    <link
+        href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700&display=swap"
+        rel="stylesheet"
+    >
+
+    <style>
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            min-height: 100vh;
+            font-family: "Tajawal", sans-serif;
+            background: #f4f6f9;
+
+            display: flex;
+            align-items: center;
+            justify-content: center;
+
+            padding: 20px;
+
+            transition:
+                opacity 0.5s ease,
+                transform 0.5s ease;
+        }
+
+        body.page-exit {
+            opacity: 0;
+            transform: scale(0.98);
+        }
+
+        .login-container {
+            width: 100%;
+            max-width: 420px;
+
+            animation: loginCardIn 0.7s ease;
+        }
+
+        @keyframes loginCardIn {
+
+            from {
+                opacity: 0;
+                transform: translateY(25px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+
+        }
+
+        .login-card {
+            background: #ffffff;
+            border: 1px solid #e5e7eb;
+            border-radius: 16px;
+
+            padding: 35px;
+
+            box-shadow:
+                0 10px 30px rgba(0, 0, 0, 0.08);
+
+            transition:
+                transform 0.3s ease,
+                box-shadow 0.3s ease;
+        }
+
+        .login-card.login-success {
+            transform: scale(1.02);
+            box-shadow:
+                0 15px 40px rgba(37, 99, 235, 0.18);
+        }
+
+        .brand {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        .brand-icon {
+            width: 65px;
+            height: 65px;
+
+            margin: 0 auto 15px;
+
+            border-radius: 14px;
+
+            background: #111827;
+            color: #ffffff;
+
+            display: flex;
+            align-items: center;
+            justify-content: center;
+
+            font-size: 28px;
+        }
+
+        .brand h1 {
+            font-size: 25px;
+            color: #111827;
+            margin-bottom: 6px;
+        }
+
+        .brand p {
+            color: #6b7280;
+            font-size: 14px;
+        }
+
+        .form-group {
+            margin-bottom: 18px;
+        }
+
+        .form-group label {
+            display: block;
+
+            margin-bottom: 7px;
+
+            color: #374151;
+
+            font-size: 14px;
+            font-weight: 500;
+        }
+
+        .input-wrapper {
+            position: relative;
+            width: 100%;
+        }
+
+        /*
+            أيقونة البريد والقفل
+            تم تحديدها بـ > i
+            حتى لا تؤثر على أيقونة العين
+        */
+
+        .input-wrapper > i {
+            position: absolute;
+
+            right: 13px;
+            top: 50%;
+
+            transform: translateY(-50%);
+
+            color: #9ca3af;
+
+            pointer-events: none;
+
+            z-index: 2;
+        }
+
+        .form-group input {
+            width: 100%;
+            height: 46px;
+
+            padding: 0 42px 0 45px;
+
+            border: 1px solid #d1d5db;
+            border-radius: 8px;
+
+            outline: none;
+
+            font-family: inherit;
+            font-size: 14px;
+
+            background: #ffffff;
+
+            transition:
+                border-color 0.2s ease,
+                box-shadow 0.2s ease;
+        }
+
+        .form-group input:focus {
+            border-color: #2563eb;
+
+            box-shadow:
+                0 0 0 3px rgba(37, 99, 235, 0.10);
+        }
+
+        /*
+            زر العين داخل مربع كلمة المرور
+        */
+
+        .password-toggle {
+            position: absolute;
+
+            left: 10px;
+            top: 50%;
+
+            transform: translateY(-50%);
+
+            width: 32px;
+            height: 32px;
+
+            display: flex;
+            align-items: center;
+            justify-content: center;
+
+            border: 0;
+
+            background: transparent;
+
+            color: #9ca3af;
+
+            cursor: pointer;
+
+            font-size: 15px;
+
+            border-radius: 6px;
+
+            z-index: 3;
+
+            transition:
+                color 0.2s ease,
+                background 0.2s ease;
+        }
+
+        .password-toggle:hover {
+            color: #2563eb;
+            background: #eff6ff;
+        }
+
+        /*
+            مهم جدًا
+            منع CSS الخاص بـ input-wrapper i
+            من تحريك أيقونة العين
+        */
+
+        .password-toggle i {
+            position: static;
+
+            transform: none;
+
+            color: inherit;
+
+            pointer-events: none;
+        }
+
+        .login-button {
+            width: 100%;
+            height: 48px;
+
+            border: 0;
+            border-radius: 8px;
+
+            background: #2563eb;
+            color: #ffffff;
+
+            font-family: inherit;
+            font-size: 15px;
+            font-weight: 700;
+
+            cursor: pointer;
+
+            margin-top: 5px;
+
+            transition:
+                background 0.2s ease,
+                transform 0.2s ease;
+        }
+
+        .login-button:hover {
+            background: #1d4ed8;
+        }
+
+        .login-button:active {
+            transform: scale(0.98);
+        }
+
+        .login-button:disabled {
+            opacity: 0.7;
+            cursor: not-allowed;
+        }
+
+        /*
+            Animation داخل زر الدخول
+        */
+
+        .login-loading {
+            display: inline-flex;
+
+            align-items: center;
+            justify-content: center;
+
+            gap: 8px;
+        }
+
+        .loading-spinner {
+            width: 17px;
+            height: 17px;
+
+            border: 2px solid rgba(255,255,255,0.4);
+            border-top-color: #ffffff;
+
+            border-radius: 50%;
+
+            animation: spin 0.7s linear infinite;
+        }
+
+        @keyframes spin {
+
+            to {
+                transform: rotate(360deg);
+            }
+
+        }
+
+        .message {
+            display: none;
+
+            padding: 11px 13px;
+
+            border-radius: 8px;
+
+            margin-bottom: 18px;
+
+            font-size: 14px;
+        }
+
+        .message.show {
+            display: block;
+        }
+
+        .message.error {
+            background: #fee2e2;
+            color: #991b1b;
+        }
+
+        .message.success {
+            background: #dcfce7;
+            color: #166534;
+        }
+
+        .back-store {
+            display: block;
+
+            text-align: center;
+
+            margin-top: 22px;
+
+            color: #6b7280;
+
+            text-decoration: none;
+
+            font-size: 14px;
+
+            transition: color 0.2s ease;
+        }
+
+        .back-store:hover {
+            color: #2563eb;
+        }
+
+        .footer-text {
+            text-align: center;
+
+            color: #9ca3af;
+
+            font-size: 12px;
+
+            margin-top: 20px;
+        }
+
+        /*
+            شاشة الانتقال
+        */
+
+        .page-transition {
+            position: fixed;
+
+            inset: 0;
+
+            background: #111827;
+
+            display: flex;
+
+            align-items: center;
+            justify-content: center;
+
+            flex-direction: column;
+
+            gap: 15px;
+
+            opacity: 0;
+
+            visibility: hidden;
+
+            pointer-events: none;
+
+            transition:
+                opacity 0.35s ease,
+                visibility 0.35s ease;
+
+            z-index: 9999;
+        }
+
+        .page-transition.show {
+            opacity: 1;
+            visibility: visible;
+        }
+
+        .transition-logo {
+            color: #ffffff;
+
+            font-size: 30px;
+
+            font-weight: 700;
+
+            letter-spacing: 3px;
+
+            animation: transitionLogo 0.8s ease infinite alternate;
+        }
+
+        .transition-text {
+            color: #d1d5db;
+
+            font-size: 14px;
+        }
+
+        .transition-spinner {
+            width: 32px;
+            height: 32px;
+
+            border: 3px solid rgba(255,255,255,0.25);
+
+            border-top-color: #ffffff;
+
+            border-radius: 50%;
+
+            animation: spin 0.7s linear infinite;
+        }
+
+        @keyframes transitionLogo {
+
+            from {
+                opacity: 0.5;
+                transform: scale(0.97);
+            }
+
+            to {
+                opacity: 1;
+                transform: scale(1);
+            }
+
+        }
+
+        @media (max-width: 500px) {
+
+            .login-card {
+                padding: 25px 20px;
+            }
+
+        }
+
+    </style>
+
+</head>
+
+<body>
+
+    <div class="login-container">
+
+        <div class="login-card" id="loginCard">
+
+            <div class="brand">
+
+                <div class="brand-icon">
+                    <i class="fa-solid fa-shoe-prints"></i>
+                </div>
+
+                <h1>STEP Admin</h1>
+
+                <p>
+                    تسجيل الدخول إلى لوحة التحكم
+                </p>
+
+            </div>
+
+
+            <div
+                id="loginMessage"
+                class="message"
+            ></div>
+
+
+            <form id="loginForm">
+
+                <div class="form-group">
+
+                    <label for="email">
+                        البريد الإلكتروني
+                    </label>
+
+                    <div class="input-wrapper">
+
+                        <i class="fa-solid fa-envelope"></i>
+
+                        <input
+                            type="email"
+                            id="email"
+                            placeholder="admin@stepstore.com"
+                            autocomplete="username"
+                            required
+                        >
+
+                    </div>
+
+                </div>
+
+
+                <div class="form-group">
+
+                    <label for="password">
+                        كلمة المرور
+                    </label>
+
+                    <div class="input-wrapper">
+
+                        <i class="fa-solid fa-lock"></i>
+
+                        <input
+                            type="password"
+                            id="password"
+                            placeholder="أدخل كلمة المرور"
+                            autocomplete="current-password"
+                            required
+                        >
+
+                        <button
+                            type="button"
+                            class="password-toggle"
+                            id="passwordToggle"
+                            aria-label="إظهار كلمة المرور"
+                        >
+                            <i class="fa-solid fa-eye"></i>
+                        </button>
+
+                    </div>
+
+                </div>
+
+
+                <button
+                    type="submit"
+                    class="login-button"
+                    id="loginButton"
+                >
+                    تسجيل الدخول
+                </button>
+
+            </form>
+
+
+            <a
+                href="index.html"
+                class="back-store"
+            >
+                <i class="fa-solid fa-arrow-right"></i>
+                العودة إلى المتجر
+            </a>
+
+        </div>
+
+
+        <p class="footer-text">
+            © 2026 STEP Store
+        </p>
+
+    </div>
+
+
+    <!-- شاشة الانتقال إلى لوحة التحكم -->
+
+    <div
+        class="page-transition"
+        id="pageTransition"
+    >
+
+        <div class="transition-logo">
+            STEP
+        </div>
+
+        <div class="transition-spinner"></div>
+
+        <div class="transition-text">
+            جاري فتح لوحة التحكم...
+        </div>
+
+    </div>
+
+
+    <!-- Supabase -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+    <script>
+        window.supabaseClient = window.supabase.createClient(
+            'https://uobuxepixrqijgciurve.supabase.co',
+            'sb_publishable_5cu-Flvr7CSvRPMT3hByMQ_CfO7mBIv'
+        );
+    </script>
+
+    <!-- نظام تسجيل الدخول -->
+    <script src="admin.js"></script>
+
+</body>
+
+</html>

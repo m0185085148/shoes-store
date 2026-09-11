@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>حسابي - STEP Store</title>
+<link rel="stylesheet" href="account.css">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+<link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800&display=swap" rel="stylesheet">
+</head>
+<body>
+
+<div class="top-announcement">
+  <i class="fa-solid fa-truck-fast"></i>
+  شحن مجاني عند شراء قطعتين أو أكثر 🎉
+</div>
+
+<header class="header">
+  <div class="container header-content">
+    <a href="index.html" class="logo">STEP</a>
+    <nav class="main-nav">
+      <a href="index.html">الرئيسية</a>
+      <a href="index.html#products">الأحذية</a>
+    </nav>
+    <div class="header-actions">
+      <a href="index.html#products" class="icon-button" title="المتجر">
+        <i class="fa-solid fa-bag-shopping"></i>
+      </a>
+    </div>
+  </div>
+</header>
+
+<main class="account-wrapper">
+  <div class="container">
+
+    <!-- HEADER CARD -->
+    <div class="account-header-card">
+      <div class="account-greeting">
+        <div class="account-avatar" id="userAvatar">؟</div>
+        <div>
+          <h1 id="userGreeting">مرحباً بيك</h1>
+          <p id="userEmail">-</p>
+        </div>
+      </div>
+      <button class="logout-btn" id="logoutBtn" type="button">
+        <i class="fa-solid fa-right-from-bracket"></i>
+        تسجيل الخروج
+      </button>
+    </div>
+
+    <!-- TABS -->
+    <div class="account-tabs">
+      <button class="account-tab active" data-tab="profile" type="button">
+        <i class="fa-solid fa-user"></i>
+        بياناتي
+      </button>
+      <button class="account-tab" data-tab="orders" type="button">
+        <i class="fa-solid fa-box"></i>
+        طلباتي
+        <span id="ordersTabCount" style="
+          background:#2563eb;color:#fff;font-size:11px;
+          padding:2px 8px;border-radius:10px;font-weight:800;
+          display:none;
+        ">0</span>
+      </button>
+    </div>
+
+    <!-- PROFILE TAB -->
+    <div class="tab-panel active" id="tabProfile">
+
+      <!-- ✅ بانر تذكير رقم الهاتف -->
+      <div id="phoneReminderBanner" class="phone-reminder-banner" style="display:none;">
+        <div class="phone-reminder-icon">
+          <i class="fa-solid fa-phone"></i>
+        </div>
+        <div class="phone-reminder-content">
+          <h4>لسه مضفتش رقم هاتفك!</h4>
+          <p>ضيف رقمك عشان نقدر نتواصل معك بخصوص طلباتك</p>
+        </div>
+        <button type="button" class="phone-reminder-btn" id="addPhoneBtn">
+          <i class="fa-solid fa-plus"></i>
+          ضيف رقمك
+        </button>
+      </div>
+
+      <div class="info-card">
+        <h2>
+          <i class="fa-solid fa-user-pen"></i>
+          بياناتي الشخصية
+        </h2>
+
+        <div id="profileMessage" class="auth-message"></div>
+
+        <form id="profileForm" class="auth-form">
+          <div class="form-group">
+            <label for="fullName">الاسم بالكامل</label>
+            <div class="input-icon-wrapper">
+              <i class="fa-solid fa-user"></i>
+              <input type="text" id="fullName" required placeholder="الاسم">
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label for="phone">رقم الهاتف</label>
+            <div class="input-icon-wrapper">
+              <i class="fa-solid fa-phone"></i>
+              <input type="tel" id="phone" placeholder="01xxxxxxxxx" pattern="01[0-9]{9}">
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label for="governorate">المحافظة</label>
+            <select id="governorate">
+              <option value="">اختر المحافظة</option>
+              <option>القاهرة</option>
+              <option>الجيزة</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label for="city">المدينة / المنطقة</label>
+            <input type="text" id="city" placeholder="مثال: مدينة نصر">
+          </div>
+
+          <div class="form-group">
+            <label for="address">العنوان بالتفصيل</label>
+            <textarea id="address" rows="3" placeholder="اسم الشارع، رقم المبنى، رقم الشقة..."></textarea>
+          </div>
+
+          <button type="submit" class="btn-primary" id="saveProfileBtn">
+            <i class="fa-solid fa-check"></i>
+            حفظ التعديلات
+          </button>
+        </form>
+      </div>
+    </div>
+
+    <!-- ORDERS TAB -->
+    <div class="tab-panel" id="tabOrders">
+      <div class="info-card">
+        <div class="orders-header">
+          <h2>
+            <i class="fa-solid fa-box"></i>
+            طلباتي
+          </h2>
+          <span class="orders-count-badge" id="ordersCount">0</span>
+        </div>
+
+        <div id="ordersList">
+          <div class="account-empty">
+            <i class="fa-solid fa-spinner fa-spin"></i>
+            <p>جاري تحميل الطلبات...</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</main>
+
+<footer class="footer">
+  <div class="container footer-content">
+    <div>
+      <div class="footer-logo">STEP</div>
+      <p>متجر أحذية عصرية.</p>
+    </div>
+    <div class="footer-links">
+      <a href="index.html">الرئيسية</a>
+      <a href="index.html#products">الأحذية</a>
+    </div>
+  </div>
+  <div class="container footer-bottom">
+    <p>© 2026 STEP. جميع الحقوق محفوظة.</p>
+  </div>
+</footer>
+
+<!-- ORDER DETAILS MODAL -->
+<div class="order-details-modal" id="orderDetailsModal">
+  <div class="order-details-content">
+    <div class="order-details-header">
+      <h2 id="orderDetailsTitle">تفاصيل الطلب</h2>
+      <button class="order-details-close" id="closeOrderDetailsBtn" type="button">
+        <i class="fa-solid fa-xmark"></i>
+      </button>
+    </div>
+    <div class="order-details-body" id="orderDetailsBody"></div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="account.js"></script>
+</body>
+</html>
