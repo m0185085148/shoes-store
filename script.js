@@ -158,7 +158,6 @@ function updateOrderSummary() {
     const govField = $('governorate');
     const gov = govField?.value || '';
 
-    // ✅ الشحن يعتمد على عدد القطع
     const shipping = getShippingCost(gov, count);
     const total = subtotal + (shipping || 0);
 
@@ -184,7 +183,6 @@ function updateOrderSummary() {
         }
     }
 
-    // ✅ رسالة تحفيزية للعميل
     const hintEl = $('shippingHint');
     if (hintEl) {
         if (!gov) {
@@ -222,7 +220,6 @@ async function loadCurrentCustomer() {
 
         const user = sessionData.session.user;
 
-        // نتأكد إنه مش أدمن
         const { data: adminData } = await supabaseClient
             .from("admin_users")
             .select("id")
@@ -231,7 +228,6 @@ async function loadCurrentCustomer() {
 
         if (adminData) return null;
 
-        // جب البروفايل
         const { data: profile } = await supabaseClient
             .from("customer_profiles")
             .select("*")
@@ -642,18 +638,15 @@ async function openOrderModal() {
 
     closeCart();
 
-    // جب بيانات العميل
     if (!currentCustomer) {
         currentCustomer = await loadCurrentCustomer();
     }
 
-    // ✅ إظهار/إخفاء زر تسجيل الدخول
     const loginPrompt = $('loginPrompt');
     if (loginPrompt) {
         loginPrompt.style.display = currentCustomer ? 'none' : 'flex';
     }
 
-    // املأ الحقول تلقائيًا (لو مسجل)
     if (currentCustomer?.profile) {
         const p = currentCustomer.profile;
         const nameField = $('customerName');
@@ -728,7 +721,6 @@ async function submitOrder(event) {
         image: i.image
     }));
 
-    // ✅ نحسب subtotal + shipping + total
     const subtotal = cart.reduce(
         (s, i) => s + Number(i.price) * Number(i.quantity), 0
     );
@@ -767,6 +759,13 @@ async function submitOrder(event) {
         orderModal?.classList.remove('open');
 
         if (successOrderId) successOrderId.textContent = `#${data.id}`;
+
+        // ✅ تحديث رابط تتبع الطلب
+        const trackLink = $('trackOrderLink');
+        if (trackLink) {
+            trackLink.href =
+                `track.html?id=${data.id}&phone=${encodeURIComponent(phone)}`;
+        }
 
         // ✅ إظهار تنبيه إنشاء حساب لو ده زائر
         const accountPrompt = $('successAccountPrompt');
@@ -884,6 +883,5 @@ document.addEventListener('DOMContentLoaded', async () => {
         currentCustomer = null;
     }
 
-    // ✅ مراقبة تغيير المحافظة
     $('governorate')?.addEventListener('change', updateOrderSummary);
 });

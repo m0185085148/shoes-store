@@ -29,6 +29,10 @@
         <i class="fa-solid fa-magnifying-glass"></i>
       </button>
 
+      <a href="track.html" class="icon-button" title="تتبع طلبك" aria-label="تتبع طلبك">
+        <i class="fa-solid fa-truck-fast"></i>
+      </a>
+
       <a href="account.html" class="icon-button" title="حسابي" aria-label="حسابي">
         <i class="fa-solid fa-user"></i>
       </a>
@@ -49,6 +53,7 @@
   <div id="mobileMenu" class="mobile-menu">
     <a href="index.html">الرئيسية</a>
     <a href="index.html#products">الأحذية</a>
+    <a href="track.html">تتبع طلبك</a>
     <a href="account.html">حسابي</a>
   </div>
 </header>
@@ -80,6 +85,7 @@
     <div class="footer-links">
       <a href="index.html">الرئيسية</a>
       <a href="index.html#products">الأحذية</a>
+      <a href="track.html">تتبع طلبك</a>
       <a href="account.html">حسابي</a>
     </div>
   </div>
@@ -131,7 +137,6 @@
 
     <form id="orderForm" class="order-form">
 
-      <!-- ✅ تنبيه تسجيل الدخول (يظهر للزوار فقط) -->
       <div id="loginPrompt" class="login-prompt" style="display:none;">
         <div>
           <i class="fa-solid fa-user-circle"></i>
@@ -225,6 +230,18 @@
     <h2>تم استلام طلبك بنجاح!</h2>
     <p>رقم طلبك: <strong id="successOrderId">-</strong></p>
     <p class="success-note">سيتم التواصل معك قريباً لتأكيد الطلب.</p>
+
+    <!-- ✅ زر تتبع الطلب -->
+    <a id="trackOrderLink" href="track.html" style="
+      display:flex;align-items:center;justify-content:center;gap:8px;
+      width:100%;padding:14px;margin-top:14px;
+      background:#2563eb;color:#fff;border-radius:10px;
+      font-size:14px;font-weight:700;text-decoration:none;
+      transition:all .2s;
+    ">
+      <i class="fa-solid fa-truck-fast"></i>
+      تتبع طلبك
+    </a>
 
     <div id="successAccountPrompt" class="success-account-prompt" style="display:none;">
       <i class="fa-solid fa-user-plus"></i>

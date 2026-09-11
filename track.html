@@ -1,0 +1,449 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>تتبع طلبك - STEP Store</title>
+<link rel="stylesheet" href="account.css">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+<link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800&display=swap" rel="stylesheet">
+<style>
+/* ===== TRACK PAGE STYLES ===== */
+.track-hero{
+  background:linear-gradient(135deg,#111,#1e293b);
+  color:#fff;padding:70px 0 90px;
+  text-align:center;position:relative;overflow:hidden
+}
+.track-hero::after{
+  content:"";position:absolute;inset:0;
+  background:radial-gradient(circle at 30% 20%,rgba(37,99,235,.25),transparent 60%),
+             radial-gradient(circle at 70% 80%,rgba(74,222,128,.15),transparent 60%);
+  pointer-events:none
+}
+.track-hero-content{position:relative;z-index:1;max-width:700px;margin:0 auto}
+.track-hero-icon{
+  width:80px;height:80px;margin:0 auto 22px;
+  background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.15);
+  border-radius:22px;display:flex;align-items:center;justify-content:center;
+  font-size:34px;color:#4ade80
+}
+.track-hero h1{
+  font-size:clamp(28px,4vw,42px);font-weight:800;
+  margin-bottom:12px;line-height:1.2
+}
+.track-hero p{
+  font-size:15px;color:#cbd5e1;line-height:1.8;max-width:500px;margin:0 auto
+}
+
+.track-wrapper{
+  padding:0 0 80px;margin-top:-60px;position:relative;z-index:5
+}
+
+.track-search-card{
+  background:#fff;border-radius:20px;padding:32px;
+  box-shadow:0 20px 60px rgba(0,0,0,.12);
+  border:1px solid #f0f0f0;max-width:640px;margin:0 auto
+}
+.track-search-card h2{
+  font-size:18px;font-weight:800;margin-bottom:22px;
+  display:flex;align-items:center;gap:10px;color:#111
+}
+.track-search-card h2 i{
+  width:34px;height:34px;border-radius:10px;
+  background:#eff6ff;color:#2563eb;
+  display:flex;align-items:center;justify-content:center;font-size:15px
+}
+
+.track-form .form-group{margin-bottom:18px}
+.track-form label{
+  display:block;font-size:13px;font-weight:700;
+  margin-bottom:8px;color:#333
+}
+.track-form input{
+  width:100%;padding:14px 16px;
+  border:1px solid #e5e5e5;border-radius:12px;
+  font-size:15px;background:#fafafa;color:#111;
+  outline:0;transition:all .2s;font-family:inherit;
+  text-align:center;letter-spacing:.5px;font-weight:600
+}
+.track-form input:focus{
+  border-color:#111;background:#fff;
+  box-shadow:0 0 0 4px rgba(17,17,17,.06)
+}
+.track-form input::placeholder{
+  color:#aaa;font-weight:500;letter-spacing:0
+}
+
+.track-search-btn{
+  width:100%;padding:15px;
+  background:#111;color:#fff;border-radius:12px;
+  font-size:15px;font-weight:700;border:0;
+  cursor:pointer;transition:all .25s;
+  display:flex;align-items:center;justify-content:center;gap:10px;
+  margin-top:6px;font-family:inherit
+}
+.track-search-btn:hover{background:#2563eb;transform:translateY(-1px)}
+.track-search-btn:disabled{opacity:.6;cursor:not-allowed;transform:none}
+
+.track-hint{
+  text-align:center;margin-top:16px;
+  font-size:12px;color:#888;line-height:1.7
+}
+.track-hint strong{color:#555}
+
+/* ===== RESULTS ===== */
+.track-result{
+  max-width:820px;margin:32px auto 0;
+  display:none;animation:fadeInUp .4s ease
+}
+.track-result.show{display:block}
+@keyframes fadeInUp{
+  from{opacity:0;transform:translateY(20px)}
+  to{opacity:1;transform:none}
+}
+
+.track-status-card{
+  background:#fff;border-radius:20px;
+  padding:26px;margin-bottom:20px;
+  box-shadow:0 8px 30px rgba(0,0,0,.06);
+  border:1px solid #f0f0f0;
+  display:flex;align-items:center;gap:18px;flex-wrap:wrap
+}
+.track-status-icon{
+  width:64px;height:64px;border-radius:18px;
+  display:flex;align-items:center;justify-content:center;
+  font-size:26px;flex-shrink:0
+}
+.track-status-info{flex:1;min-width:200px}
+.track-status-info h3{
+  font-size:20px;font-weight:800;color:#111;margin-bottom:4px
+}
+.track-status-info p{font-size:13px;color:#666}
+.track-status-badge{
+  padding:10px 18px;border-radius:24px;
+  font-size:14px;font-weight:800;
+  white-space:nowrap
+}
+
+.track-section{
+  background:#fff;border-radius:20px;
+  padding:26px;margin-bottom:20px;
+  box-shadow:0 8px 30px rgba(0,0,0,.06);
+  border:1px solid #f0f0f0
+}
+.track-section h3{
+  font-size:16px;font-weight:800;
+  margin-bottom:18px;padding-bottom:14px;
+  border-bottom:1px solid #f0f0f0;
+  display:flex;align-items:center;gap:10px;color:#111
+}
+.track-section h3 i{color:#2563eb;font-size:15px}
+
+.track-item{
+  display:flex;gap:14px;padding:14px 0;
+  border-bottom:1px solid #f5f5f5;align-items:center
+}
+.track-item:last-child{border:0;padding-bottom:0}
+.track-item-img{
+  width:66px;height:66px;border-radius:12px;
+  background:#f5f5f5;background-position:center;
+  background-size:cover;flex-shrink:0
+}
+.track-item-info{flex:1;min-width:0}
+.track-item-info h4{font-size:14px;font-weight:700;margin-bottom:5px}
+.track-item-info small{font-size:12px;color:#666}
+.track-item-price{
+  font-weight:800;font-size:15px;color:#111;
+  align-self:center;white-space:nowrap
+}
+
+.track-summary-row{
+  display:flex;justify-content:space-between;
+  padding:9px 0;font-size:14px;color:#555
+}
+.track-summary-row.total{
+  border-top:2px dashed #e5e5e5;margin-top:8px;
+  padding-top:16px;font-size:17px;font-weight:800;color:#111
+}
+.track-summary-row.total span:last-child{color:#2563eb;font-size:19px}
+
+/* Timeline */
+.track-timeline{
+  border-right:3px solid #e5e7eb;
+  padding-right:18px;margin-top:6px
+}
+.track-timeline-item{
+  margin-bottom:18px;padding-bottom:14px;position:relative
+}
+.track-timeline-item:last-child{margin-bottom:0;padding-bottom:0}
+.track-timeline-item::before{
+  content:"";position:absolute;right:-26px;top:4px;
+  width:14px;height:14px;border-radius:50%;
+  background:#2563eb;border:3px solid #fff;
+  box-shadow:0 0 0 2px #e5e7eb
+}
+.track-timeline-item.done::before{background:#16a34a}
+.track-timeline-item.current::before{
+  background:#f59e0b;
+  animation:pulseDot 1.5s infinite
+}
+@keyframes pulseDot{
+  0%,100%{box-shadow:0 0 0 2px #e5e7eb,0 0 0 6px rgba(245,158,11,.2)}
+  50%{box-shadow:0 0 0 2px #e5e7eb,0 0 0 10px rgba(245,158,11,.05)}
+}
+.track-timeline-status{
+  font-weight:700;font-size:14px;color:#111
+}
+.track-timeline-reason{
+  font-size:12px;color:#dc2626;margin-top:4px
+}
+.track-timeline-notes{
+  font-size:12px;color:#666;margin-top:4px
+}
+.track-timeline-meta{
+  font-size:11px;color:#999;margin-top:5px
+}
+
+/* Actions */
+.track-actions{
+  display:flex;gap:10px;flex-wrap:wrap;margin-top:20px
+}
+.track-action-btn{
+  flex:1;min-width:160px;
+  padding:14px 20px;border-radius:12px;
+  font-size:14px;font-weight:700;
+  display:flex;align-items:center;justify-content:center;gap:8px;
+  border:0;cursor:pointer;font-family:inherit;
+  transition:all .2s;text-decoration:none
+}
+.track-action-btn.whatsapp{background:#25d366;color:#fff}
+.track-action-btn.whatsapp:hover{background:#1ebe5b;transform:translateY(-1px)}
+.track-action-btn.cancel{background:#fef2f2;color:#dc2626}
+.track-action-btn.cancel:hover{background:#dc2626;color:#fff}
+.track-action-btn.cancel:disabled{opacity:.5;cursor:not-allowed}
+
+/* Error / empty */
+.track-error{
+  max-width:520px;margin:32px auto 0;
+  padding:40px 30px;border-radius:20px;
+  background:#fff;border:1px solid #f0f0f0;
+  text-align:center;
+  box-shadow:0 8px 30px rgba(0,0,0,.06);
+  display:none;animation:fadeInUp .4s ease
+}
+.track-error.show{display:block}
+.track-error-icon{
+  width:64px;height:64px;margin:0 auto 18px;
+  border-radius:50%;
+  background:#fef2f2;color:#dc2626;
+  display:flex;align-items:center;justify-content:center;
+  font-size:26px
+}
+.track-error h3{
+  font-size:17px;font-weight:800;margin-bottom:8px;color:#111
+}
+.track-error p{
+  font-size:13px;color:#666;line-height:1.7
+}
+
+@media(max-width:600px){
+  .track-hero{padding:50px 0 80px}
+  .track-search-card{padding:24px 20px}
+  .track-status-card{padding:20px;flex-direction:column;text-align:center}
+  .track-status-info{text-align:center}
+  .track-section{padding:20px}
+  .track-action-btn{min-width:100%}
+}
+</style>
+</head>
+<body>
+
+<div class="top-announcement">
+  <i class="fa-solid fa-truck-fast"></i>
+  شحن مجاني عند شراء قطعتين أو أكثر 🎉
+</div>
+
+<header class="header">
+  <div class="container header-content">
+    <a href="index.html" class="logo">STEP</a>
+
+    <nav class="main-nav">
+      <a href="index.html">الرئيسية</a>
+      <a href="index.html#products">الأحذية</a>
+      <a href="track.html" class="active">تتبع طلبك</a>
+    </nav>
+
+    <div class="header-actions">
+      <a href="account.html" class="icon-button" title="حسابي" aria-label="حسابي">
+        <i class="fa-solid fa-user"></i>
+      </a>
+      <a href="index.html#products" class="icon-button" title="المتجر" aria-label="المتجر">
+        <i class="fa-solid fa-bag-shopping"></i>
+      </a>
+    </div>
+  </div>
+</header>
+
+<main>
+  <section class="track-hero">
+    <div class="container">
+      <div class="track-hero-content">
+        <div class="track-hero-icon">
+          <i class="fa-solid fa-truck-fast"></i>
+        </div>
+        <h1>تتبع طلبك</h1>
+        <p>اعرف حالة طلبك في أي وقت — من غير ما تحتاج تسجيل دخول</p>
+      </div>
+    </div>
+  </section>
+
+  <div class="container track-wrapper">
+
+    <!-- SEARCH CARD -->
+    <div class="track-search-card">
+      <h2>
+        <i class="fa-solid fa-search"></i>
+        اكتب بيانات الطلب
+      </h2>
+
+      <form class="track-form" id="trackForm">
+        <div class="form-group">
+          <label for="orderId">رقم الطلب</label>
+          <input type="text" id="orderId" inputmode="numeric" placeholder="مثال: 123" required>
+        </div>
+
+        <div class="form-group">
+          <label for="phone">رقم الهاتف</label>
+          <input type="tel" id="phone" placeholder="01xxxxxxxxx" pattern="01[0-9]{9}" required>
+        </div>
+
+        <button type="submit" class="track-search-btn" id="trackBtn">
+          <i class="fa-solid fa-magnifying-glass"></i>
+          تتبع الطلب
+        </button>
+      </form>
+
+      <p class="track-hint">
+        رقم الطلب هتلاقيه في رسالة التأكيد اللي وصلتلك على <strong>واتساب</strong>
+        أو في الإيميل
+      </p>
+    </div>
+
+    <!-- ERROR STATE -->
+    <div class="track-error" id="trackError">
+      <div class="track-error-icon">
+        <i class="fa-solid fa-circle-exclamation"></i>
+      </div>
+      <h3 id="trackErrorTitle">مفيش نتائج</h3>
+      <p id="trackErrorMsg">اتأكد من رقم الطلب ورقم الهاتف وحاول تاني</p>
+    </div>
+
+    <!-- RESULT -->
+    <div class="track-result" id="trackResult">
+
+      <!-- Status Card -->
+      <div class="track-status-card">
+        <div class="track-status-icon" id="trackStatusIcon"></div>
+        <div class="track-status-info">
+          <h3 id="trackOrderTitle">طلب #0</h3>
+          <p id="trackOrderDate">-</p>
+        </div>
+        <div class="track-status-badge" id="trackStatusBadge"></div>
+      </div>
+
+      <!-- Timeline -->
+      <div class="track-section" id="trackTimelineSection">
+        <h3>
+          <i class="fa-solid fa-clock-rotate-left"></i>
+          مراحل الطلب
+        </h3>
+        <div class="track-timeline" id="trackTimeline"></div>
+      </div>
+
+      <!-- Items -->
+      <div class="track-section">
+        <h3>
+          <i class="fa-solid fa-box"></i>
+          المنتجات
+        </h3>
+        <div id="trackItems"></div>
+      </div>
+
+      <!-- Summary -->
+      <div class="track-section">
+        <h3>
+          <i class="fa-solid fa-receipt"></i>
+          ملخص الطلب
+        </h3>
+        <div class="track-summary-row">
+          <span>المنتجات:</span>
+          <strong id="trackSubtotal">0 ج</strong>
+        </div>
+        <div class="track-summary-row">
+          <span>الشحن:</span>
+          <strong id="trackShipping">-</strong>
+        </div>
+        <div class="track-summary-row total">
+          <span>الإجمالي:</span>
+          <span id="trackTotal">0 ج</span>
+        </div>
+      </div>
+
+      <!-- Delivery Info -->
+      <div class="track-section">
+        <h3>
+          <i class="fa-solid fa-location-dot"></i>
+          بيانات التوصيل
+        </h3>
+        <div class="track-summary-row">
+          <span>الاسم:</span>
+          <strong id="trackCustomerName">-</strong>
+        </div>
+        <div class="track-summary-row">
+          <span>الهاتف:</span>
+          <strong id="trackCustomerPhone">-</strong>
+        </div>
+        <div class="track-summary-row">
+          <span>المحافظة:</span>
+          <strong id="trackGovernorate">-</strong>
+        </div>
+        <div class="track-summary-row" id="trackCityRow">
+          <span>المدينة:</span>
+          <strong id="trackCity">-</strong>
+        </div>
+        <div class="track-summary-row">
+          <span>العنوان:</span>
+          <strong id="trackAddress" style="max-width:60%;text-align:left;">-</strong>
+        </div>
+      </div>
+
+      <!-- Actions -->
+      <div class="track-actions" id="trackActions"></div>
+
+    </div>
+
+  </div>
+</main>
+
+<footer class="footer">
+  <div class="container footer-content">
+    <div>
+      <div class="footer-logo">STEP</div>
+      <p>متجر أحذية عصرية.</p>
+    </div>
+    <div class="footer-links">
+      <a href="index.html">الرئيسية</a>
+      <a href="index.html#products">الأحذية</a>
+      <a href="track.html">تتبع طلبك</a>
+      <a href="account.html">حسابي</a>
+    </div>
+  </div>
+  <div class="container footer-bottom">
+    <p>© 2026 STEP. جميع الحقوق محفوظة.</p>
+  </div>
+</footer>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="track.js"></script>
+</body>
+</html>
