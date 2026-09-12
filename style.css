@@ -1018,3 +1018,158 @@ img{max-width:100%;display:block}
     margin-top: 5px;
     flex-shrink: 0;
 }
+/* =========================================
+   ORDER DETAILS MODAL — MOBILE FIX
+   ========================================= */
+
+@media (max-width: 768px) {
+
+    /* ===== الـ Modal ===== */
+    .modal-content {
+        padding: 16px !important;
+        margin: 8px !important;
+        max-height: 94vh !important;
+        width: calc(100% - 16px) !important;
+        border-radius: 14px !important;
+    }
+
+    .modal-header {
+        padding-bottom: 10px;
+        margin-bottom: 14px;
+    }
+
+    .modal-header h2 {
+        font-size: 16px !important;
+    }
+
+    /* ===== منطقة المنتجات ===== */
+    #orderModalDetails h3 {
+        font-size: 15px !important;
+        margin-bottom: 10px !important;
+    }
+
+    #orderModalDetails h4 {
+        font-size: 13px !important;
+        margin: 12px 0 8px !important;
+    }
+
+    #orderModalDetails p {
+        font-size: 13px !important;
+        line-height: 1.7 !important;
+        margin-bottom: 6px !important;
+    }
+
+    /* ===== Product Item في الطلب ===== */
+    .order-detail-item {
+        flex-direction: column !important;
+        align-items: stretch !important;
+        gap: 12px !important;
+        padding: 14px 12px !important;
+        border-radius: 12px !important;
+    }
+
+    .order-detail-img {
+        width: 100% !important;
+        height: 180px !important;
+        border-radius: 10px !important;
+    }
+
+    .order-detail-info {
+        width: 100% !important;
+    }
+
+    .order-detail-info h4 {
+        font-size: 14px !important;
+        text-align: center !important;
+        margin-bottom: 10px !important;
+    }
+
+    /* ===== Size Display ===== */
+    .size-display {
+        justify-content: center !important;
+        margin-bottom: 8px !important;
+    }
+
+    .size-display .size-value {
+        font-size: 14px !important;
+    }
+
+    /* ===== Qty Info ===== */
+    .qty-info {
+        justify-content: center !important;
+        margin: 8px 0 !important;
+    }
+
+    /* ===== Stock Info Chips ===== */
+    .stock-info {
+        display: flex !important;
+        flex-direction: row !important;
+        flex-wrap: wrap !important;
+        gap: 6px !important;
+        justify-content: center !important;
+        margin-top: 10px !important;
+    }
+
+    .stock-info span {
+        font-size: 11px !important;
+        padding: 6px 10px !important;
+        white-space: nowrap !important;
+        flex: 0 0 auto !important;
+    }
+
+    /* ===== Price ===== */
+    .order-detail-price {
+        text-align: center !important;
+        padding: 10px !important;
+        font-size: 16px !important;
+        background: #eff6ff !important;
+        border-radius: 10px !important;
+        color: #2563eb !important;
+        margin-top: 8px !important;
+    }
+
+    /* ===== Total Summary ===== */
+    #orderModalDetails > div[style*="border-top:2px"] > div {
+        font-size: 13px !important;
+        padding: 6px 0 !important;
+    }
+
+    /* ===== Tracking link box ===== */
+    #orderModalDetails > div[style*="background:#eff6ff"] {
+        padding: 12px !important;
+        border-radius: 10px !important;
+    }
+
+    #orderModalDetails > div[style*="background:#eff6ff"] > div[style*="font-size:11px"] {
+        font-size: 10px !important;
+        padding: 8px !important;
+        word-break: break-all !important;
+    }
+
+    /* ===== Order status history ===== */
+    .timeline-item,
+    #orderModalDetails div[style*="border-right:3px"] > div {
+        padding-bottom: 10px !important;
+        margin-bottom: 10px !important;
+    }
+
+    #orderModalDetails div[style*="font-size:12px"] {
+        font-size: 11px !important;
+    }
+}
+
+/* ===== للشاشات الصغيرة جدًا ===== */
+@media (max-width: 400px) {
+    .order-detail-img {
+        height: 150px !important;
+    }
+
+    .stock-info span {
+        font-size: 10px !important;
+        padding: 5px 8px !important;
+    }
+
+    .order-detail-info h4 {
+        font-size: 13px !important;
+    }
+}

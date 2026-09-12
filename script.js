@@ -951,6 +951,84 @@ async function submitOrder(event) {
         return;
     }
 
+    // ✅ التحقق من المخزون قبل الإرسال
+    const stockErrors = [];
+
+    cart.forEach(item => {
+        const product = products.find(p => p.id === Number(item.id));
+        if (!product) return;
+
+        const available = product.stockBySize?.[String(item.size)] || 0;
+
+        if (item.quantity > available) {
+            stockErrors.push(
+                `${product.name} - مقاس ${item.size}: متاح ${available} بس، إنت عايز ${item.quantity}`
+            );
+        }
+    });
+
+    if (stockErrors.length > 0) {
+        showToast('⚠️ بعض المنتجات مش متوفرة بالكمية المطلوبة');
+        alert(
+            'عذرًا، الكميات المطلوبة غير متوفرة:\n\n' +
+            stockErrors.join('\n\n') +
+            '\n\nعدّل السلة وحاول تاني.'
+        );
+        return;
+    }
+
+    // ✅ التحقق من المخزون في الـ Frontend أولاً
+    const stockErrors = [];
+
+    cart.forEach(item => {
+        const product = products.find(p => p.id === Number(item.id));
+        if (!product) return;
+
+        const available = product.stockBySize?.[String(item.size)] || 0;
+
+        if (item.quantity > available) {
+            stockErrors.push(
+                `${product.name} - مقاس ${item.size}: المتاح ${available} بس (طلبك ${item.quantity})`
+            );
+        }
+    });
+
+    if (stockErrors.length > 0) {
+        showToast('⚠️ بعض المنتجات مش متوفرة بالكمية المطلوبة');
+        alert(
+            '⚠️ الكميات المطلوبة مش متوفرة:\n\n' +
+            stockErrors.join('\n\n') +
+            '\n\nعدّل السلة وحاول تاني 🙏'
+        );
+        return;
+    }
+
+    // ✅ التحقق من المخزون في الـ Frontend أولاً
+    const stockErrors = [];
+
+    cart.forEach(item => {
+        const product = products.find(p => p.id === Number(item.id));
+        if (!product) return;
+
+        const available = product.stockBySize?.[String(item.size)] || 0;
+
+        if (item.quantity > available) {
+            stockErrors.push(
+                `${product.name} - مقاس ${item.size}: المتاح ${available} بس (طلبك ${item.quantity})`
+            );
+        }
+    });
+
+    if (stockErrors.length > 0) {
+        showToast('⚠️ بعض المنتجات مش متوفرة بالكمية المطلوبة');
+        alert(
+            '⚠️ الكميات المطلوبة مش متوفرة:\n\n' +
+            stockErrors.join('\n\n') +
+            '\n\nعدّل السلة وحاول تاني 🙏'
+        );
+        return;
+    }
+
     const items = cart.map(i => ({
         id: i.id,
         name: i.name,
@@ -1017,7 +1095,24 @@ async function submitOrder(event) {
         successModal?.classList.add('open');
     } catch (err) {
         console.error('Order error:', err);
-        alert('فشل إرسال الطلب:\n\n' + err.message);
+
+        // ✅ لو الخطأ بسبب المخزون
+        const errorMsg = err.message || '';
+
+        if (
+            errorMsg.includes('غير متوفر') ||
+            errorMsg.includes('المتاح') ||
+            errorMsg.includes('غير متوفرة')
+        ) {
+            showToast('⚠️ بعض المنتجات مش متوفرة');
+            alert(
+                '⚠️ الكميات المطلوبة مش متوفرة:\n\n' +
+                errorMsg +
+                '\n\nعدّل السلة وحاول تاني 🙏'
+            );
+        } else {
+            alert('فشل إرسال الطلب:\n\n' + errorMsg);
+        }
     } finally {
         submitOrderBtn.disabled = false;
         submitOrderBtn.innerHTML =

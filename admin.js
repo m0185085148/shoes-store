@@ -1571,17 +1571,19 @@ async function applyStatusChange(orderId, newStatus, reason, notes) {
             order.exchange_reason = reason;
         }
 
-        // خصم المخزون عند التوصيل
-        if (newStatus === "delivered" && oldStatus !== "delivered") {
+        // ✅ خصم المخزون عند الشحن
+        if (newStatus === "shipped" && oldStatus !== "shipped") {
             try {
-                await client.rpc("process_order_delivery", {
+                await client.rpc("process_order_shipped", {
                     p_order_id: orderId
                 });
-                showToast("تم تحديث المخزون تلقائيًا ✅");
+                showToast("تم خصم الكميات من المخزون ✅");
             } catch (e) {
-                console.warn("Stock update failed:", e);
+                console.warn("Stock deduction failed:", e);
+                showToast("⚠️ فشل خصم المخزون");
             }
         }
+
 
         // تحرير الحجز عند الإلغاء
         if ((newStatus === "cancelled" || newStatus === "refunded") &&
@@ -1702,26 +1704,39 @@ function viewOrderDetails(orderId) {
         const sizeReserved = sizeData ? Number(sizeData.reserved) : 0;
         const sizeStock = sizeData ? Number(sizeData.stock) : 0;
 
+        // ✅ هل الكمية كافية؟
+        const canFulfill = sizeAvailable >= quantity;
+        const statusClass = canFulfill ? 'available' : 'low';
+        const statusIcon = canFulfill ? 'fa-check-circle' : 'fa-exclamation-triangle';
+        const statusText = canFulfill 
+            ? 'الكمية كافية' 
+            : `⚠️ غير كافي! المتاح ${sizeAvailable} بس`;
+
         let stockHTML = "";
         if (product && sizeData) {
-            const sizeStatus = sizeAvailable === 0 ? "out" : (sizeAvailable <= 5 ? "low" : "good");
-            const availableClass = sizeStatus === "out" || sizeStatus === "low" ? "low" : "available";
-
             stockHTML = `
                 <div class="stock-info">
-                    <span class="${availableClass}">
-                        <i class="fa-solid fa-check"></i>
-                        متاح في مقاس ${escapeAdminHTML(effectiveSize)}: ${sizeAvailable}
+                    <span class="${statusClass}">
+                        <i class="fa-solid ${statusIcon}"></i>
+                        ${statusText}
+                    </span>
+                    <span>
+                        <i class="fa-solid fa-box"></i>
+                        المطلوب: <strong>${quantity}</strong>
+                    </span>
+                    <span class="${sizeAvailable === 0 ? 'low' : ''}">
+                        <i class="fa-solid fa-warehouse"></i>
+                        المتاح: <strong>${sizeAvailable}</strong>
                     </span>
                     ${sizeReserved > 0 ? `
                         <span class="reserved">
-                            <i class="fa-solid fa-clock"></i>
-                            محجوز: ${sizeReserved}
+                            <i class="fa-solid fa-lock"></i>
+                            محجوز: <strong>${sizeReserved}</strong>
                         </span>
                     ` : ""}
                     <span>
-                        <i class="fa-solid fa-warehouse"></i>
-                        إجمالي: ${sizeStock}
+                        <i class="fa-solid fa-cubes"></i>
+                        إجمالي المخزون: <strong>${sizeStock}</strong>
                     </span>
                     ${product.sku ? `
                         <span>
