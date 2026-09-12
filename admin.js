@@ -2552,10 +2552,7 @@ if (addProductForm) {
             return;
         }
 
-        if (totalStock === 0) {
-            alert("اكتب كمية لكل مقاس مختار");
-            return;
-        }
+        // ✅ الكميات اختيارية — يُسمح بـ 0
 
         addSubmitButton.disabled = true;
         addSubmitButton.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> جاري الإضافة...';
