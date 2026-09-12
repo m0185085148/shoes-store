@@ -1784,6 +1784,23 @@
                     </div>
 
                     <div class="form-group">
+                        <label>صور إضافية (اختياري)</label>
+                        
+                        <div class="multi-image-grid" id="addImagesGrid">
+                            <button type="button" class="multi-image-add" 
+                                onclick="document.getElementById('addImagesFile').click()">
+                                <i class="fa-solid fa-plus"></i>
+                                <span>إضافة صور</span>
+                            </button>
+                            <input type="file" id="addImagesFile" accept="image/*" multiple hidden>
+                        </div>
+                        
+                        <small style="color:#94a3b8;font-size:11px;display:block;margin-top:6px;">
+                            حتى 5 صور — كل صورة 5 ميجا كحد أقصى
+                        </small>
+                    </div>
+
+                    <div class="form-group">
                         <label for="description">وصف المنتج</label>
                         <textarea id="description" rows="3" placeholder="اكتب تفاصيل ومواصفات المنتج..."></textarea>
                     </div>
@@ -1950,6 +1967,23 @@
                         <div style="text-align:center;margin:10px 0;color:#94a3b8;font-size:12px;font-weight:700;">أو</div>
                         
                         <input type="url" id="editImageUrl" placeholder="الصق رابط الصورة هنا...">
+                    </div>
+
+                    <div class="form-group">
+                        <label>صور إضافية (اختياري)</label>
+                        
+                        <div class="multi-image-grid" id="editImagesGrid">
+                            <button type="button" class="multi-image-add" 
+                                onclick="document.getElementById('editImagesFile').click()">
+                                <i class="fa-solid fa-plus"></i>
+                                <span>إضافة صور</span>
+                            </button>
+                            <input type="file" id="editImagesFile" accept="image/*" multiple hidden>
+                        </div>
+                        
+                        <small style="color:#94a3b8;font-size:11px;display:block;margin-top:6px;">
+                            حتى 5 صور — كل صورة 5 ميجا كحد أقصى
+                        </small>
                     </div>
 
                     <div class="form-group">

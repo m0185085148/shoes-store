@@ -112,6 +112,13 @@ function normalizeProduct(item) {
     }
     if (!Array.isArray(sizes)) sizes = [];
 
+    // ✅ معالجة الصور الإضافية
+    let images = item.images;
+    if (typeof images === 'string') {
+        try { images = JSON.parse(images); } catch { images = []; }
+    }
+    if (!Array.isArray(images)) images = [];
+
     return {
         id: Number(item.id),
         name: item.name || '',
@@ -120,6 +127,7 @@ function normalizeProduct(item) {
         badge: item.badge || '',
         sizes,
         image: item.image || '',
+        images,
         description: item.description || ''
     };
 }
@@ -869,6 +877,7 @@ document.addEventListener('keydown', e => {
 // ========================================
 
 window.addToCartFromGrid = addToCartFromGrid;
+window.switchProductImage = switchProductImage;
 window.changeCartQuantity = changeCartQuantity;
 window.removeFromCart = removeFromCart;
 window.closeSuccessModal = closeSuccessModal;

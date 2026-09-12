@@ -263,6 +263,18 @@ function getProductById(id) {
     return adminProducts.find(p => Number(p.id) === Number(id));
 }
 
+function parseImagesArray(value) {
+    if (Array.isArray(value)) return value;
+    if (!value) return [];
+    if (typeof value === "string") {
+        try {
+            const parsed = JSON.parse(value);
+            if (Array.isArray(parsed)) return parsed;
+        } catch (e) {}
+    }
+    return [];
+}
+
 function showToast(message) {
     document.querySelector('.toast-notification')?.remove();
     const toast = document.createElement('div');
@@ -1047,6 +1059,8 @@ function setupAddProductModal() {
         addProductForm.reset();
         resetSizesGrid("sizesGrid");
         clearImageUpload("add");
+        addImagesList = [];
+        renderMultiImageGrid("add");
         addProductModal?.classList.add("open");
     });
 
@@ -2165,6 +2179,7 @@ function getProductSnapshot(product) {
         sizes: parseSizes(product.sizes),
         sizes_with_quantities: sizes,
         image: product.image || null,
+        images: parseImagesArray(product.images),
         description: product.description || ""
     };
 }
@@ -2205,6 +2220,7 @@ function getEditProductData() {
         sizes: sizesWithQty.map(s => s.size),
         sizes_with_quantities: sizesWithQty,
         image: editImageUrl?.value.trim() || null,
+        images: [...editImagesList],
         description: editDescription?.value.trim() || ""
     };
 }
@@ -2261,6 +2277,10 @@ function prepareEditProduct(productId) {
     }));
 
     setSizeQuantities("editSizesGrid", sizesData);
+
+    // ✅ تحميل الصور الإضافية
+    editImagesList = parseImagesArray(product.images);
+    renderMultiImageGrid("edit");
 
     editModal.classList.add("open");
 }
@@ -2412,6 +2432,7 @@ if (editProductForm) {
                         badge: newData.badge,
                         sizes: newData.sizes,
                         image: newData.image,
+                        images: newData.images || [],
                         description: newData.description,
                         stock_quantity: totalStock,
                         updated_by: currentAdmin.id,
@@ -2547,6 +2568,7 @@ if (addProductForm) {
                 badge: addBadge?.value.trim() || null,
                 sizes: sizes,
                 image: addImageUrl?.value.trim() || null,
+                images: [...addImagesList],
                 description: addDescription?.value.trim() || "",
                 stock_quantity: totalStock,
                 reserved_quantity: 0,
@@ -2612,6 +2634,8 @@ if (addProductForm) {
             addProductModal?.classList.remove("open");
             addProductForm.reset();
             resetSizesGrid("sizesGrid");
+            addImagesList = [];
+            renderMultiImageGrid("add");
             await loadAdminProducts();
         } catch (error) {
             console.error(error);
@@ -3477,6 +3501,7 @@ async function approveChangeRequest(requestId, fromModal = false) {
                     badge: newData.badge || null,
                     sizes: Array.isArray(newData.sizes) ? newData.sizes : [],
                     image: newData.image || null,
+                    images: Array.isArray(newData.images) ? newData.images : [],
                     description: newData.description || "",
                     stock_quantity: totalStock,
                     updated_by: request.requested_by,
@@ -6037,3 +6062,158 @@ function clearImageUpload(mode) {
 
 // ✅ Global exports
 window.clearImageUpload = clearImageUpload;
+
+// ========================================
+// 78. MULTI IMAGE UPLOAD
+// ========================================
+
+let addImagesList = [];
+let editImagesList = [];
+
+const MAX_MULTI_IMAGES = 5;
+
+function setupMultiImageUploads() {
+    setupMultiImageInput("addImagesFile", "add");
+    setupMultiImageInput("editImagesFile", "edit");
+}
+
+function setupMultiImageInput(fileInputId, mode) {
+    const input = document.getElementById(fileInputId);
+    if (!input) return;
+
+    input.addEventListener("change", async (e) => {
+        const files = Array.from(e.target.files || []);
+        if (!files.length) return;
+
+        input.value = "";
+        await uploadMultipleImages(files, mode);
+    });
+}
+
+async function uploadMultipleImages(files, mode) {
+    const list = mode === "edit" ? editImagesList : addImagesList;
+    const remaining = MAX_MULTI_IMAGES - list.length;
+
+    if (remaining <= 0) {
+        alert(`الحد الأقصى ${MAX_MULTI_IMAGES} صور إضافية`);
+        return;
+    }
+
+    const filesToUpload = files.slice(0, remaining);
+
+    if (files.length > remaining) {
+        alert(`هيتم رفع ${remaining} صور بس (الحد الأقصى ${MAX_MULTI_IMAGES})`);
+    }
+
+    const client = getSupabaseClient();
+    if (!client) return;
+
+    for (const file of filesToUpload) {
+        if (!file.type.startsWith("image/")) {
+            alert(`الملف "${file.name}" ليس صورة`);
+            continue;
+        }
+
+        if (file.size > 5 * 1024 * 1024) {
+            alert(`الصورة "${file.name}" أكبر من 5 ميجا`);
+            continue;
+        }
+
+        // ✅ نضيف placeholder
+        const tempId = `temp_${Date.now()}_${Math.random()}`;
+        list.push({ tempId, uploading: true });
+        renderMultiImageGrid(mode);
+
+        try {
+            const ext = file.name.split(".").pop()?.toLowerCase() || "jpg";
+            const filename = `products/${Date.now()}_${Math.random().toString(36).substring(2, 10)}.${ext}`;
+
+            const { data, error } = await client.storage
+                .from(SUPABASE_STORAGE_BUCKET)
+                .upload(filename, file, {
+                    cacheControl: "3600",
+                    upsert: false
+                });
+
+            if (error) throw error;
+
+            const { data: urlData } = client.storage
+                .from(SUPABASE_STORAGE_BUCKET)
+                .getPublicUrl(data.path);
+
+            // ✅ نستبدل الـ placeholder بالرابط الحقيقي
+            const idx = list.findIndex((x) => x.tempId === tempId);
+            if (idx !== -1) {
+                list[idx] = urlData.publicUrl;
+            }
+
+        } catch (err) {
+            console.error("Upload error:", err);
+            alert(`فشل رفع "${file.name}": ${err.message || "خطأ"}`);
+            const idx = list.findIndex((x) => x.tempId === tempId);
+            if (idx !== -1) list.splice(idx, 1);
+        }
+
+        renderMultiImageGrid(mode);
+    }
+
+    showToast("تم رفع الصور ✅");
+}
+
+function renderMultiImageGrid(mode) {
+    const gridId = mode === "edit" ? "editImagesGrid" : "addImagesGrid";
+    const grid = document.getElementById(gridId);
+    if (!grid) return;
+
+    const list = mode === "edit" ? editImagesList : addImagesList;
+
+    const addBtnHTML = `
+        <button type="button" class="multi-image-add" 
+            onclick="document.getElementById('${mode === 'edit' ? 'editImagesFile' : 'addImagesFile'}').click()">
+            <i class="fa-solid fa-plus"></i>
+            <span>إضافة صور</span>
+        </button>
+    `;
+
+    const itemsHTML = list.map((item, index) => {
+        if (typeof item === "object" && item.uploading) {
+            return `
+                <div class="multi-image-item uploading">
+                    <div class="upload-spinner">
+                        <i class="fa-solid fa-spinner fa-spin"></i>
+                    </div>
+                </div>
+            `;
+        }
+
+        return `
+            <div class="multi-image-item">
+                <img src="${escapeAdminHTML(item)}" alt="">
+                <button type="button" class="multi-image-remove"
+                    onclick="removeMultiImage('${mode}', ${index})">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+        `;
+    }).join("");
+
+    grid.innerHTML = addBtnHTML + itemsHTML;
+}
+
+function removeMultiImage(mode, index) {
+    const list = mode === "edit" ? editImagesList : addImagesList;
+    if (index < 0 || index >= list.length) return;
+
+    list.splice(index, 1);
+    renderMultiImageGrid(mode);
+}
+
+// ✅ Global exports
+window.removeMultiImage = removeMultiImage;
+
+// ✅ توسيع setupImageUploads
+const __originalSetupImageUploads = setupImageUploads;
+setupImageUploads = function() {
+    __originalSetupImageUploads();
+    setupMultiImageUploads();
+};

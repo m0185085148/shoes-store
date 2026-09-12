@@ -624,3 +624,92 @@ img{max-width:100%;display:block}
         grid-template-columns: 1fr;
     }
 }
+/* =========================================
+   PRODUCT GALLERY
+   ========================================= */
+
+.product-gallery {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.product-thumbnails {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(80px, 1fr));
+    gap: 10px;
+    padding: 4px;
+}
+
+.product-thumb {
+    aspect-ratio: 1;
+    border: 2px solid #e5e5e5;
+    border-radius: 12px;
+    background: #f5f5f5;
+    cursor: pointer;
+    overflow: hidden;
+    padding: 0;
+    transition: all .2s ease;
+    position: relative;
+    font-family: inherit;
+}
+
+.product-thumb img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+    transition: transform .3s ease;
+}
+
+.product-thumb:hover {
+    border-color: #999;
+    transform: translateY(-2px);
+}
+
+.product-thumb:hover img {
+    transform: scale(1.05);
+}
+
+.product-thumb.active {
+    border-color: #111;
+    box-shadow: 0 0 0 3px rgba(17, 17, 17, 0.1);
+}
+
+.product-thumb.active::after {
+    content: "\f00c";
+    font-family: "Font Awesome 6 Free";
+    font-weight: 900;
+    position: absolute;
+    top: 6px;
+    left: 6px;
+    width: 20px;
+    height: 20px;
+    background: #111;
+    color: #fff;
+    border-radius: 50%;
+    font-size: 9px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 2;
+}
+
+/* ✅ صورة المنتج الرئيسية — تأثير انتقالي */
+#mainProductImage {
+    transition: opacity 0.15s ease;
+}
+
+@media (max-width: 900px) {
+    .product-thumbnails {
+        grid-template-columns: repeat(auto-fill, minmax(65px, 1fr));
+        gap: 8px;
+    }
+}
+
+@media (max-width: 600px) {
+    .product-thumbnails {
+        grid-template-columns: repeat(auto-fill, minmax(55px, 1fr));
+        gap: 6px;
+    }
+}
