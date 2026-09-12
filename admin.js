@@ -1152,16 +1152,16 @@ async function loadAdminOrders() {
         adminOrders = data || [];
         window.adminOrders = adminOrders;
 
-        // ✅ تطبيق فلتر "جديدة" افتراضيًا — حتى لو فاضي
+        // ✅ تطبيق فلتر "بانتظار الدفع" افتراضيًا
         const oldOrders = adminOrders;
-        adminOrders = adminOrders.filter(o => o.status === "pending");
+        adminOrders = adminOrders.filter(o => o.status === "payment_pending");
         renderAdminOrders();
         adminOrders = oldOrders;
 
         // ✅ ضبط الفلتر النشط بصريًا
         document.querySelectorAll(".filter-chip").forEach(b => b.classList.remove("active"));
-        const pendingBtn = document.querySelector('.filter-chip[onclick*="pending"]');
-        if (pendingBtn) pendingBtn.classList.add("active");
+        const paymentPendingBtn = document.querySelector('.filter-chip[onclick*="payment_pending"]');
+        if (paymentPendingBtn) paymentPendingBtn.classList.add("active");
 
         updateDashboard();
     } catch (error) {
@@ -1180,6 +1180,7 @@ async function loadAdminOrders() {
 
 function getStatusBadge(status) {
     const badges = {
+        payment_pending: { text: "بانتظار الدفع", bg: "#dbeafe", color: "#1e40af" },
         pending: { text: "جديدة", bg: "#fef3c7", color: "#92400e" },
         preparing: { text: "قيد التحضير", bg: "#e0f2fe", color: "#0369a1" },
         shipped: { text: "تم الشحن", bg: "#f3e8ff", color: "#6b21a8" },
@@ -1210,6 +1211,7 @@ function getStatusBadge(status) {
 
 function getAllowedStatuses(currentStatus) {
     const flows = {
+        payment_pending: ["payment_pending", "pending", "cancelled"],
         pending: ["pending", "preparing", "cancelled"],
         preparing: ["preparing", "shipped", "cancelled"],
         shipped: ["shipped", "delivered", "cancelled"],
@@ -1241,6 +1243,7 @@ const STATUS_REQUIRES_REASON = [
 ];
 
 const STATUS_LABELS = {
+    payment_pending: "بانتظار الدفع",
     pending: "جديدة",
     preparing: "قيد التحضير",
     shipped: "تم الشحن",
@@ -1259,6 +1262,18 @@ function renderStatusControl(order) {
     const current = order.status;
 
     if (isLockedStatus(current)) return getStatusBadge(current);
+
+    // ✅ زرار خاص لتأكيد الدفع
+    if (current === "payment_pending") {
+        return `
+            <button type="button" 
+                onclick="confirmInstaPayPayment(${Number(order.id)})"
+                style="background:#2563eb;color:#fff;padding:8px 14px;border-radius:8px;font-size:12px;font-weight:800;border:0;cursor:pointer;font-family:inherit;display:inline-flex;align-items:center;gap:6px;width:100%;justify-content:center;">
+                <i class="fa-solid fa-check-circle"></i>
+                تأكيد استلام الدفع
+            </button>
+        `;
+    }
 
     // ✅ "تم التوصيل" → زرارين صريحين
     if (current === "delivered") {
@@ -1568,6 +1583,19 @@ async function applyStatusChange(orderId, newStatus, reason, notes) {
         if (newStatus === "exchange_requested" && reason) {
             order.exchange_reason = reason;
         }
+
+                // ✅ لو التحويل من payment_pending لـ pending → نأكد الدفع
+        if (oldStatus === "payment_pending" && newStatus === "pending") {
+            try {
+                await client.rpc("confirm_instapay_payment", {
+                    p_order_id: orderId
+                });
+                showToast("تم تأكيد استلام الدفع ✅");
+            } catch (e) {
+                console.warn("Confirm payment failed:", e);
+            }
+        }
+
 
         // ✅ خصم المخزون عند الشحن
         if (newStatus === "shipped" && oldStatus !== "shipped") {
@@ -6480,3 +6508,34 @@ window.openProductPicker = openProductPicker;
 window.closeProductPicker = closeProductPicker;
 window.selectPickerProduct = selectPickerProduct;
 window.renderProductPickerList = renderProductPickerList;
+// ========================================
+// 80. CONFIRM INSTAPAY PAYMENT
+// ========================================
+
+async function confirmInstaPayPayment(orderId) {
+    const confirmed = confirm(
+        "هل تأكدت من استلام المبلغ في حساب إنستاباي؟\n\n" +
+        "⚠️ بعد التأكيد، الطلب هيتحول لـ 'جديدة'"
+    );
+
+    if (!confirmed) return;
+
+    const client = getSupabaseClient();
+    if (!client) return;
+
+    try {
+        const { error } = await client.rpc("confirm_instapay_payment", {
+            p_order_id: orderId
+        });
+
+        if (error) throw error;
+
+        showToast("تم تأكيد الدفع ✅");
+        await loadAdminOrders();
+    } catch (err) {
+        console.error("Confirm payment error:", err);
+        alert("فشل التأكيد:\n\n" + err.message);
+    }
+}
+
+window.confirmInstaPayPayment = confirmInstaPayPayment;

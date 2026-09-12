@@ -1103,6 +1103,28 @@ async function submitOrder(event) {
 
         if (successOrderId) successOrderId.textContent = `#${data.id}`;
 
+        // ✅ لو الدفع إنستاباي، نعرض التعليمات
+        const instaPayBox = $('instapayInstructions');
+        if (instaPayBox) {
+            if (paymentMethod === 'instapay') {
+                instaPayBox.style.display = 'block';
+
+                // ✅ نحدّث المبلغ
+                const amountEl = $('instapayAmount');
+                if (amountEl) {
+                    amountEl.textContent = `${formatPrice(total)} جنيه`;
+                }
+
+                // ✅ نحدّث رقم الطلب
+                const orderNumEl = $('instapayOrderNumber');
+                if (orderNumEl) {
+                    orderNumEl.textContent = `#${data.id}`;
+                }
+            } else {
+                instaPayBox.style.display = 'none';
+            }
+        }
+
         const trackLink = $('trackOrderLink');
         if (trackLink) {
             trackLink.href =
@@ -1396,3 +1418,24 @@ document.addEventListener('DOMContentLoaded', async () => {
         radio.addEventListener('change', saveOrderFormData);
     });
 });
+function copyToClipboard(text, btnEl) {
+    navigator.clipboard.writeText(text).then(() => {
+        if (btnEl) {
+            const original = btnEl.innerHTML;
+            btnEl.innerHTML = '<i class="fa-solid fa-check"></i>';
+            btnEl.style.background = '#16a34a';
+            btnEl.style.color = '#fff';
+            setTimeout(() => {
+                btnEl.innerHTML = original;
+                btnEl.style.background = '';
+                btnEl.style.color = '';
+            }, 1500);
+        }
+        showToast('تم النسخ ✅');
+    }).catch(err => {
+        console.error('Copy failed:', err);
+        prompt('انسخ الرقم ده:', text);
+    });
+}
+
+window.copyToClipboard = copyToClipboard;

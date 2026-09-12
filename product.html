@@ -270,6 +270,59 @@
       تتبع طلبك
     </a>
 
+    <!-- ✅ تعليمات إنستاباي -->
+    <div id="instapayInstructions" class="instapay-instructions" style="display:none;">
+        <div class="instapay-instructions-header">
+            <div class="instapay-instructions-icon">
+                <i class="fa-solid fa-mobile-screen"></i>
+            </div>
+            <h3>إتمام الدفع عبر إنستاباي</h3>
+            <p>من فضلك حوّل المبلغ التالي على حسابنا</p>
+        </div>
+
+        <div class="instapay-amount-box">
+            <span class="instapay-label">المبلغ المطلوب</span>
+            <strong id="instapayAmount">-</strong>
+        </div>
+
+        <div class="instapay-details">
+            <div class="instapay-detail-row">
+                <span>رقم إنستاباي</span>
+                <strong id="instapayNumber">01120915594</strong>
+                <button type="button" class="copy-btn" onclick="copyToClipboard('01120915594', this)">
+                    <i class="fa-solid fa-copy"></i>
+                </button>
+            </div>
+
+            <div class="instapay-detail-row">
+                <span>اسم الحساب</span>
+                <strong>STEP Store</strong>
+            </div>
+
+            <div class="instapay-detail-row">
+                <span>رقم الطلب</span>
+                <strong id="instapayOrderNumber">-</strong>
+            </div>
+        </div>
+
+        <div class="instapay-warning">
+            <i class="fa-solid fa-circle-info"></i>
+            <p>
+                ⚠️ بعد التحويل، ابعتلنا صورة الإيصال على 
+                <a href="https://wa.me/201120915594" target="_blank">واتساب</a>
+                عشان نأكد طلبك في أسرع وقت.
+            </p>
+        </div>
+
+        <a href="https://wa.me/201120915594?text=مرحباً، حوّلت مبلغ الطلب" 
+            target="_blank" 
+            class="instapay-whatsapp-btn">
+            <i class="fa-brands fa-whatsapp"></i>
+            إرسال الإيصال على واتساب
+        </a>
+    </div>
+
+    <!-- ✅ تنبيه إنشاء حساب للزوار -->
     <div id="successAccountPrompt" class="success-account-prompt" style="display:none;">
       <i class="fa-solid fa-user-plus"></i>
       <h3>عايز تتبع طلبك بسهولة؟</h3>

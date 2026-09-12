@@ -367,7 +367,11 @@
         <!-- ============ ORDERS ============ -->
         <div id="viewOrders" class="tab-content">
             <div class="orders-filter-bar-modern">
-                <button class="filter-chip active" onclick="filterOrders('pending', this)">
+                <button class="filter-chip active" onclick="filterOrders('payment_pending', this)">
+                    <span class="dot" style="background:#2563eb;"></span>
+                    بانتظار الدفع
+                </button>
+                <button class="filter-chip" onclick="filterOrders('pending', this)">
                     <span class="dot pending"></span>
                     جديدة
                 </button>
