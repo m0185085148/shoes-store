@@ -1173,3 +1173,128 @@ img{max-width:100%;display:block}
         font-size: 13px !important;
     }
 }
+/* =========================================
+   ACCORDION SECTION — عرض كامل
+   ========================================= */
+
+.product-accordion-section {
+    max-width: 900px;
+    margin: 50px auto 0;
+    padding: 0 10px;
+}
+
+.product-accordion-section .product-accordion {
+    gap: 12px;
+}
+
+@media (max-width: 600px) {
+    .product-accordion-section {
+        margin: 30px auto 0;
+        padding: 0 4px;
+    }
+}
+/* =========================================
+   MOBILE FIXES — Dropdown + Order Details
+   ========================================= */
+
+@media (max-width: 768px) {
+
+    /* ===== 1. User Dropdown — يبان كامل على الموبايل ===== */
+    .user-dropdown {
+        position: static !important;
+    }
+
+    .user-menu {
+        position: fixed !important;
+        top: 80px !important;
+        left: 12px !important;
+        right: 12px !important;
+        width: auto !important;
+        min-width: unset !important;
+        max-width: calc(100vw - 24px) !important;
+        z-index: 9999 !important;
+        transform: none !important;
+    }
+
+    .user-dropdown.open .user-menu {
+        transform: none !important;
+    }
+
+    .user-menu-header {
+        padding: 10px 12px !important;
+    }
+
+    .user-menu-header strong {
+        font-size: 13px !important;
+    }
+
+    .user-menu-header span {
+        font-size: 11px !important;
+        word-break: break-all;
+        direction: ltr;
+        text-align: right;
+    }
+
+    .user-menu-item {
+        padding: 12px 14px !important;
+        font-size: 14px !important;
+        justify-content: center !important;
+    }
+
+    /* ===== 2. Order Details — Stock Info بالعرض ===== */
+    .stock-info {
+        display: flex !important;
+        flex-direction: row !important;
+        flex-wrap: wrap !important;
+        gap: 6px !important;
+        justify-content: center !important;
+        margin-top: 10px !important;
+    }
+
+    .stock-info span {
+        font-size: 11px !important;
+        padding: 6px 10px !important;
+        white-space: nowrap !important;
+        flex: 0 0 auto !important;
+        display: inline-flex !important;
+        align-items: center !important;
+        gap: 4px !important;
+    }
+
+    .stock-info span i {
+        font-size: 10px !important;
+    }
+
+    /* ===== 3. Order Item Row — يبقى أنيق ===== */
+    .order-detail-item {
+        padding: 12px !important;
+    }
+
+    .order-detail-info h4 {
+        font-size: 13px !important;
+        text-align: center !important;
+    }
+
+    /* ===== 4. تفاصيل المخزون - عرض أفقي مرتب ===== */
+    .stock-info span strong {
+        font-weight: 800 !important;
+    }
+}
+
+/* ===== تحسين إضافي للـ dropdown على كل الشاشات ===== */
+.user-menu {
+    max-height: 80vh;
+    overflow-y: auto;
+}
+
+/* ===== على الموبايل - عرض أزرار المخزون بشكل أفقي ===== */
+@media (max-width: 480px) {
+    .stock-info {
+        gap: 5px !important;
+    }
+
+    .stock-info span {
+        font-size: 10px !important;
+        padding: 5px 8px !important;
+    }
+}

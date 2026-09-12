@@ -1152,18 +1152,16 @@ async function loadAdminOrders() {
         adminOrders = data || [];
         window.adminOrders = adminOrders;
 
-        // ✅ تطبيق فلتر "جديدة" افتراضيًا
-        const defaultFilter = "pending";
-        const filteredDefault = adminOrders.filter(o => o.status === defaultFilter);
+        // ✅ تطبيق فلتر "جديدة" افتراضيًا — حتى لو فاضي
+        const oldOrders = adminOrders;
+        adminOrders = adminOrders.filter(o => o.status === "pending");
+        renderAdminOrders();
+        adminOrders = oldOrders;
 
-        if (filteredDefault.length > 0) {
-            const oldOrders = adminOrders;
-            adminOrders = filteredDefault;
-            renderAdminOrders();
-            adminOrders = oldOrders;
-        } else {
-            renderAdminOrders();
-        }
+        // ✅ ضبط الفلتر النشط بصريًا
+        document.querySelectorAll(".filter-chip").forEach(b => b.classList.remove("active"));
+        const pendingBtn = document.querySelector('.filter-chip[onclick*="pending"]');
+        if (pendingBtn) pendingBtn.classList.add("active");
 
         updateDashboard();
     } catch (error) {
@@ -4626,20 +4624,24 @@ function computeTopCustomer() {
     if (!el) return;
 
     const map = {};
-    adminOrders.forEach(o => {
-        const key = o.customer_id
-            ? `id:${o.customer_id}`
-            : `phone:${o.customer_phone || "unknown"}`;
 
-        if (!map[key]) {
-            map[key] = {
-                name: o.customer_name || "عميل",
-                phone: o.customer_phone || "-",
-                total: 0
-            };
-        }
-        map[key].total += Number(o.total_amount || 0);
-    });
+    // ✅ نستثني الطلبات الملغية والمرتجعة نهائيًا
+    adminOrders
+        .filter(o => !["cancelled", "refunded"].includes(o.status))
+        .forEach(o => {
+            const key = o.customer_id
+                ? `id:${o.customer_id}`
+                : `phone:${o.customer_phone || "unknown"}`;
+
+            if (!map[key]) {
+                map[key] = {
+                    name: o.customer_name || "عميل",
+                    phone: o.customer_phone || "-",
+                    total: 0
+                };
+            }
+            map[key].total += Number(o.total_amount || 0);
+        });
 
     const sorted = Object.values(map).sort((a, b) => b.total - a.total);
 
@@ -5209,7 +5211,12 @@ async function loadSalesReport() {
     if (listEl) listEl.innerHTML = `<tr><td colspan="8" style="text-align:center;padding:30px;color:#94a3b8;">جاري التحميل...</td></tr>`;
 
     try {
-        salesReportOrders = await _fetchOrdersInRange(salesReportFilters);
+        const allOrders = await _fetchOrdersInRange(salesReportFilters);
+
+        // ✅ نستثني الطلبات الملغية والمرتجعة نهائيًا
+        salesReportOrders = allOrders.filter(o => 
+            !["cancelled", "refunded"].includes(o.status)
+        );
         renderSalesKPIs();
         renderPaymentBreakdown();
         renderStatusBreakdown();
@@ -5362,7 +5369,12 @@ async function loadDailyReport() {
     if (el) el.innerHTML = `<div class="empty-state"><i class="fa-solid fa-spinner fa-spin"></i><p>جاري التحميل...</p></div>`;
 
     try {
-        const orders = await _fetchOrdersInRange(dailyReportFilters);
+        const allOrders = await _fetchOrdersInRange(dailyReportFilters);
+
+        // ✅ نستثني الملغية
+        const orders = allOrders.filter(o => 
+            !["cancelled", "refunded"].includes(o.status)
+        );
         const map = {};
         orders.forEach(o => {
             const d = new Date(o.created_at);
@@ -5409,7 +5421,12 @@ async function loadGovernorateReport() {
     if (el) el.innerHTML = `<tr><td colspan="7" style="text-align:center;padding:30px;color:#94a3b8;">جاري التحميل...</td></tr>`;
 
     try {
-        const orders = await _fetchOrdersInRange(govReportFilters);
+        const allOrders = await _fetchOrdersInRange(govReportFilters);
+
+        // ✅ نستثني الملغية
+        const orders = allOrders.filter(o => 
+            !["cancelled", "refunded"].includes(o.status)
+        );
         const map = {};
         orders.forEach(o => {
             const g = o.governorate || "غير محدد";
@@ -5463,7 +5480,10 @@ async function loadCustomersReport() {
         ]);
         if (ordersRes.error) throw ordersRes.error;
 
-        const orders = ordersRes.data || [];
+        // ✅ نستثني الطلبات الملغية والمرتجعة نهائيًا
+        const orders = (ordersRes.data || []).filter(o => 
+            !["cancelled", "refunded"].includes(o.status)
+        );
         const profiles = profilesRes.data || [];
 
         const byPhone = {}, byId = {};
@@ -5621,7 +5641,12 @@ async function loadProductsReport() {
     if (listEl) listEl.innerHTML = `<tr><td colspan="7" style="text-align:center;padding:30px;color:#94a3b8;">جاري التحميل...</td></tr>`;
 
     try {
-        const orders = await _fetchOrdersInRange(prodReportFilters);
+        const allOrders = await _fetchOrdersInRange(prodReportFilters);
+
+        // ✅ نستثني الملغية
+        const orders = allOrders.filter(o => 
+            !["cancelled", "refunded"].includes(o.status)
+        );
         const map = {};
         orders.forEach(o => (Array.isArray(o.items) ? o.items : []).forEach(item => {
             const k = String(item.id ?? item.name);
@@ -5703,15 +5728,18 @@ function renderInventoryReport() {
     if (!listEl) return;
 
     let list = [...inventoryReportData];
-    const s = (document.getElementById("invReportSearch")?.value || "").trim().toLowerCase();
     const t = document.getElementById("invReportType")?.value || "all";
 
-    if (t !== "all") list = list.filter(m => m.movement_type === t);
-    if (s) {
-        list = list.filter(m => {
-            const p = adminProducts.find(x => Number(x.id) === Number(m.product_id));
-            return String(p?.name || "").toLowerCase().includes(s) || String(m.reason || "").toLowerCase().includes(s);
-        });
+    // ✅ فلتر نوع الحركة
+    if (t !== "all") {
+        list = list.filter(m => m.movement_type === t);
+    }
+
+    // ✅ فلتر المنتج المختار من الـ Picker
+    if (selectedPickerProductId !== null) {
+        list = list.filter(m => 
+            Number(m.product_id) === Number(selectedPickerProductId)
+        );
     }
 
     const totalIn = list.filter(m => Number(m.quantity) > 0).reduce((s, m) => s + Number(m.quantity), 0);
@@ -5946,10 +5974,33 @@ document.addEventListener("DOMContentLoaded", () => {
     const so = document.getElementById("customersSortSelect");
     if (so) so.addEventListener("change", e => { customersReportFilters.sort = e.target.value; renderCustomersTable(); });
 
-    const is = document.getElementById("invReportSearch");
-    if (is) is.addEventListener("input", renderInventoryReport);
+    // ✅ نوع الحركة
     const it = document.getElementById("invReportType");
     if (it) it.addEventListener("change", renderInventoryReport);
+
+    // ✅ بحث المنتج في الـ Picker (SKU)
+    const pickerSku = document.getElementById("pickerSearchSku");
+    if (pickerSku) {
+        let t;
+        pickerSku.addEventListener("input", e => {
+            clearTimeout(t);
+            t = setTimeout(() => {
+                renderProductPickerList(e.target.value, document.getElementById("pickerSearchName")?.value || "");
+            }, 200);
+        });
+    }
+
+    // ✅ بحث المنتج في الـ Picker (Name)
+    const pickerName = document.getElementById("pickerSearchName");
+    if (pickerName) {
+        let t;
+        pickerName.addEventListener("input", e => {
+            clearTimeout(t);
+            t = setTimeout(() => {
+                renderProductPickerList(document.getElementById("pickerSearchSku")?.value || "", e.target.value);
+            }, 200);
+        });
+    }
 });
 
 // ========================================
@@ -6005,6 +6056,9 @@ function setupImageUploads() {
         loadingId: "editImageLoading",
         urlInputId: "editImageUrl"
     });
+
+    // ✅ تهيئة رفع الصور المتعددة
+    setupMultiImageUploads();
 }
 
 function setupOneImageUpload(config) {
@@ -6324,9 +6378,105 @@ function removeMultiImage(mode, index) {
 // ✅ Global exports
 window.removeMultiImage = removeMultiImage;
 
-// ✅ توسيع setupImageUploads
-const __originalSetupImageUploads = setupImageUploads;
-setupImageUploads = function() {
-    __originalSetupImageUploads();
-    setupMultiImageUploads();
-};
+// ========================================
+// 79. PRODUCT PICKER (لل تقارير)
+// ========================================
+
+let selectedPickerProductId = null;
+
+function openProductPicker() {
+    const modal = document.getElementById("productPickerModal");
+    if (!modal) return;
+
+    // ✅ نعبّي القائمة
+    renderProductPickerList("", "");
+
+    // ✅ نصفّر حقول البحث
+    const skuInput = document.getElementById("pickerSearchSku");
+    const nameInput = document.getElementById("pickerSearchName");
+    if (skuInput) skuInput.value = "";
+    if (nameInput) nameInput.value = "";
+
+    modal.classList.add("open");
+}
+
+function closeProductPicker() {
+    document.getElementById("productPickerModal")?.classList.remove("open");
+}
+
+function renderProductPickerList(skuQuery, nameQuery) {
+    const listEl = document.getElementById("productPickerList");
+    if (!listEl) return;
+
+    const sku = String(skuQuery || "").trim().toLowerCase();
+    const name = String(nameQuery || "").trim().toLowerCase();
+
+    let filtered = [...adminProducts];
+
+    if (sku) {
+        filtered = filtered.filter(p =>
+            String(p.id).includes(sku) ||
+            String(p.sku || "").toLowerCase().includes(sku)
+        );
+    }
+
+    if (name) {
+        filtered = filtered.filter(p =>
+            String(p.name || "").toLowerCase().includes(name)
+        );
+    }
+
+    if (!filtered.length) {
+        listEl.innerHTML = `
+            <div class="empty-state" style="padding:30px;">
+                <i class="fa-solid fa-box-open"></i>
+                <p>لا توجد منتجات مطابقة</p>
+            </div>
+        `;
+        return;
+    }
+
+    // ✅ خيار "الكل"
+    const clearBtn = `
+        <div class="product-picker-item-clear" onclick="selectPickerProduct(null)">
+            <i class="fa-solid fa-rotate-left"></i>
+            عرض كل المنتجات
+        </div>
+    `;
+
+    listEl.innerHTML = clearBtn + filtered.map(p => `
+        <div class="product-picker-item ${selectedPickerProductId === p.id ? 'selected' : ''}"
+            onclick="selectPickerProduct(${Number(p.id)})">
+            <div class="product-picker-item-id">#${p.id}</div>
+            <div class="product-picker-item-info">
+                <strong>${escapeAdminHTML(p.name || "منتج")}</strong>
+                <small>${p.sku ? `SKU: ${escapeAdminHTML(p.sku)}` : "بدون SKU"}</small>
+            </div>
+        </div>
+    `).join("");
+}
+
+function selectPickerProduct(productId) {
+    selectedPickerProductId = productId;
+
+    const labelEl = document.getElementById("invProductPickerLabel");
+    const btnEl = document.getElementById("invProductPickerBtn");
+
+    if (productId === null) {
+        if (labelEl) labelEl.textContent = "كل المنتجات";
+        if (btnEl) btnEl.classList.remove("active");
+    } else {
+        const product = adminProducts.find(p => Number(p.id) === Number(productId));
+        if (labelEl) labelEl.textContent = product?.name || `#${productId}`;
+        if (btnEl) btnEl.classList.add("active");
+    }
+
+    closeProductPicker();
+    renderInventoryReport();
+}
+
+// ✅ Global exports
+window.openProductPicker = openProductPicker;
+window.closeProductPicker = closeProductPicker;
+window.selectPickerProduct = selectPickerProduct;
+window.renderProductPickerList = renderProductPickerList;

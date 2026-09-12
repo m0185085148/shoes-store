@@ -1382,8 +1382,11 @@
 
                 <div class="report-filter-bar">
                     <div class="report-filter-group" style="flex:1;min-width:220px;">
-                        <label><i class="fa-solid fa-magnifying-glass"></i> بحث</label>
-                        <input type="text" id="invReportSearch" placeholder="اسم المنتج أو السبب...">
+                        <label><i class="fa-solid fa-box"></i> اختيار المنتج</label>
+                        <button type="button" class="product-picker-btn" id="invProductPickerBtn" onclick="openProductPicker()">
+                            <span id="invProductPickerLabel">كل المنتجات</span>
+                            <i class="fa-solid fa-chevron-down"></i>
+                        </button>
                     </div>
                     <div class="report-filter-group">
                         <label><i class="fa-solid fa-tag"></i> نوع الحركة</label>
@@ -2220,7 +2223,41 @@
             </div>
         </div>
     </div>
+    <!-- ============ PRODUCT PICKER MODAL ============ -->
+    <div class="modal" id="productPickerModal">
+        <div class="modal-content modal-large" style="max-width:600px;">
+            <div class="modal-header">
+                <div class="modal-title-group">
+                    <div class="modal-icon" style="background:#f3e8ff;color:#8b5cf6;">
+                        <i class="fa-solid fa-box"></i>
+                    </div>
+                    <div>
+                        <h2>اختر منتج</h2>
+                        <p style="font-size:13px;color:#888;margin-top:2px;">ابحث بالكود أو الاسم</p>
+                    </div>
+                </div>
+                <button type="button" class="close-modal" onclick="closeProductPicker()">&times;</button>
+            </div>
 
+            <div class="product-picker-search">
+                <div class="product-picker-search-field">
+                    <i class="fa-solid fa-barcode"></i>
+                    <input type="text" id="pickerSearchSku" placeholder="ابحث بالكود...">
+                </div>
+                <div class="product-picker-search-field">
+                    <i class="fa-solid fa-magnifying-glass"></i>
+                    <input type="text" id="pickerSearchName" placeholder="ابحث بالاسم...">
+                </div>
+            </div>
+
+            <div class="product-picker-list" id="productPickerList">
+                <div class="empty-state" style="padding:30px;">
+                    <i class="fa-solid fa-spinner fa-spin"></i>
+                    <p>جاري التحميل...</p>
+                </div>
+            </div>
+        </div>
+    </div>
     <!-- SUPABASE -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script>

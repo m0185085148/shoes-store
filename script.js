@@ -280,7 +280,6 @@ async function fetchProducts() {
             return;
         }
 
-        // ✅ خريطة المخزون
         const sizesMap = {};
         (sizesRes.data || []).forEach(row => {
             const pid = Number(row.product_id);
@@ -527,74 +526,6 @@ function renderProductDetails() {
 
                 <div class="details-divider"></div>
 
-                <div class="product-accordion">
-                    
-                    <div class="accordion-item open">
-                        <button type="button" class="accordion-header" onclick="toggleAccordion(this)">
-                            <span>
-                                <i class="fa-solid fa-circle-info"></i>
-                                الوصف
-                            </span>
-                            <i class="fa-solid fa-chevron-down accordion-icon"></i>
-                        </button>
-                        <div class="accordion-body">
-                            <p>${escapeHTML(product.description || 'لا يوجد وصف متاح لهذا المنتج.')}</p>
-                        </div>
-                    </div>
-
-                    <div class="accordion-item">
-                        <button type="button" class="accordion-header" onclick="toggleAccordion(this)">
-                            <span>
-                                <i class="fa-solid fa-truck-fast"></i>
-                                الشحن والتوصيل
-                            </span>
-                            <i class="fa-solid fa-chevron-down accordion-icon"></i>
-                        </button>
-                        <div class="accordion-body">
-                            <ul class="accordion-list">
-                                <li><i class="fa-solid fa-check"></i> توصيل سريع داخل القاهرة والجيزة (2-3 أيام)</li>
-                                <li><i class="fa-solid fa-check"></i> شحن مجاني عند شراء قطعتين أو أكثر</li>
-                                <li><i class="fa-solid fa-check"></i> يمكنك تتبع طلبك مباشرة من الموقع</li>
-                            </ul>
-                        </div>
-                    </div>
-
-                    <div class="accordion-item">
-                        <button type="button" class="accordion-header" onclick="toggleAccordion(this)">
-                            <span>
-                                <i class="fa-solid fa-arrows-rotate"></i>
-                                الاستبدال والاسترجاع
-                            </span>
-                            <i class="fa-solid fa-chevron-down accordion-icon"></i>
-                        </button>
-                        <div class="accordion-body">
-                            <ul class="accordion-list">
-                                <li><i class="fa-solid fa-check"></i> استبدال المقاس خلال 14 يوم من الاستلام</li>
-                                <li><i class="fa-solid fa-check"></i> إمكانية الاسترجاع في حالة وجود عيب مصنعي</li>
-                                <li><i class="fa-solid fa-check"></i> المنتج لازم يكون بحالته الأصلية مع الكرتونة</li>
-                            </ul>
-                        </div>
-                    </div>
-
-                    <div class="accordion-item">
-                        <button type="button" class="accordion-header" onclick="toggleAccordion(this)">
-                            <span>
-                                <i class="fa-solid fa-shield-halved"></i>
-                                الضمان
-                            </span>
-                            <i class="fa-solid fa-chevron-down accordion-icon"></i>
-                        </button>
-                        <div class="accordion-body">
-                            <ul class="accordion-list">
-                                <li><i class="fa-solid fa-check"></i> ضمان أصلي من الشركة المصنعة</li>
-                                <li><i class="fa-solid fa-check"></i> منتجات أصلية 100%</li>
-                                <li><i class="fa-solid fa-check"></i> الدفع عند الاستلام متاح</li>
-                            </ul>
-                        </div>
-                    </div>
-
-                </div>
-
                 <div class="details-option">
                     <label>المقاس</label>
                     <div class="size-options-grid" id="sizeOptionsGrid">
@@ -623,6 +554,77 @@ function renderProductDetails() {
                     <i class="fa-solid fa-arrow-right"></i>
                     العودة للمنتجات
                 </a>
+            </div>
+        </div>
+
+        <!-- ✅ قسم الـ Accordion — عرض كامل تحت الصورة -->
+        <div class="product-accordion-section">
+            <div class="product-accordion">
+
+                <div class="accordion-item">
+                    <button type="button" class="accordion-header" onclick="toggleAccordion(this)">
+                        <span>
+                            <i class="fa-solid fa-circle-info"></i>
+                            الوصف
+                        </span>
+                        <i class="fa-solid fa-chevron-down accordion-icon"></i>
+                    </button>
+                    <div class="accordion-body">
+                        <p>${escapeHTML(product.description || 'لا يوجد وصف متاح لهذا المنتج.')}</p>
+                    </div>
+                </div>
+
+                <div class="accordion-item">
+                    <button type="button" class="accordion-header" onclick="toggleAccordion(this)">
+                        <span>
+                            <i class="fa-solid fa-truck-fast"></i>
+                            الشحن والتوصيل
+                        </span>
+                        <i class="fa-solid fa-chevron-down accordion-icon"></i>
+                    </button>
+                    <div class="accordion-body">
+                        <ul class="accordion-list">
+                            <li><i class="fa-solid fa-check"></i> توصيل سريع داخل القاهرة والجيزة (2-3 أيام)</li>
+                            <li><i class="fa-solid fa-check"></i> شحن مجاني عند شراء قطعتين أو أكثر</li>
+                            <li><i class="fa-solid fa-check"></i> يمكنك تتبع طلبك مباشرة من الموقع</li>
+                        </ul>
+                    </div>
+                </div>
+
+                <div class="accordion-item">
+                    <button type="button" class="accordion-header" onclick="toggleAccordion(this)">
+                        <span>
+                            <i class="fa-solid fa-arrows-rotate"></i>
+                            الاستبدال والاسترجاع
+                        </span>
+                        <i class="fa-solid fa-chevron-down accordion-icon"></i>
+                    </button>
+                    <div class="accordion-body">
+                        <ul class="accordion-list">
+                            <li><i class="fa-solid fa-check"></i> استبدال المقاس خلال 14 يوم من الاستلام</li>
+                            <li><i class="fa-solid fa-check"></i> إمكانية الاسترجاع في حالة وجود عيب مصنعي</li>
+                            <li><i class="fa-solid fa-check"></i> المنتج لازم يكون بحالته الأصلية مع الكرتونة</li>
+                        </ul>
+                    </div>
+                </div>
+
+                <div class="accordion-item">
+                    <button type="button" class="accordion-header" onclick="toggleAccordion(this)">
+                        <span>
+                            <i class="fa-solid fa-shield-halved"></i>
+                            الضمان
+                        </span>
+                        <i class="fa-solid fa-chevron-down accordion-icon"></i>
+                    </button>
+                    <div class="accordion-body">
+                        <ul class="accordion-list">
+                            <li><i class="fa-solid fa-check"></i> ضمان أصلي من الشركة المصنعة</li>
+                            <li><i class="fa-solid fa-check"></i> منتجات أصلية 100%</li>
+                            <li><i class="fa-solid fa-check"></i> الدفع عند الاستلام متاح</li>
+                        </ul>
+                    </div>
+                </div>
+
             </div>
         </div>
     `;
@@ -944,7 +946,7 @@ async function submitOrder(event) {
         return;
     }
 
-    // ✅ التحقق من المخزون قبل الإرسال
+    // ✅ التحقق من المخزون
     const stockErrors = [];
 
     cart.forEach(item => {
