@@ -1754,8 +1754,33 @@
                     </div>
 
                     <div class="form-group">
-                        <label for="imageUrl">رابط الصورة</label>
-                        <input type="url" id="imageUrl" placeholder="https://example.com/shoe.jpg">
+                        <label>صورة المنتج</label>
+                        
+                        <div class="image-upload-zone" id="addImageZone">
+                            <input type="file" id="addImageFile" accept="image/*" hidden>
+                            
+                            <div class="image-upload-empty" id="addImageEmpty">
+                                <i class="fa-solid fa-cloud-arrow-up"></i>
+                                <strong>اضغط لرفع صورة</strong>
+                                <small>PNG، JPG، WEBP — حتى 5 ميجا</small>
+                            </div>
+                            
+                            <div class="image-upload-preview" id="addImagePreview" style="display:none;">
+                                <img id="addImagePreviewImg" src="" alt="">
+                                <button type="button" class="image-remove-btn" onclick="clearImageUpload('add')">
+                                    <i class="fa-solid fa-xmark"></i>
+                                </button>
+                            </div>
+                            
+                            <div class="image-upload-loading" id="addImageLoading" style="display:none;">
+                                <i class="fa-solid fa-spinner fa-spin"></i>
+                                <span>جاري الرفع...</span>
+                            </div>
+                        </div>
+                        
+                        <div style="text-align:center;margin:10px 0;color:#94a3b8;font-size:12px;font-weight:700;">أو</div>
+                        
+                        <input type="url" id="imageUrl" placeholder="الصق رابط الصورة هنا...">
                     </div>
 
                     <div class="form-group">
@@ -1898,8 +1923,33 @@
                     </div>
 
                     <div class="form-group">
-                        <label for="editImageUrl">رابط الصورة</label>
-                        <input type="url" id="editImageUrl">
+                        <label>صورة المنتج</label>
+                        
+                        <div class="image-upload-zone" id="editImageZone">
+                            <input type="file" id="editImageFile" accept="image/*" hidden>
+                            
+                            <div class="image-upload-empty" id="editImageEmpty">
+                                <i class="fa-solid fa-cloud-arrow-up"></i>
+                                <strong>اضغط لرفع صورة</strong>
+                                <small>PNG، JPG، WEBP — حتى 5 ميجا</small>
+                            </div>
+                            
+                            <div class="image-upload-preview" id="editImagePreview" style="display:none;">
+                                <img id="editImagePreviewImg" src="" alt="">
+                                <button type="button" class="image-remove-btn" onclick="clearImageUpload('edit')">
+                                    <i class="fa-solid fa-xmark"></i>
+                                </button>
+                            </div>
+                            
+                            <div class="image-upload-loading" id="editImageLoading" style="display:none;">
+                                <i class="fa-solid fa-spinner fa-spin"></i>
+                                <span>جاري الرفع...</span>
+                            </div>
+                        </div>
+                        
+                        <div style="text-align:center;margin:10px 0;color:#94a3b8;font-size:12px;font-weight:700;">أو</div>
+                        
+                        <input type="url" id="editImageUrl" placeholder="الصق رابط الصورة هنا...">
                     </div>
 
                     <div class="form-group">

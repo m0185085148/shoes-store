@@ -1046,6 +1046,7 @@ function setupAddProductModal() {
     openAddProductBtn?.addEventListener("click", () => {
         addProductForm.reset();
         resetSizesGrid("sizesGrid");
+        clearImageUpload("add");
         addProductModal?.classList.add("open");
     });
 
@@ -2239,6 +2240,20 @@ function prepareEditProduct(productId) {
     editBadge.value = normalizeBadge(product.badge);
     editDescription.value = product.description || "";
     editImageUrl.value = product.image || "";
+
+    // ✅ عرض صورة المنتج في الـ preview
+    if (product.image) {
+        showImagePreview(product.image, {
+            emptyId: "editImageEmpty",
+            previewId: "editImagePreview",
+            previewImgId: "editImagePreviewImg"
+        });
+    } else {
+        hideImagePreview({
+            emptyId: "editImageEmpty",
+            previewId: "editImagePreview"
+        });
+    }
 
     const sizesData = getProductSizes(product.id).map(s => ({
         size: s.size,
@@ -4757,7 +4772,10 @@ window.addEventListener("click", function (event) {
 
 document.addEventListener("DOMContentLoaded", async function () {
     if (isLoginPage()) await checkLoginPageSession();
-    if (isAdminDashboard()) await protectAdminDashboard();
+    if (isAdminDashboard()) {
+        await protectAdminDashboard();
+        setupImageUploads(); // ✅ تهيئة رفع الصور
+    }
 });
 
 // ========================================
@@ -5829,3 +5847,193 @@ window.loadProductsReport = loadProductsReport;
 window.loadInventoryReport = loadInventoryReport;
 window.loadStatusReport = loadStatusReport;
 window.loadExchangeReport = loadExchangeReport;
+
+// ========================================
+// 77. PRODUCT IMAGE UPLOAD
+// ========================================
+
+const SUPABASE_STORAGE_BUCKET = "product-images";
+
+function setupImageUploads() {
+    setupOneImageUpload({
+        zoneId: "addImageZone",
+        fileId: "addImageFile",
+        emptyId: "addImageEmpty",
+        previewId: "addImagePreview",
+        previewImgId: "addImagePreviewImg",
+        loadingId: "addImageLoading",
+        urlInputId: "imageUrl"
+    });
+
+    setupOneImageUpload({
+        zoneId: "editImageZone",
+        fileId: "editImageFile",
+        emptyId: "editImageEmpty",
+        previewId: "editImagePreview",
+        previewImgId: "editImagePreviewImg",
+        loadingId: "editImageLoading",
+        urlInputId: "editImageUrl"
+    });
+}
+
+function setupOneImageUpload(config) {
+    const zone = document.getElementById(config.zoneId);
+    const fileInput = document.getElementById(config.fileId);
+    const urlInput = document.getElementById(config.urlInputId);
+
+    if (!zone || !fileInput) return;
+
+    // ✅ ضغط على المنطقة → فتح نافذة اختيار الملف
+    zone.addEventListener("click", (e) => {
+        if (e.target.closest(".image-remove-btn")) return;
+        fileInput.click();
+    });
+
+    // ✅ اختيار ملف
+    fileInput.addEventListener("change", (e) => {
+        const file = e.target.files?.[0];
+        if (file) uploadProductImage(file, config);
+    });
+
+    // ✅ سحب وإفلات
+    zone.addEventListener("dragover", (e) => {
+        e.preventDefault();
+        zone.classList.add("dragover");
+    });
+    zone.addEventListener("dragleave", () => {
+        zone.classList.remove("dragover");
+    });
+    zone.addEventListener("drop", (e) => {
+        e.preventDefault();
+        zone.classList.remove("dragover");
+        const file = e.dataTransfer.files?.[0];
+        if (file && file.type.startsWith("image/")) {
+            uploadProductImage(file, config);
+        }
+    });
+
+    // ✅ لو المستخدم لصق رابط في الـ input
+    urlInput?.addEventListener("input", () => {
+        const url = urlInput.value.trim();
+        if (url) {
+            showImagePreview(url, config);
+        } else {
+            hideImagePreview(config);
+        }
+    });
+}
+
+async function uploadProductImage(file, config) {
+    // ✅ التحقق
+    if (!file.type.startsWith("image/")) {
+        alert("الملف المختار ليس صورة");
+        return;
+    }
+
+    if (file.size > 5 * 1024 * 1024) {
+        alert("حجم الصورة أكبر من 5 ميجا");
+        return;
+    }
+
+    const client = getSupabaseClient();
+    if (!client) return;
+
+    const emptyEl = document.getElementById(config.emptyId);
+    const previewEl = document.getElementById(config.previewId);
+    const loadingEl = document.getElementById(config.loadingId);
+
+    // ✅ إظهار حالة التحميل
+    if (emptyEl) emptyEl.style.display = "none";
+    if (previewEl) previewEl.style.display = "none";
+    if (loadingEl) loadingEl.style.display = "flex";
+
+    try {
+        const ext = file.name.split(".").pop()?.toLowerCase() || "jpg";
+        const filename = `products/${Date.now()}_${Math.random().toString(36).substring(2, 10)}.${ext}`;
+
+        const { data, error } = await client.storage
+            .from(SUPABASE_STORAGE_BUCKET)
+            .upload(filename, file, {
+                cacheControl: "3600",
+                upsert: false
+            });
+
+        if (error) throw error;
+
+        const { data: urlData } = client.storage
+            .from(SUPABASE_STORAGE_BUCKET)
+            .getPublicUrl(data.path);
+
+        const publicUrl = urlData.publicUrl;
+
+        // ✅ حفظ الرابط في الـ input
+        const urlInput = document.getElementById(config.urlInputId);
+        if (urlInput) urlInput.value = publicUrl;
+
+        // ✅ عرض المعاينة
+        showImagePreview(publicUrl, config);
+
+        showToast("تم رفع الصورة ✅");
+
+    } catch (err) {
+        console.error("Upload error:", err);
+        alert("فشل رفع الصورة:\n\n" + (err.message || "خطأ غير متوقع"));
+        if (emptyEl) emptyEl.style.display = "flex";
+    } finally {
+        if (loadingEl) loadingEl.style.display = "none";
+    }
+}
+
+function showImagePreview(url, config) {
+    const emptyEl = document.getElementById(config.emptyId);
+    const previewEl = document.getElementById(config.previewId);
+    const previewImg = document.getElementById(config.previewImgId);
+
+    if (emptyEl) emptyEl.style.display = "none";
+    if (previewEl) previewEl.style.display = "flex";
+    if (previewImg) previewImg.src = url;
+}
+
+function hideImagePreview(config) {
+    const emptyEl = document.getElementById(config.emptyId);
+    const previewEl = document.getElementById(config.previewId);
+
+    if (emptyEl) emptyEl.style.display = "flex";
+    if (previewEl) previewEl.style.display = "none";
+}
+
+function clearImageUpload(mode) {
+    const map = {
+        add: {
+            emptyId: "addImageEmpty",
+            previewId: "addImagePreview",
+            previewImgId: "addImagePreviewImg",
+            urlInputId: "imageUrl",
+            fileId: "addImageFile"
+        },
+        edit: {
+            emptyId: "editImageEmpty",
+            previewId: "editImagePreview",
+            previewImgId: "editImagePreviewImg",
+            urlInputId: "editImageUrl",
+            fileId: "editImageFile"
+        }
+    };
+
+    const config = map[mode];
+    if (!config) return;
+
+    const urlInput = document.getElementById(config.urlInputId);
+    if (urlInput) urlInput.value = "";
+
+    const fileInput = document.getElementById(config.fileId);
+    if (fileInput) fileInput.value = "";
+
+    const previewImg = document.getElementById(config.previewImgId);
+    if (previewImg) previewImg.src = "";
+
+    hideImagePreview(config);
+}
+
+// ✅ Global exports
+window.clearImageUpload = clearImageUpload;
