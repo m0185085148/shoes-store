@@ -388,12 +388,22 @@ img{max-width:100%;display:block}
 .product-gallery {
     display: flex;
     flex-direction: column;
-    gap: 12px;
+    gap: 20px;
     position: sticky;
     top: 95px;
     height: calc(100vh - 130px);
-    max-height: 640px;
+    max-height: 620px;
     min-height: 400px;
+}
+
+/* ✅ صورة المنتج الرئيسية — محدودة */
+.product-details-image img {
+    max-width: 100%;
+    max-height: 100%;
+    width: auto;
+    height: auto;
+    object-fit: contain;
+    display: block;
 }
 
 .product-details-image {
@@ -420,13 +430,13 @@ img{max-width:100%;display:block}
 /* ✅ Thumbnails أصغر شوية */
 .product-thumbnails {
     display: flex;
-    gap: 8px;
+    gap: 12px;
     justify-content: center;
-    flex-wrap: nowrap;
-    overflow-x: auto;
-    padding: 2px;
+    flex-wrap: wrap;
+    padding: 4px;
     flex-shrink: 0;
-    scrollbar-width: thin;
+    border-top: 1px solid #f0f0f0;
+    padding-top: 16px;
 }
 
 .product-thumbnails::-webkit-scrollbar {
@@ -925,11 +935,24 @@ img{max-width:100%;display:block}
 }
 
 .size-chip-btn.selected {
-    background: #111;
-    color: #fff;
-    border-color: #111;
+    background: #111 !important;
+    color: #ffffff !important;
+    -webkit-text-fill-color: #ffffff !important;
+    border-color: #111 !important;
     box-shadow: 0 4px 12px rgba(17,17,17,0.25);
     transform: translateY(-2px);
+    font-weight: 800;
+}
+
+/* ✅ لو المربع فيه رقم مش باين */
+.size-chip-btn {
+    color: #334155;
+    -webkit-text-fill-color: #334155;
+}
+
+.size-chip-btn.disabled {
+    color: #cbd5e1 !important;
+    -webkit-text-fill-color: #cbd5e1 !important;
 }
 
 .size-chip-btn.disabled {

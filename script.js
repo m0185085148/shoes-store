@@ -502,7 +502,7 @@ function renderProductDetails() {
                 data-size="${escapeHTML(sizeKey)}"
                 ${isOutOfStock ? 'disabled' : ''}
                 onclick="selectSizeOption(this, ${product.id}, '${escapeHTML(sizeKey)}')"
-                title="${isOutOfStock ? 'غير متاح' : `${available} متاح`}">
+                title="${isOutOfStock ? 'غير متاح' : 'متاح'}">
                 ${escapeHTML(sizeKey)}
             </button>
         `;
@@ -587,20 +587,11 @@ function selectSizeOption(btn, productId, size) {
     btn.classList.add('selected');
     detailsSelectedSize = size;
 
-    const product = products.find(p => p.id === Number(productId));
-    const available = product?.stockBySize?.[String(size)];
-
     const helpEl = document.getElementById('sizeHelpText');
     if (helpEl) {
-        if (available !== undefined && available > 0) {
-            helpEl.textContent = `✅ متاح ${available} قطعة في مقاس ${size}`;
-            helpEl.style.color = '#16a34a';
-            helpEl.style.background = '#dcfce7';
-        } else {
-            helpEl.textContent = 'اختر المقاس المناسب';
-            helpEl.style.color = '#64748b';
-            helpEl.style.background = '#f1f5f9';
-        }
+        helpEl.textContent = `✅ مقاس ${size} متاح`;
+        helpEl.style.color = '#16a34a';
+        helpEl.style.background = '#dcfce7';
     }
 }
 
@@ -628,11 +619,6 @@ function addDetailsToCart() {
     const available = product.stockBySize?.[String(detailsSelectedSize)];
     if (!available || available === 0) {
         showToast('المقاس ده مش متاح حاليًا');
-        return;
-    }
-
-    if (detailsQuantity > available) {
-        showToast(`متاح ${available} قطعة بس من المقاس ده`);
         return;
     }
 
