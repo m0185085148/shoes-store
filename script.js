@@ -21,6 +21,7 @@ let products = [];
 let cart = [];
 let currentProductId = null;
 let detailsQuantity = 1;
+let detailsSelectedSize = null;
 let currentCustomer = null;
 
 try {
@@ -112,7 +113,6 @@ function normalizeProduct(item) {
     }
     if (!Array.isArray(sizes)) sizes = [];
 
-    // ✅ معالجة الصور الإضافية
     let images = item.images;
     if (typeof images === 'string') {
         try { images = JSON.parse(images); } catch { images = []; }
@@ -128,7 +128,8 @@ function normalizeProduct(item) {
         sizes,
         image: item.image || '',
         images,
-        description: item.description || ''
+        description: item.description || '',
+        stockBySize: {}
     };
 }
 
@@ -148,7 +149,6 @@ const SHIPPING_RATES = {
     "الجيزة": 80
 };
 
-// ✅ الشحن مجاني عند شراء قطعتين أو أكثر
 const FREE_SHIPPING_MIN_ITEMS = 2;
 
 function getShippingCost(governorate, itemsCount) {
@@ -264,19 +264,41 @@ async function fetchProducts() {
     }
 
     try {
-        const { data, error } = await supabaseClient
-            .from('products')
-            .select('*')
-            .order('id', { ascending: false });
+        // ✅ نجيب المنتجات + المقاسات مع بعض
+        const [productsRes, sizesRes] = await Promise.all([
+            supabaseClient
+                .from('products')
+                .select('*')
+                .order('id', { ascending: false }),
+            supabaseClient
+                .from('product_sizes')
+                .select('product_id, size, stock, reserved')
+        ]);
 
-        if (error) {
-            console.error('Supabase error:', error);
+        if (productsRes.error) {
+            console.error('Supabase error:', productsRes.error);
             showToast('تعذر تحميل المنتجات');
             return;
         }
 
-        products = (data || []).map(normalizeProduct);
+        // ✅ خريطة المخزون
+        const sizesMap = {};
+        (sizesRes.data || []).forEach(row => {
+            const pid = Number(row.product_id);
+            if (!sizesMap[pid]) sizesMap[pid] = {};
+            const available = Math.max(0, Number(row.stock || 0) - Number(row.reserved || 0));
+            sizesMap[pid][String(row.size)] = available;
+        });
+
+        products = (productsRes.data || []).map(p => ({
+            ...normalizeProduct(p),
+            stockBySize: sizesMap[Number(p.id)] || {}
+        }));
+
         window.products = products;
+
+        console.log("📦 Products loaded:", products.length);
+        console.log("🖼️ First product images:", products[0]?.images);
 
         syncCartWithProducts();
 
@@ -293,10 +315,30 @@ async function fetchProducts() {
 // ========================================
 
 function productCardHTML(product) {
-    const sizesOptions = product.sizes
-        .map(s => `<option value="${escapeHTML(s)}">${escapeHTML(s)}</option>`)
-        .join('');
     const badgeClass = getBadgeClass(product.badge);
+    const stockBySize = product.stockBySize || {};
+
+    // ✅ المقاسات كأزرار صغيرة
+    const sizesHTML = product.sizes.map(s => {
+        const sizeKey = String(s);
+        const available = stockBySize[sizeKey];
+        const isOutOfStock = available === undefined || available === 0;
+
+        return `
+            <button type="button" 
+                class="size-chip-btn ${isOutOfStock ? 'disabled' : ''}" 
+                data-size="${escapeHTML(sizeKey)}"
+                ${isOutOfStock ? 'disabled' : ''}
+                onclick="selectGridSize(this, ${product.id}, '${escapeHTML(sizeKey)}')">
+                ${escapeHTML(sizeKey)}
+            </button>
+        `;
+    }).join('');
+
+    const hasAnyStock = product.sizes.some(s => {
+        const avail = stockBySize[String(s)];
+        return avail !== undefined && avail > 0;
+    });
 
     return `
         <div class="product-card">
@@ -313,6 +355,11 @@ function productCardHTML(product) {
                             ${escapeHTML(product.badge)}
                         </span>
                     ` : ''}
+                    ${!hasAnyStock ? `
+                        <span class="product-badge" style="background:#dc2626;">
+                            نفذ المخزون
+                        </span>
+                    ` : ''}
                 </div>
             </a>
             <div class="product-info">
@@ -326,18 +373,18 @@ function productCardHTML(product) {
                         <span class="old-price">${formatPrice(product.oldPrice)} جنيه</span>
                     ` : ''}
                 </div>
-                <label class="size-label" for="size-select-${product.id}">المقاس</label>
-                <select class="size-select" id="size-select-${product.id}">
-                    <option value="">اختر المقاس</option>
-                    ${sizesOptions}
-                </select>
+                <label class="size-label">المقاس</label>
+                <div class="size-chips-grid" data-product-id="${product.id}">
+                    ${sizesHTML}
+                </div>
                 <button
                     class="add-to-cart"
                     type="button"
                     onclick="addToCartFromGrid(${product.id})"
+                    ${!hasAnyStock ? 'disabled style="opacity:0.5;cursor:not-allowed;"' : ''}
                 >
                     <i class="fa-solid fa-bag-shopping"></i>
-                    إضافة للسلة
+                    ${hasAnyStock ? 'إضافة للسلة' : 'غير متاح'}
                 </button>
             </div>
         </div>
@@ -361,6 +408,69 @@ function renderHomeGrid() {
 // 10. PRODUCT DETAILS PAGE
 // ========================================
 
+function switchProductImage(btn) {
+    const url = btn.dataset.image;
+    const mainImg = document.getElementById('mainProductImage');
+    if (mainImg) {
+        mainImg.src = url;
+        mainImg.style.opacity = '0.6';
+        setTimeout(() => { mainImg.style.opacity = '1'; }, 150);
+    }
+
+    document.querySelectorAll('.product-thumb').forEach(t => t.classList.remove('active'));
+    btn.classList.add('active');
+}
+
+function buildGalleryHTML(product) {
+    const mainImage = product.image || '';
+    const extraImages = Array.isArray(product.images) ? product.images : [];
+    const allImages = [mainImage, ...extraImages].filter(Boolean);
+
+    console.log("🎨 Gallery images:", allImages);
+
+    if (!allImages.length) {
+        return `
+            <div class="product-gallery">
+                <div class="product-details-image">
+                    <div class="no-image-placeholder">
+                        <i class="fa-solid fa-image"></i>
+                        <span>لا توجد صورة</span>
+                    </div>
+                </div>
+            </div>
+        `;
+    }
+
+    const badgeHTML = product.badge
+        ? `<span class="product-details-badge ${getBadgeClass(product.badge)}">
+                ${escapeHTML(product.badge)}
+           </span>`
+        : '';
+
+    const thumbnailsHTML = allImages.length > 1
+        ? `<div class="product-thumbnails">
+            ${allImages.map((url, i) => `
+                <button type="button" 
+                    class="product-thumb ${i === 0 ? 'active' : ''}" 
+                    data-image="${escapeHTML(url)}" 
+                    onclick="switchProductImage(this)">
+                    <img src="${escapeHTML(url)}" alt="">
+                </button>
+            `).join('')}
+        </div>`
+        : '';
+
+    return `
+        <div class="product-gallery">
+            <div class="product-details-image">
+                <img id="mainProductImage" src="${escapeHTML(allImages[0])}" alt="${escapeHTML(product.name)}">
+                ${badgeHTML}
+            </div>
+            ${thumbnailsHTML}
+        </div>
+    `;
+}
+
 function renderProductDetails() {
     if (!productDetailsEl) return;
 
@@ -379,24 +489,28 @@ function renderProductDetails() {
 
     document.title = `STEP | ${product.name}`;
 
-    const sizesOptions = product.sizes
-        .map(s => `<option value="${escapeHTML(s)}">${escapeHTML(s)}</option>`)
-        .join('');
-    const badgeClass = getBadgeClass(product.badge);
+    // ✅ المقاسات كدوائر
+    const stockBySize = product.stockBySize || {};
+    const sizesOptionsHTML = product.sizes.map(s => {
+        const sizeKey = String(s);
+        const available = stockBySize[sizeKey];
+        const isOutOfStock = available === undefined || available === 0;
+
+        return `
+            <button type="button" 
+                class="size-option ${isOutOfStock ? 'disabled' : ''}" 
+                data-size="${escapeHTML(sizeKey)}"
+                ${isOutOfStock ? 'disabled' : ''}
+                onclick="selectSizeOption(this, ${product.id}, '${escapeHTML(sizeKey)}')"
+                title="${isOutOfStock ? 'غير متاح' : `${available} متاح`}">
+                ${escapeHTML(sizeKey)}
+            </button>
+        `;
+    }).join('');
 
     productDetailsEl.innerHTML = `
         <div class="product-details-grid">
-            <div class="product-details-image">
-                <img
-                    src="${escapeHTML(product.image)}"
-                    alt="${escapeHTML(product.name)}"
-                >
-                ${product.badge ? `
-                    <span class="product-details-badge ${badgeClass}">
-                        ${escapeHTML(product.badge)}
-                    </span>
-                ` : ''}
-            </div>
+            ${buildGalleryHTML(product)}
 
             <div class="product-details-info">
                 <h1>${escapeHTML(product.name)}</h1>
@@ -424,11 +538,13 @@ function renderProductDetails() {
                 </p>
 
                 <div class="details-option">
-                    <label for="detailsSize">المقاس</label>
-                    <select id="detailsSize" class="details-size-select">
-                        <option value="">اختر المقاس</option>
-                        ${sizesOptions}
-                    </select>
+                    <label>المقاس</label>
+                    <div class="size-options-grid" id="sizeOptionsGrid">
+                        ${sizesOptionsHTML}
+                    </div>
+                    <div id="sizeHelpText" class="size-help-text">
+                        اختر المقاس المناسب
+                    </div>
                 </div>
 
                 <div class="details-option">
@@ -445,7 +561,7 @@ function renderProductDetails() {
                     إضافة للسلة
                 </button>
 
-                <a href="index.html" class="back-products-btn">
+                <a href="index.html#productsSection" class="back-products-btn">
                     <i class="fa-solid fa-arrow-right"></i>
                     العودة للمنتجات
                 </a>
@@ -454,10 +570,38 @@ function renderProductDetails() {
     `;
 
     detailsQuantity = 1;
+    detailsSelectedSize = null;
 
     $('detailsMinus').onclick = () => changeDetailsQuantity(-1);
     $('detailsPlus').onclick = () => changeDetailsQuantity(1);
     $('detailsAddBtn').onclick = addDetailsToCart;
+}
+
+function selectSizeOption(btn, productId, size) {
+    if (btn.disabled) return;
+
+    document.querySelectorAll('.size-option').forEach(b => {
+        b.classList.remove('selected');
+    });
+
+    btn.classList.add('selected');
+    detailsSelectedSize = size;
+
+    const product = products.find(p => p.id === Number(productId));
+    const available = product?.stockBySize?.[String(size)];
+
+    const helpEl = document.getElementById('sizeHelpText');
+    if (helpEl) {
+        if (available !== undefined && available > 0) {
+            helpEl.textContent = `✅ متاح ${available} قطعة في مقاس ${size}`;
+            helpEl.style.color = '#16a34a';
+            helpEl.style.background = '#dcfce7';
+        } else {
+            helpEl.textContent = 'اختر المقاس المناسب';
+            helpEl.style.color = '#64748b';
+            helpEl.style.background = '#f1f5f9';
+        }
+    }
 }
 
 function changeDetailsQuantity(delta) {
@@ -470,14 +614,29 @@ function addDetailsToCart() {
     const product = products.find(p => p.id === currentProductId);
     if (!product) return;
 
-    const size = $('detailsSize')?.value || '';
-    if (!size) {
+    if (!detailsSelectedSize) {
         showToast('اختار المقاس الأول');
-        $('detailsSize')?.focus();
+
+        const grid = document.getElementById('sizeOptionsGrid');
+        if (grid) {
+            grid.style.animation = 'shake 0.4s';
+            setTimeout(() => grid.style.animation = '', 500);
+        }
         return;
     }
 
-    addProductToCart(product, size, detailsQuantity);
+    const available = product.stockBySize?.[String(detailsSelectedSize)];
+    if (!available || available === 0) {
+        showToast('المقاس ده مش متاح حاليًا');
+        return;
+    }
+
+    if (detailsQuantity > available) {
+        showToast(`متاح ${available} قطعة بس من المقاس ده`);
+        return;
+    }
+
+    addProductToCart(product, detailsSelectedSize, detailsQuantity);
 }
 
 function renderRelatedProducts() {
@@ -499,16 +658,37 @@ function renderRelatedProducts() {
 // 11. CART
 // ========================================
 
+function selectGridSize(btn, productId, size) {
+    if (btn.disabled) return;
+
+    const grid = btn.closest('.size-chips-grid');
+    if (grid) {
+        grid.querySelectorAll('.size-chip-btn').forEach(b => b.classList.remove('selected'));
+    }
+    btn.classList.add('selected');
+}
+
 function addToCartFromGrid(productId) {
     const product = products.find(p => p.id === Number(productId));
     if (!product) return;
 
-    const select = $(`size-select-${product.id}`);
-    const size = select?.value || '';
+    const grid = document.querySelector(`.size-chips-grid[data-product-id="${productId}"]`);
+    const selectedBtn = grid?.querySelector('.size-chip-btn.selected');
+    const size = selectedBtn?.dataset.size;
 
     if (!size) {
         showToast('اختار المقاس الأول');
-        select?.focus();
+
+        if (grid) {
+            grid.style.animation = 'shake 0.4s';
+            setTimeout(() => grid.style.animation = '', 500);
+        }
+        return;
+    }
+
+    const available = product.stockBySize?.[String(size)];
+    if (!available || available === 0) {
+        showToast('المقاس ده مش متاح حاليًا');
         return;
     }
 
@@ -736,7 +916,6 @@ async function submitOrder(event) {
     const shippingCost = getShippingCost(gov, totalItems);
     const total = subtotal + (shippingCost || 0);
 
-    // ✅ طريقة الدفع
     const paymentMethod =
         document.querySelector('input[name="paymentMethod"]:checked')?.value || 'cash';
 
@@ -773,14 +952,12 @@ async function submitOrder(event) {
 
         if (successOrderId) successOrderId.textContent = `#${data.id}`;
 
-        // ✅ تحديث رابط تتبع الطلب
         const trackLink = $('trackOrderLink');
         if (trackLink) {
             trackLink.href =
                 `track.html?id=${data.id}&phone=${encodeURIComponent(phone)}`;
         }
 
-        // ✅ إظهار تنبيه إنشاء حساب لو ده زائر
         const accountPrompt = $('successAccountPrompt');
         if (accountPrompt) {
             accountPrompt.style.display = currentCustomer ? 'none' : 'block';
@@ -818,14 +995,14 @@ function performSearch() {
     }
 
     if (!productGrid) {
-        window.location.href = `index.html#products`;
+        window.location.href = `index.html#productsSection`;
         return;
     }
 
     productGrid.innerHTML = result.map(productCardHTML).join('');
     if (emptyProducts) emptyProducts.style.display = 'none';
 
-    $('products')?.scrollIntoView({ behavior: 'smooth' });
+    $('productsSection')?.scrollIntoView({ behavior: 'smooth' });
 
     setTimeout(() => {
         if (products.length) renderHomeGrid();
@@ -878,6 +1055,8 @@ document.addEventListener('keydown', e => {
 
 window.addToCartFromGrid = addToCartFromGrid;
 window.switchProductImage = switchProductImage;
+window.selectSizeOption = selectSizeOption;
+window.selectGridSize = selectGridSize;
 window.changeCartQuantity = changeCartQuantity;
 window.removeFromCart = removeFromCart;
 window.closeSuccessModal = closeSuccessModal;
