@@ -533,9 +533,74 @@ function renderProductDetails() {
 
                 <div class="details-divider"></div>
 
-                <p class="product-description">
-                    ${escapeHTML(product.description || 'لا يوجد وصف متاح لهذا المنتج.')}
-                </p>
+                <!-- ✅ Accordion للتفاصيل -->
+                <div class="product-accordion">
+                    
+                    <div class="accordion-item open">
+                        <button type="button" class="accordion-header" onclick="toggleAccordion(this)">
+                            <span>
+                                <i class="fa-solid fa-circle-info"></i>
+                                الوصف
+                            </span>
+                            <i class="fa-solid fa-chevron-down accordion-icon"></i>
+                        </button>
+                        <div class="accordion-body">
+                            <p>${escapeHTML(product.description || 'لا يوجد وصف متاح لهذا المنتج.')}</p>
+                        </div>
+                    </div>
+
+                    <div class="accordion-item">
+                        <button type="button" class="accordion-header" onclick="toggleAccordion(this)">
+                            <span>
+                                <i class="fa-solid fa-truck-fast"></i>
+                                الشحن والتوصيل
+                            </span>
+                            <i class="fa-solid fa-chevron-down accordion-icon"></i>
+                        </button>
+                        <div class="accordion-body">
+                            <ul class="accordion-list">
+                                <li><i class="fa-solid fa-check"></i> توصيل سريع داخل القاهرة والجيزة (2-3 أيام)</li>
+                                <li><i class="fa-solid fa-check"></i> شحن مجاني عند شراء قطعتين أو أكثر</li>
+                                <li><i class="fa-solid fa-check"></i> يمكنك تتبع طلبك مباشرة من الموقع</li>
+                            </ul>
+                        </div>
+                    </div>
+
+                    <div class="accordion-item">
+                        <button type="button" class="accordion-header" onclick="toggleAccordion(this)">
+                            <span>
+                                <i class="fa-solid fa-arrows-rotate"></i>
+                                الاستبدال والاسترجاع
+                            </span>
+                            <i class="fa-solid fa-chevron-down accordion-icon"></i>
+                        </button>
+                        <div class="accordion-body">
+                            <ul class="accordion-list">
+                                <li><i class="fa-solid fa-check"></i> استبدال المقاس خلال 14 يوم من الاستلام</li>
+                                <li><i class="fa-solid fa-check"></i> إمكانية الاسترجاع في حالة وجود عيب مصنعي</li>
+                                <li><i class="fa-solid fa-check"></i> المنتج لازم يكون بحالته الأصلية مع الكرتونة</li>
+                            </ul>
+                        </div>
+                    </div>
+
+                    <div class="accordion-item">
+                        <button type="button" class="accordion-header" onclick="toggleAccordion(this)">
+                            <span>
+                                <i class="fa-solid fa-shield-halved"></i>
+                                الضمان
+                            </span>
+                            <i class="fa-solid fa-chevron-down accordion-icon"></i>
+                        </button>
+                        <div class="accordion-body">
+                            <ul class="accordion-list">
+                                <li><i class="fa-solid fa-check"></i> ضمان أصلي من الشركة المصنعة</li>
+                                <li><i class="fa-solid fa-check"></i> منتجات أصلية 100%</li>
+                                <li><i class="fa-solid fa-check"></i> الدفع عند الاستلام متاح</li>
+                            </ul>
+                        </div>
+                    </div>
+
+                </div>
 
                 <div class="details-option">
                     <label>المقاس</label>
@@ -1046,6 +1111,28 @@ window.selectGridSize = selectGridSize;
 window.changeCartQuantity = changeCartQuantity;
 window.removeFromCart = removeFromCart;
 window.closeSuccessModal = closeSuccessModal;
+
+function toggleAccordion(btn) {
+    const item = btn.closest('.accordion-item');
+    if (!item) return;
+
+    const isOpen = item.classList.contains('open');
+
+    // ✅ نقفل الباقي (اختياري)
+    const parent = item.closest('.product-accordion');
+    if (parent) {
+        parent.querySelectorAll('.accordion-item.open').forEach(el => {
+            el.classList.remove('open');
+        });
+    }
+
+    // ✅ نفتح اللي ضغط عليه
+    if (!isOpen) {
+        item.classList.add('open');
+    }
+}
+
+window.toggleAccordion = toggleAccordion;
 
 // ========================================
 // 17. INIT

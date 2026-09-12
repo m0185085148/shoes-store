@@ -894,3 +894,127 @@ img{max-width:100%;display:block}
     gap: 8px;
   }
 }
+/* =========================================
+   PRODUCT ACCORDION
+   ========================================= */
+
+.product-accordion {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-top: 4px;
+}
+
+.accordion-item {
+    border: 1.5px solid #f0f0f0;
+    border-radius: 12px;
+    overflow: hidden;
+    background: #fff;
+    transition: all .25s ease;
+}
+
+.accordion-item:hover {
+    border-color: #e5e5e5;
+}
+
+.accordion-item.open {
+    border-color: #111;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+}
+
+.accordion-header {
+    width: 100%;
+    padding: 14px 16px;
+    background: #fafafa;
+    border: 0;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    cursor: pointer;
+    font-family: inherit;
+    font-size: 14px;
+    font-weight: 800;
+    color: #111;
+    transition: all .2s ease;
+    text-align: right;
+}
+
+.accordion-header:hover {
+    background: #f5f5f5;
+}
+
+.accordion-item.open .accordion-header {
+    background: #111;
+    color: #fff;
+}
+
+.accordion-header span {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.accordion-header span i {
+    font-size: 14px;
+    color: #8b5cf6;
+    transition: color .2s ease;
+}
+
+.accordion-item.open .accordion-header span i {
+    color: #4ade80;
+}
+
+.accordion-icon {
+    font-size: 12px;
+    color: #94a3b8;
+    transition: transform .3s ease, color .2s ease;
+}
+
+.accordion-item.open .accordion-icon {
+    transform: rotate(180deg);
+    color: #fff;
+}
+
+.accordion-body {
+    max-height: 0;
+    overflow: hidden;
+    transition: max-height .35s cubic-bezier(.2,.8,.2,1), padding .2s ease;
+    padding: 0 16px;
+}
+
+.accordion-item.open .accordion-body {
+    max-height: 500px;
+    padding: 16px;
+}
+
+.accordion-body p {
+    font-size: 14px;
+    line-height: 1.9;
+    color: #555;
+    margin: 0;
+}
+
+.accordion-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.accordion-list li {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    font-size: 13px;
+    color: #475569;
+    line-height: 1.7;
+}
+
+.accordion-list li i {
+    color: #16a34a;
+    font-size: 12px;
+    margin-top: 5px;
+    flex-shrink: 0;
+}
