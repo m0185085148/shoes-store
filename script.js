@@ -264,7 +264,6 @@ async function fetchProducts() {
     }
 
     try {
-        // ✅ نجيب المنتجات + المقاسات مع بعض
         const [productsRes, sizesRes] = await Promise.all([
             supabaseClient
                 .from('products')
@@ -298,7 +297,6 @@ async function fetchProducts() {
         window.products = products;
 
         console.log("📦 Products loaded:", products.length);
-        console.log("🖼️ First product images:", products[0]?.images);
 
         syncCartWithProducts();
 
@@ -318,7 +316,6 @@ function productCardHTML(product) {
     const badgeClass = getBadgeClass(product.badge);
     const stockBySize = product.stockBySize || {};
 
-    // ✅ المقاسات كأزرار صغيرة
     const sizesHTML = product.sizes.map(s => {
         const sizeKey = String(s);
         const available = stockBySize[sizeKey];
@@ -426,8 +423,6 @@ function buildGalleryHTML(product) {
     const extraImages = Array.isArray(product.images) ? product.images : [];
     const allImages = [mainImage, ...extraImages].filter(Boolean);
 
-    console.log("🎨 Gallery images:", allImages);
-
     if (!allImages.length) {
         return `
             <div class="product-gallery">
@@ -489,7 +484,6 @@ function renderProductDetails() {
 
     document.title = `STEP | ${product.name}`;
 
-    // ✅ المقاسات كدوائر
     const stockBySize = product.stockBySize || {};
     const sizesOptionsHTML = product.sizes.map(s => {
         const sizeKey = String(s);
@@ -533,7 +527,6 @@ function renderProductDetails() {
 
                 <div class="details-divider"></div>
 
-                <!-- ✅ Accordion للتفاصيل -->
                 <div class="product-accordion">
                     
                     <div class="accordion-item open">
@@ -962,58 +955,6 @@ async function submitOrder(event) {
 
         if (item.quantity > available) {
             stockErrors.push(
-                `${product.name} - مقاس ${item.size}: متاح ${available} بس، إنت عايز ${item.quantity}`
-            );
-        }
-    });
-
-    if (stockErrors.length > 0) {
-        showToast('⚠️ بعض المنتجات مش متوفرة بالكمية المطلوبة');
-        alert(
-            'عذرًا، الكميات المطلوبة غير متوفرة:\n\n' +
-            stockErrors.join('\n\n') +
-            '\n\nعدّل السلة وحاول تاني.'
-        );
-        return;
-    }
-
-    // ✅ التحقق من المخزون في الـ Frontend أولاً
-    const stockErrors = [];
-
-    cart.forEach(item => {
-        const product = products.find(p => p.id === Number(item.id));
-        if (!product) return;
-
-        const available = product.stockBySize?.[String(item.size)] || 0;
-
-        if (item.quantity > available) {
-            stockErrors.push(
-                `${product.name} - مقاس ${item.size}: المتاح ${available} بس (طلبك ${item.quantity})`
-            );
-        }
-    });
-
-    if (stockErrors.length > 0) {
-        showToast('⚠️ بعض المنتجات مش متوفرة بالكمية المطلوبة');
-        alert(
-            '⚠️ الكميات المطلوبة مش متوفرة:\n\n' +
-            stockErrors.join('\n\n') +
-            '\n\nعدّل السلة وحاول تاني 🙏'
-        );
-        return;
-    }
-
-    // ✅ التحقق من المخزون في الـ Frontend أولاً
-    const stockErrors = [];
-
-    cart.forEach(item => {
-        const product = products.find(p => p.id === Number(item.id));
-        if (!product) return;
-
-        const available = product.stockBySize?.[String(item.size)] || 0;
-
-        if (item.quantity > available) {
-            stockErrors.push(
                 `${product.name} - مقاس ${item.size}: المتاح ${available} بس (طلبك ${item.quantity})`
             );
         }
@@ -1096,7 +1037,6 @@ async function submitOrder(event) {
     } catch (err) {
         console.error('Order error:', err);
 
-        // ✅ لو الخطأ بسبب المخزون
         const errorMsg = err.message || '';
 
         if (
@@ -1199,21 +1139,12 @@ document.addEventListener('keydown', e => {
 // 16. GLOBAL FUNCTIONS
 // ========================================
 
-window.addToCartFromGrid = addToCartFromGrid;
-window.switchProductImage = switchProductImage;
-window.selectSizeOption = selectSizeOption;
-window.selectGridSize = selectGridSize;
-window.changeCartQuantity = changeCartQuantity;
-window.removeFromCart = removeFromCart;
-window.closeSuccessModal = closeSuccessModal;
-
 function toggleAccordion(btn) {
     const item = btn.closest('.accordion-item');
     if (!item) return;
 
     const isOpen = item.classList.contains('open');
 
-    // ✅ نقفل الباقي (اختياري)
     const parent = item.closest('.product-accordion');
     if (parent) {
         parent.querySelectorAll('.accordion-item.open').forEach(el => {
@@ -1221,12 +1152,18 @@ function toggleAccordion(btn) {
         });
     }
 
-    // ✅ نفتح اللي ضغط عليه
     if (!isOpen) {
         item.classList.add('open');
     }
 }
 
+window.addToCartFromGrid = addToCartFromGrid;
+window.switchProductImage = switchProductImage;
+window.selectSizeOption = selectSizeOption;
+window.selectGridSize = selectGridSize;
+window.changeCartQuantity = changeCartQuantity;
+window.removeFromCart = removeFromCart;
+window.closeSuccessModal = closeSuccessModal;
 window.toggleAccordion = toggleAccordion;
 
 // ========================================
