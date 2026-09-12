@@ -330,7 +330,7 @@ function productCardHTML(product) {
                 data-size="${escapeHTML(sizeKey)}"
                 ${isOutOfStock ? 'disabled' : ''}
                 onclick="selectGridSize(this, ${product.id}, '${escapeHTML(sizeKey)}')">
-                ${escapeHTML(sizeKey)}
+                <span class="size-chip-text">${escapeHTML(sizeKey)}</span>
             </button>
         `;
     }).join('');

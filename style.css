@@ -420,7 +420,6 @@ img{max-width:100%;display:block}
   align-items: start;
 }
 
-/* ✅ Gallery */
 .product-gallery {
   display: flex;
   flex-direction: column;
@@ -455,7 +454,6 @@ img{max-width:100%;display:block}
   display: block;
 }
 
-/* ✅ Thumbnails — wrap + صحيحة */
 .product-thumbnails {
   display: flex;
   gap: 12px;
@@ -692,7 +690,7 @@ img{max-width:100%;display:block}
   transition: all .2s ease;
 }
 
-/* ===== SIZE CHIPS — في الشبكة ===== */
+/* ===== SIZE CHIPS — في الشبكة (مصلّحة) ===== */
 .size-chips-grid {
   display: flex;
   flex-wrap: wrap;
@@ -702,48 +700,51 @@ img{max-width:100%;display:block}
 }
 
 .size-chip-btn {
-  min-width: 38px;
-  height: 38px;
-  padding: 0 8px;
+  min-width: 42px;
+  height: 42px;
+  padding: 0 10px;
   border-radius: 10px;
   border: 1.5px solid #e5e5e5;
   background: #fff;
-  color: #334155 !important;
-  -webkit-text-fill-color: #334155 !important;
+  color: #334155;
   font-family: inherit;
-  font-size: 13px;
+  font-size: 14px;
   font-weight: 800;
   cursor: pointer;
   transition: all .2s ease;
   display: flex;
   align-items: center;
   justify-content: center;
+  line-height: 1;
+  position: relative;
+  overflow: hidden;
+  text-align: center;
 }
 
 .size-chip-btn:hover:not(.disabled) {
   border-color: #111;
-  color: #111 !important;
-  -webkit-text-fill-color: #111 !important;
+  color: #111;
   transform: translateY(-2px);
   box-shadow: 0 4px 10px rgba(0,0,0,0.08);
 }
 
-/* ✅ المقاس المختار — النص باين */
-.size-chip-btn.selected {
+.size-chip-btn.selected,
+.size-chip-btn.selected span,
+.size-chip-btn.selected * {
   background: #111 !important;
   color: #ffffff !important;
-  -webkit-text-fill-color: #ffffff !important;
   border-color: #111 !important;
-  box-shadow: 0 4px 12px rgba(17,17,17,0.25);
-  transform: translateY(-2px);
-  font-weight: 800;
+  -webkit-text-fill-color: #ffffff !important;
 }
 
-/* ✅ المقاس المعطل */
+.size-chip-btn.selected {
+  box-shadow: 0 4px 12px rgba(17,17,17,0.25);
+  transform: translateY(-2px);
+}
+
 .size-chip-btn.disabled {
   background: #f5f5f5;
-  color: #cbd5e1 !important;
-  -webkit-text-fill-color: #cbd5e1 !important;
+  color: #cbd5e1;
   cursor: not-allowed;
   border-color: #f0f0f0;
   position: relative;
@@ -759,6 +760,7 @@ img{max-width:100%;display:block}
   top: 50%;
   left: -10%;
   transform: rotate(-35deg);
+  z-index: 2;
 }
 
 /* ===== NO IMAGE PLACEHOLDER ===== */
@@ -804,7 +806,6 @@ img{max-width:100%;display:block}
   .hero{min-height:480px}
   .features-grid{grid-template-columns:repeat(2,1fr)}
 
-  /* ✅ صفحة المنتج — بدون sticky */
   .product-details-grid{
     grid-template-columns:1fr;
     gap:24px;
@@ -847,32 +848,20 @@ img{max-width:100%;display:block}
   .add-to-cart{font-size:13px;padding:10px}
   .size-select{height:38px;font-size:13px}
 
-  /* ✅ الميزات 2 في الصف */
   .features-grid {
     grid-template-columns: repeat(2, 1fr);
     gap: 12px;
   }
 
-  .feature {
-    padding: 14px 8px;
-  }
-
+  .feature { padding: 14px 8px; }
   .feature-icon {
     width: 44px;
     height: 44px;
     margin-bottom: 10px;
     font-size: 16px;
   }
-
-  .feature h3 {
-    font-size: 13px;
-    margin-bottom: 6px;
-  }
-
-  .feature p {
-    font-size: 11px;
-    line-height: 1.5;
-  }
+  .feature h3 { font-size: 13px; margin-bottom: 6px; }
+  .feature p { font-size: 11px; line-height: 1.5; }
 
   .why-us{padding:60px 0}
   .footer-content{flex-direction:column;text-align:center}
@@ -883,10 +872,8 @@ img{max-width:100%;display:block}
   .order-modal-content{border-radius:16px}
   .toast-notification{right:12px;bottom:12px;left:12px;max-width:none}
 
-  /* ✅ payment methods */
   .payment-methods { grid-template-columns: 1fr; }
 
-  /* ✅ sizes */
   .size-option {
     min-width: 50px;
     height: 50px;
@@ -894,12 +881,11 @@ img{max-width:100%;display:block}
     padding: 0 8px;
   }
   .size-chip-btn {
-    min-width: 34px;
-    height: 34px;
-    font-size: 12px;
+    min-width: 38px;
+    height: 38px;
+    font-size: 13px;
   }
 
-  /* ✅ thumbnails */
   .product-thumb {
     width: 60px;
     height: 60px;
