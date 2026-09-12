@@ -6256,6 +6256,13 @@ function renderMultiImageGrid(mode) {
     const grid = document.getElementById(gridId);
     if (!grid) return;
 
+    // ✅ نضمن إن الـ input موجود (حماية إضافية)
+    const fileInputId = mode === "edit" ? "editImagesFile" : "addImagesFile";
+    if (!document.getElementById(fileInputId)) {
+        console.warn("File input missing:", fileInputId);
+        return;
+    }
+
     const list = mode === "edit" ? editImagesList : addImagesList;
 
     const addBtnHTML = `
