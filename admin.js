@@ -864,28 +864,46 @@ function switchTab(tabId) {
         document.getElementById("tabNavDashboard")?.classList.add("active");
         title.textContent = "اللوحة الرئيسية";
         subtitle.textContent = "متابعة الأداء اليومي وطلبات STEP Store";
+
+        // ✅ تحديث تلقائي
+        loadAdminOrders();
+        loadAdminProducts();
+        loadApprovalRequests();
     } else if (tabId === "orders") {
         document.getElementById("viewOrders")?.classList.add("active");
         document.getElementById("tabNavOrders")?.classList.add("active");
         title.textContent = "طلبات العملاء والشحن";
         subtitle.textContent = "إدارة الطلبات ومتابعة حالات التوصيل";
+
+        // ✅ تحديث تلقائي
+        loadAdminOrders();
     } else if (tabId === "approvals") {
         document.getElementById("viewApprovals")?.classList.add("active");
         document.getElementById("tabNavApprovals")?.classList.add("active");
         title.textContent = "طلبات موافقة الموظفين";
         subtitle.textContent = "مراجعة واعتماد تعديلات الموظفين";
+
+        // ✅ تحديث تلقائي
+        loadApprovalRequests();
     } else if (tabId === "products") {
         document.getElementById("viewProducts")?.classList.add("active");
         document.getElementById("tabNavProducts")?.classList.add("active");
         title.textContent = "إدارة المنتجات";
         subtitle.textContent = "إضافة وتعديل وحذف منتجات المتجر";
+
+        // ✅ تحديث تلقائي
+        loadAdminProducts();
     } else if (tabId === "inventory") {
         document.getElementById("viewInventory")?.classList.add("active");
         document.getElementById("tabNavInventory")?.classList.add("active");
         title.textContent = "المخزون";
         subtitle.textContent = "متابعة حركات المخزون والكميات المتاحة";
-        loadInventory();
-        loadMovements();
+
+        // ✅ تحديث تلقائي
+        loadAdminProducts().then(() => {
+            loadInventory();
+            loadMovements();
+        });
     } else if (tabId === "reports") {
         document.getElementById("viewReports")?.classList.add("active");
         document.getElementById("tabNavReports")?.classList.add("active");
@@ -897,8 +915,6 @@ function switchTab(tabId) {
 
     document.getElementById("sidebar")?.classList.remove("open");
     document.getElementById("mobileOverlay")?.classList.remove("show");
-
-    if (tabId === "approvals") loadApprovalRequests();
 }
 
 // ========================================
@@ -980,6 +996,9 @@ async function protectAdminDashboard() {
     setupProductsSearch();
     setupAddProductModal();
     setupNotificationsDropdown();
+
+    // ✅ تشغيل التحديث التلقائي
+    startAutoRefresh();
 }
 
 // ========================================
@@ -4244,6 +4263,21 @@ function showLowStockProducts() {
     }, 100);
 }
 
+function showOutOfStockProducts() {
+    closeNotificationsDropdown();
+    switchTab('inventory');
+
+    setTimeout(() => {
+        const outBtn = document.querySelector('.inv-filter-chip[data-filter="out"]');
+        if (outBtn) {
+            document.querySelectorAll('.inv-filter-chip').forEach(b => b.classList.remove('active'));
+            outBtn.classList.add('active');
+            currentInventoryFilter = 'out';
+            renderInventoryList();
+        }
+    }, 100);
+}
+
 function showUrgentOrders() {
     closeNotificationsDropdown();
     switchTab('orders');
@@ -4310,13 +4344,26 @@ function renderSmartAlerts(lowStockCount) {
 
     const alerts = [];
 
-    // ⚠️ منتجات قاربت على النفاد
-    if (lowStockCount > 0) {
+    // ⚠️ منتجات نفذت أو قاربت على النفاد
+    const outCount = adminProducts.filter(p => getStockStatus(p) === "out").length;
+    const lowOnlyCount = adminProducts.filter(p => getStockStatus(p) === "low").length;
+
+    if (lowOnlyCount > 0) {
         alerts.push({
             type: "warning",
             icon: "fa-triangle-exclamation",
-            text: `${lowStockCount} ${lowStockCount === 1 ? "منتج قارب" : "منتجات قاربت"} على النفاد`,
+            text: `${lowOnlyCount} ${lowOnlyCount === 1 ? "منتج قارب" : "منتجات قاربت"} على النفاد`,
             action: "showLowStockProducts()",
+            actionText: "مراجعة"
+        });
+    }
+
+    if (outCount > 0) {
+        alerts.push({
+            type: "danger",
+            icon: "fa-circle-xmark",
+            text: `${outCount} ${outCount === 1 ? "منتج نفذ" : "منتجات نفذت"} من المخزون`,
+            action: "showOutOfStockProducts()",
             actionText: "مراجعة"
         });
     }
@@ -4512,13 +4559,21 @@ function updateDashboard() {
     }
 
     // ===== منتجات قاربت على النفاد =====
+    // ✅ نعرض "قاربت على النفاد" فقط (low)
     const lowStockCount = adminProducts.filter(p => {
-        const status = getStockStatus(p);
-        return status === "low" || status === "out";
+        return getStockStatus(p) === "low";
     }).length;
 
+    // ✅ "نفذت" فقط (out)
+    const outOfStockCount = adminProducts.filter(p => {
+        return getStockStatus(p) === "out";
+    }).length;
+
+    // ✅ المجموع للتنبيهات
+    const totalNeedAttention = lowStockCount + outOfStockCount;
+
     if (dashStatLowStock) {
-        dashStatLowStock.textContent = lowStockCount;
+        dashStatLowStock.textContent = totalNeedAttention;
     }
 
     // ===== طلبات محتاجة متابعة (استبدال / استرجاع) =====
@@ -4535,7 +4590,7 @@ function updateDashboard() {
 
     // ===== التنبيهات =====
     updateLowStockBadge();
-    renderSmartAlerts(lowStockCount);
+    renderSmartAlerts(totalNeedAttention);
 
     // ===== باقي الويدجت =====
     renderDashboardOrders();
@@ -4762,6 +4817,7 @@ if (logoutButton) {
         if (!confirmed) return;
 
         stopHeartbeat();
+        stopAutoRefresh();
         await endAdminSession("logout");
 
         const client = getSupabaseClient();
@@ -4799,6 +4855,43 @@ document.addEventListener("DOMContentLoaded", async function () {
         setupImageUploads(); // ✅ تهيئة رفع الصور
     }
 });
+
+// ========================================
+// 58.5 AUTO REFRESH (كل دقيقة)
+// ========================================
+
+let autoRefreshInterval = null;
+
+function startAutoRefresh() {
+    stopAutoRefresh();
+
+    autoRefreshInterval = setInterval(async () => {
+        if (!isAdminDashboard() || !currentAdmin) return;
+
+        // ✅ نحدّث الطلبات والتنبيهات كل دقيقة
+        try {
+            await loadAdminOrders();
+            await loadApprovalRequests();
+
+            // ✅ لو المستخدم على شاشة المخزون، نحدّثها كمان
+            const currentTab = document.querySelector(".tab-content.active")?.id;
+            if (currentTab === "viewInventory") {
+                await loadAdminProducts();
+                loadInventory();
+                loadMovements();
+            }
+        } catch (err) {
+            console.warn("Auto refresh error:", err);
+        }
+    }, 60 * 1000); // كل دقيقة
+}
+
+function stopAutoRefresh() {
+    if (autoRefreshInterval) {
+        clearInterval(autoRefreshInterval);
+        autoRefreshInterval = null;
+    }
+}
 
 // ========================================
 // 59. SESSION PROTECTION
@@ -4865,6 +4958,7 @@ window.openExchangeReceivedModal = openExchangeReceivedModal;
 window.closeExchangeReceivedModal = closeExchangeReceivedModalFn;
 window.selectExchangeSize = selectExchangeSize;
 window.showLowStockProducts = showLowStockProducts;
+window.showOutOfStockProducts = showOutOfStockProducts;
 window.showUrgentOrders = showUrgentOrders;
 window.showExchangeOrders = showExchangeOrders;
 window.openSalesPage = openSalesPage;
