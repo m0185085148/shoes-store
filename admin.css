@@ -4351,3 +4351,72 @@ body {
         grid-template-columns: 1fr;
     }
 }
+/* =========================================
+   Order Details — Mobile Only
+   ========================================= */
+
+@media (max-width: 768px) {
+
+    .order-detail-item {
+        flex-direction: column !important;
+        align-items: stretch !important;
+        padding: 12px !important;
+        gap: 12px !important;
+    }
+
+    .order-detail-img {
+        width: 100% !important;
+        height: 180px !important;
+        order: -1 !important;
+    }
+
+    .order-detail-info {
+        width: 100% !important;
+    }
+
+    .order-detail-info h4 {
+        text-align: center !important;
+        margin-bottom: 10px !important;
+    }
+
+    .size-display {
+        justify-content: center !important;
+    }
+
+    .qty-info {
+        justify-content: center !important;
+    }
+
+    .stock-info {
+        display: flex !important;
+        flex-direction: row !important;
+        flex-wrap: wrap !important;
+        gap: 6px !important;
+        justify-content: center !important;
+        margin-top: 10px !important;
+    }
+
+    .stock-info span {
+        font-size: 11px !important;
+        padding: 6px 10px !important;
+        white-space: nowrap !important;
+        flex: 0 0 auto !important;
+        display: inline-flex !important;
+        align-items: center !important;
+        gap: 4px !important;
+    }
+
+    .stock-info span i {
+        font-size: 10px !important;
+    }
+
+    .order-detail-price {
+        text-align: center !important;
+        margin-top: 8px !important;
+        padding: 8px !important;
+        background: #eff6ff !important;
+        border-radius: 8px !important;
+        color: #2563eb !important;
+        font-weight: 800 !important;
+    }
+}

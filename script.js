@@ -864,6 +864,57 @@ function closeCart() {
     document.body.classList.remove('cart-open');
 }
 
+// ========================================
+// ORDER FORM PERSISTENCE
+// ========================================
+
+const ORDER_FORM_KEY = 'step_order_form_draft';
+const ORDER_FORM_TTL_DAYS = 30; // ✅ 30 يوم
+
+function saveOrderFormData() {
+    const data = {
+        customerName: $('customerName')?.value || '',
+        customerPhone: $('customerPhone')?.value || '',
+        governorate: $('governorate')?.value || '',
+        city: $('city')?.value || '',
+        customerAddress: $('customerAddress')?.value || '',
+        orderNotes: $('orderNotes')?.value || '',
+        paymentMethod: document.querySelector('input[name="paymentMethod"]:checked')?.value || 'cash',
+        savedAt: Date.now()
+    };
+
+    try {
+        localStorage.setItem(ORDER_FORM_KEY, JSON.stringify(data));
+    } catch (e) {
+        console.warn('Save form error:', e);
+    }
+}
+
+function loadOrderFormData() {
+    try {
+        const raw = localStorage.getItem(ORDER_FORM_KEY);
+        if (!raw) return null;
+
+        const data = JSON.parse(raw);
+        if (!data) return null;
+
+        // ✅ نتجاهل البيانات القديمة (أكتر من 30 يوم)
+        const ttlMs = ORDER_FORM_TTL_DAYS * 24 * 60 * 60 * 1000;
+        if (data.savedAt && Date.now() - data.savedAt > ttlMs) {
+            localStorage.removeItem(ORDER_FORM_KEY);
+            return null;
+        }
+
+        return data;
+    } catch (e) {
+        return null;
+    }
+}
+
+function clearOrderFormData() {
+    localStorage.removeItem(ORDER_FORM_KEY);
+}
+
 async function openOrderModal() {
     if (!cart.length) {
         showToast('السلة فارغة. أضف منتج أولًا');
@@ -881,6 +932,31 @@ async function openOrderModal() {
         loginPrompt.style.display = currentCustomer ? 'none' : 'flex';
     }
 
+    // ✅ الأول: نحمّل الـ draft من localStorage
+    const draft = loadOrderFormData();
+    if (draft) {
+        const nameField = $('customerName');
+        const phoneField = $('customerPhone');
+        const govField = $('governorate');
+        const cityField = $('city');
+        const addressField = $('customerAddress');
+        const notesField = $('orderNotes');
+
+        if (nameField && !nameField.value && draft.customerName) nameField.value = draft.customerName;
+        if (phoneField && !phoneField.value && draft.customerPhone) phoneField.value = draft.customerPhone;
+        if (govField && !govField.value && draft.governorate) govField.value = draft.governorate;
+        if (cityField && !cityField.value && draft.city) cityField.value = draft.city;
+        if (addressField && !addressField.value && draft.customerAddress) addressField.value = draft.customerAddress;
+        if (notesField && !notesField.value && draft.orderNotes) notesField.value = draft.orderNotes;
+
+        // ✅ استرجاع طريقة الدفع
+        if (draft.paymentMethod) {
+            const paymentRadio = document.querySelector(`input[name="paymentMethod"][value="${draft.paymentMethod}"]`);
+            if (paymentRadio) paymentRadio.checked = true;
+        }
+    }
+
+    // ✅ ثانيًا: لو مسجل دخول، نكمّل البيانات الناقصة من البروفايل
     if (currentCustomer?.profile) {
         const p = currentCustomer.profile;
         const nameField = $('customerName');
@@ -1019,6 +1095,9 @@ async function submitOrder(event) {
         localStorage.setItem('myCart', '[]');
         updateCartUI();
 
+        // ✅ امسح draft بعد النجاح
+        clearOrderFormData();
+
         orderForm.reset();
         orderModal?.classList.remove('open');
 
@@ -1066,37 +1145,153 @@ async function submitOrder(event) {
 // 14. SEARCH
 // ========================================
 
+// ========================================
+// SEARCH MODAL
+// ========================================
+
 function performSearch() {
-    const term = prompt('اكتب اسم الحذاء اللي بتدور عليه');
-    if (!term) return;
-
-    const query = term.trim().toLowerCase();
-    if (!query) return;
-
-    const result = products.filter(p =>
-        p.name.toLowerCase().includes(query)
-    );
-
-    if (!result.length) {
-        showToast('لم يتم العثور على المنتج');
-        return;
-    }
-
-    if (!productGrid) {
-        window.location.href = `index.html#productsSection`;
-        return;
-    }
-
-    productGrid.innerHTML = result.map(productCardHTML).join('');
-    if (emptyProducts) emptyProducts.style.display = 'none';
-
-    $('productsSection')?.scrollIntoView({ behavior: 'smooth' });
-
-    setTimeout(() => {
-        if (products.length) renderHomeGrid();
-    }, 4000);
+    openSearchModal();
 }
 
+function openSearchModal() {
+    let modal = document.getElementById('searchModal');
+
+    if (!modal) {
+        createSearchModal();
+        modal = document.getElementById('searchModal');
+    }
+
+    modal.classList.add('open');
+    document.body.classList.add('cart-open');
+
+    const input = document.getElementById('searchInput');
+    if (input) {
+        input.value = '';
+        setTimeout(() => input.focus(), 100);
+    }
+
+    renderSearchResults('');
+}
+
+function closeSearchModal() {
+    const modal = document.getElementById('searchModal');
+    modal?.classList.remove('open');
+    document.body.classList.remove('cart-open');
+}
+
+function createSearchModal() {
+    const modal = document.createElement('div');
+    modal.id = 'searchModal';
+    modal.className = 'search-modal';
+
+    modal.innerHTML = `
+        <div class="search-modal-content">
+            <div class="search-modal-header">
+                <div>
+                    <span class="search-modal-small">STEP STORE</span>
+                    <h2>ابحث عن حذائك</h2>
+                </div>
+                <button type="button" class="search-close-btn" onclick="closeSearchModal()">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+
+            <div class="search-modal-body">
+                <div class="search-input-wrapper">
+                    <i class="fa-solid fa-magnifying-glass"></i>
+                    <input 
+                        type="text" 
+                        id="searchInput" 
+                        placeholder="اكتب اسم الحذاء..."
+                        autocomplete="off"
+                    >
+                    <button type="button" class="search-clear-btn" id="searchClearBtn" style="display:none;">
+                        <i class="fa-solid fa-xmark"></i>
+                    </button>
+                </div>
+
+                <div class="search-results" id="searchResults"></div>
+            </div>
+        </div>
+    `;
+
+    document.body.appendChild(modal);
+
+    modal.addEventListener('click', (e) => {
+        if (e.target === modal) closeSearchModal();
+    });
+
+    const input = document.getElementById('searchInput');
+    const clearBtn = document.getElementById('searchClearBtn');
+
+    input?.addEventListener('input', (e) => {
+        const val = e.target.value;
+        if (clearBtn) {
+            clearBtn.style.display = val ? 'flex' : 'none';
+        }
+        renderSearchResults(val);
+    });
+
+    input?.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') closeSearchModal();
+    });
+
+    clearBtn?.addEventListener('click', () => {
+        input.value = '';
+        clearBtn.style.display = 'none';
+        renderSearchResults('');
+        input.focus();
+    });
+}
+
+function renderSearchResults(query) {
+    const resultsEl = document.getElementById('searchResults');
+    if (!resultsEl) return;
+
+    const q = String(query || '').trim().toLowerCase();
+
+    let list = products;
+
+    if (q) {
+        list = products.filter(p =>
+            String(p.name || '').toLowerCase().includes(q)
+        );
+    }
+
+    if (!list.length) {
+        resultsEl.innerHTML = `
+            <div class="search-empty">
+                <i class="fa-solid fa-magnifying-glass"></i>
+                <h3>مفيش نتائج</h3>
+                <p>جرّب تكتب اسم مختلف أو جزء من الاسم</p>
+            </div>
+        `;
+        return;
+    }
+
+    resultsEl.innerHTML = `
+        <div class="search-results-count">
+            ${q ? `${list.length} نتيجة` : `${list.length} منتج متاح`}
+        </div>
+        ${list.map(product => `
+            <a href="product.html?id=${product.id}" class="search-result-item">
+                <div class="search-result-img">
+                    <img src="${escapeHTML(product.image || '')}" alt="${escapeHTML(product.name)}" loading="lazy">
+                </div>
+                <div class="search-result-info">
+                    <h4>${escapeHTML(product.name)}</h4>
+                    <div class="search-result-price">
+                        ${formatPrice(product.price)} جنيه
+                    </div>
+                </div>
+                <i class="fa-solid fa-chevron-left search-result-arrow"></i>
+            </a>
+        `).join('')}
+    `;
+}
+
+window.openSearchModal = openSearchModal;
+window.closeSearchModal = closeSearchModal;
 // ========================================
 // 15. EVENTS
 // ========================================
@@ -1134,6 +1329,7 @@ document.addEventListener('keydown', e => {
         closeCart();
         closeOrderModal();
         closeSuccessModal();
+        closeSearchModal();
     }
 });
 
@@ -1167,6 +1363,8 @@ window.changeCartQuantity = changeCartQuantity;
 window.removeFromCart = removeFromCart;
 window.closeSuccessModal = closeSuccessModal;
 window.toggleAccordion = toggleAccordion;
+window.openSearchModal = openSearchModal;
+window.closeSearchModal = closeSearchModal;
 
 // ========================================
 // 17. INIT
@@ -1183,5 +1381,18 @@ document.addEventListener('DOMContentLoaded', async () => {
         currentCustomer = null;
     }
 
-    $('governorate')?.addEventListener('change', updateOrderSummary);
+    $('governorate')?.addEventListener('change', () => {
+        updateOrderSummary();
+        saveOrderFormData();
+    });
+
+    // ✅ Auto-save لكل حقول الفورم
+    ['customerName', 'customerPhone', 'city', 'customerAddress', 'orderNotes'].forEach(id => {
+        $(id)?.addEventListener('input', saveOrderFormData);
+    });
+
+    // ✅ Auto-save لطريقة الدفع
+    document.querySelectorAll('input[name="paymentMethod"]').forEach(radio => {
+        radio.addEventListener('change', saveOrderFormData);
+    });
 });
