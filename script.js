@@ -728,6 +728,10 @@ async function submitOrder(event) {
     const shippingCost = getShippingCost(gov, totalItems);
     const total = subtotal + (shippingCost || 0);
 
+    // ✅ طريقة الدفع
+    const paymentMethod =
+        document.querySelector('input[name="paymentMethod"]:checked')?.value || 'cash';
+
     submitOrderBtn.disabled = true;
     submitOrderBtn.innerHTML =
         '<i class="fa-solid fa-spinner fa-spin"></i> جاري إرسال الطلب...';
@@ -745,7 +749,8 @@ async function submitOrder(event) {
                 p_items: items,
                 p_subtotal: subtotal,
                 p_shipping_cost: shippingCost || 0,
-                p_total_amount: total
+                p_total_amount: total,
+                p_payment_method: paymentMethod
             }
         );
 

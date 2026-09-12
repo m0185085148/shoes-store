@@ -1,905 +1,30 @@
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
-
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-
     <title>لوحة التحكم - STEP Store</title>
-
-    <link
-        rel="stylesheet"
-        href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"
-    >
-
-    <link
-        href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800&display=swap"
-        rel="stylesheet"
-    >
-
-    <style>
-        :root {
-            --bg: #f4f6f9;
-            --side: #111827;
-            --card: #ffffff;
-            --blue: #2563eb;
-            --blue-dark: #1d4ed8;
-            --text: #1f2937;
-            --muted: #6b7280;
-            --border: #e5e7eb;
-            --danger: #ef4444;
-            --danger-dark: #dc2626;
-            --success: #16a34a;
-            --warning: #d97706;
-            --purple: #8b5cf6;
-        }
-
-        * {
-            box-sizing: border-box;
-            margin: 0;
-            padding: 0;
-            font-family: "Tajawal", sans-serif;
-        }
-
-        body {
-            background: var(--bg);
-            color: var(--text);
-            display: flex;
-            min-height: 100vh;
-        }
-
-        .sidebar {
-            width: 260px;
-            background: var(--side);
-            color: #fff;
-            padding: 24px 16px;
-            display: flex;
-            flex-direction: column;
-            gap: 24px;
-            flex-shrink: 0;
-        }
-
-        .brand {
-            font-size: 22px;
-            font-weight: 800;
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            color: #fff;
-            text-decoration: none;
-            padding-bottom: 12px;
-            border-bottom: 1px solid #1f2937;
-        }
-
-        .nav-menu {
-            list-style: none;
-            display: flex;
-            flex-direction: column;
-            gap: 8px;
-        }
-
-        .nav-item a,
-        .logout-button {
-            width: 100%;
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            padding: 12px 16px;
-            color: #9ca3af;
-            text-decoration: none;
-            border-radius: 8px;
-            background: transparent;
-            border: 0;
-            cursor: pointer;
-            font-size: 14px;
-            font-family: inherit;
-            text-align: right;
-            transition: all 0.2s ease;
-        }
-
-        .nav-item-content {
-            display: flex;
-            align-items: center;
-            gap: 12px;
-        }
-
-        .nav-item a:hover,
-        .nav-item.active a,
-        .logout-button:hover {
-            background: #1f2937;
-            color: #fff;
-        }
-
-        .nav-item.active a {
-            background: var(--blue);
-            color: #fff;
-            font-weight: 700;
-        }
-
-        .tab-badge {
-            padding: 2px 8px;
-            border-radius: 12px;
-            font-size: 11px;
-            font-weight: 800;
-        }
-
-        .tab-badge.danger {
-            background: #fee2e2;
-            color: #991b1b;
-        }
-
-        .tab-badge.warning {
-            background: #fef3c7;
-            color: #92400e;
-        }
-
-        .sidebar-bottom {
-            margin-top: auto;
-            border-top: 1px solid #1f2937;
-            padding-top: 16px;
-        }
-
-        .main-content {
-            flex: 1;
-            padding: 32px;
-            overflow-y: auto;
-        }
-
-        .tab-content {
-            display: none;
-        }
-
-        .tab-content.active {
-            display: block;
-            animation: fadeIn 0.25s ease-in-out;
-        }
-
-        @keyframes fadeIn {
-            from {
-                opacity: 0;
-                transform: translateY(4px);
-            }
-
-            to {
-                opacity: 1;
-                transform: translateY(0);
-            }
-        }
-
-        .header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            gap: 20px;
-            margin-bottom: 28px;
-        }
-
-        .header h1 {
-            font-size: 24px;
-            font-weight: 800;
-        }
-
-        .header p {
-            color: var(--muted);
-            font-size: 14px;
-            margin-top: 4px;
-        }
-
-        .user-info {
-            background: #fff;
-            border: 1px solid var(--border);
-            border-radius: 10px;
-            padding: 10px 14px;
-            display: flex;
-            align-items: center;
-            gap: 10px;
-        }
-
-        .user-info-icon {
-            width: 38px;
-            height: 38px;
-            border-radius: 50%;
-            background: #eff6ff;
-            color: var(--blue);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
-
-        .user-info-text strong {
-            display: block;
-            font-size: 14px;
-        }
-
-        .user-info-text span {
-            display: block;
-            font-size: 12px;
-            color: var(--muted);
-            margin-top: 2px;
-        }
-
-        .message {
-            padding: 12px 14px;
-            border-radius: 8px;
-            margin-bottom: 20px;
-            display: none;
-            font-size: 14px;
-        }
-
-        .message.show {
-            display: block;
-        }
-
-        .message.success {
-            background: #dcfce7;
-            color: #166534;
-        }
-
-        .message.error {
-            background: #fee2e2;
-            color: #991b1b;
-        }
-
-        .message.warning {
-            background: #fef3c7;
-            color: #92400e;
-        }
-
-        .stats-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
-            gap: 20px;
-            margin-bottom: 32px;
-        }
-
-        .stat-card {
-            background: var(--card);
-            padding: 20px;
-            border-radius: 12px;
-            border: 1px solid var(--border);
-            display: flex;
-            align-items: center;
-            gap: 16px;
-            transition: all 0.2s ease;
-        }
-
-        .stat-card.clickable {
-            cursor: pointer;
-        }
-
-        .stat-card.clickable:hover {
-            transform: translateY(-3px);
-            border-color: var(--blue);
-            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.04);
-        }
-
-        .stat-icon {
-            width: 48px;
-            height: 48px;
-            border-radius: 10px;
-            background: #eff6ff;
-            color: var(--blue);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 20px;
-            flex-shrink: 0;
-        }
-
-        .stat-icon.warning {
-            background: #fff7ed;
-            color: var(--warning);
-        }
-
-        .stat-icon.success {
-            background: #f0fdf4;
-            color: var(--success);
-        }
-
-        .stat-icon.purple {
-            background: #f3e8ff;
-            color: var(--purple);
-        }
-
-        .stat-data h3 {
-            font-size: 22px;
-            font-weight: 800;
-        }
-
-        .stat-data p {
-            color: var(--muted);
-            font-size: 13px;
-            margin-top: 2px;
-        }
-
-        .stat-action-link {
-            font-size: 11px;
-            color: var(--blue);
-            font-weight: 700;
-            margin-top: 4px;
-            display: inline-block;
-        }
-
-        .dashboard-grid {
-            display: grid;
-            grid-template-columns: 1fr 390px;
-            gap: 24px;
-        }
-
-        .panel {
-            background: var(--card);
-            border-radius: 12px;
-            border: 1px solid var(--border);
-            padding: 24px;
-            margin-bottom: 24px;
-        }
-
-        .panel-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            gap: 15px;
-            margin-bottom: 20px;
-            padding-bottom: 12px;
-            border-bottom: 1px solid var(--border);
-        }
-
-        .panel-title {
-            font-size: 18px;
-            font-weight: 700;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-        }
-
-        .btn-link {
-            background: none;
-            border: none;
-            color: var(--blue);
-            font-weight: 700;
-            font-size: 13px;
-            cursor: pointer;
-        }
-
-        .btn-link:hover {
-            text-decoration: underline;
-        }
-
-        .top-selling-list {
-            display: flex;
-            flex-direction: column;
-            gap: 12px;
-        }
-
-        .top-item {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            padding: 10px 12px;
-            background: #f9fafb;
-            border-radius: 8px;
-            border: 1px solid #f3f4f6;
-        }
-
-        .top-item-info {
-            display: flex;
-            align-items: center;
-            gap: 12px;
-        }
-
-        .top-item-img {
-            width: 40px;
-            height: 40px;
-            border-radius: 6px;
-            object-fit: cover;
-            background: #eee;
-        }
-
-        .top-item-name {
-            font-size: 13px;
-            font-weight: 700;
-        }
-
-        .top-item-sales {
-            font-size: 12px;
-            color: var(--muted);
-        }
-
-        .top-item-revenue {
-            font-size: 13px;
-            font-weight: 800;
-            color: var(--success);
-        }
-
-        .orders-filter-bar {
-            display: flex;
-            gap: 8px;
-            margin-bottom: 20px;
-            flex-wrap: wrap;
-        }
-
-        .filter-btn {
-            padding: 8px 16px;
-            border-radius: 20px;
-            border: 1px solid var(--border);
-            background: #fff;
-            color: var(--text);
-            font-size: 13px;
-            font-weight: 600;
-            cursor: pointer;
-            transition: all 0.2s;
-        }
-
-        .filter-btn:hover,
-        .filter-btn.active {
-            background: var(--blue);
-            color: #fff;
-            border-color: var(--blue);
-        }
-
-        .order-status-badge {
-            display: inline-block;
-            padding: 4px 10px;
-            border-radius: 12px;
-            font-size: 12px;
-            font-weight: 700;
-            white-space: nowrap;
-        }
-
-        .form-group {
-            margin-bottom: 16px;
-        }
-
-        .form-group label {
-            display: block;
-            margin-bottom: 6px;
-            font-size: 14px;
-            font-weight: 500;
-        }
-
-        .form-group input,
-        .form-group textarea,
-        .form-group select {
-            width: 100%;
-            padding: 10px 12px;
-            border: 1px solid var(--border);
-            border-radius: 8px;
-            font-size: 14px;
-            outline: none;
-            background: #fff;
-        }
-
-        .form-group textarea {
-            min-height: 100px;
-            resize: vertical;
-        }
-
-        .form-group input:focus,
-        .form-group textarea:focus,
-        .form-group select:focus {
-            border-color: var(--blue);
-        }
-
-        .form-row {
-            display: flex;
-            gap: 10px;
-        }
-
-        .form-row .form-group {
-            flex: 1;
-        }
-
-        .btn-submit {
-            width: 100%;
-            padding: 12px;
-            background: var(--blue);
-            color: #fff;
-            border: 0;
-            border-radius: 8px;
-            font-weight: 700;
-            cursor: pointer;
-            font-size: 14px;
-        }
-
-        .btn-submit:hover {
-            background: var(--blue-dark);
-        }
-
-        .btn-submit:disabled {
-            opacity: 0.6;
-            cursor: not-allowed;
-        }
-
-        .table-wrap {
-            overflow-x: auto;
-        }
-
-        .products-table {
-            width: 100%;
-            border-collapse: collapse;
-            min-width: 760px;
-        }
-
-        .products-table th,
-        .products-table td {
-            padding: 12px;
-            text-align: right;
-            border-bottom: 1px solid var(--border);
-            font-size: 14px;
-            vertical-align: middle;
-        }
-
-        .products-table th {
-            color: var(--muted);
-            font-weight: 500;
-            white-space: nowrap;
-        }
-
-        .empty-state {
-            text-align: center;
-            padding: 30px 15px;
-            color: var(--muted);
-        }
-
-        .empty-state i {
-            font-size: 30px;
-            margin-bottom: 10px;
-        }
-
-        /* Approval */
-
-        .approval-filter {
-            display: flex;
-            gap: 8px;
-            flex-wrap: wrap;
-            margin-bottom: 20px;
-        }
-
-        .approval-filter button {
-            padding: 8px 14px;
-            border: 1px solid var(--border);
-            border-radius: 20px;
-            background: #fff;
-            cursor: pointer;
-            font-family: inherit;
-            font-weight: 700;
-            color: #475569;
-        }
-
-        .approval-filter button.active {
-            background: var(--blue);
-            color: #fff;
-            border-color: var(--blue);
-        }
-
-        .request-card {
-            border: 1px solid var(--border);
-            border-radius: 12px;
-            padding: 18px;
-            margin-bottom: 14px;
-            background: #fff;
-        }
-
-        .request-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            gap: 10px;
-            margin-bottom: 14px;
-        }
-
-        .request-title {
-            font-weight: 800;
-            font-size: 16px;
-        }
-
-        .request-info {
-            color: #475569;
-            font-size: 13px;
-            line-height: 1.9;
-        }
-
-        .request-actions {
-            display: flex;
-            gap: 8px;
-            margin-top: 16px;
-            flex-wrap: wrap;
-        }
-
-        .approve-btn,
-        .reject-btn,
-        .details-btn {
-            border: 0;
-            border-radius: 8px;
-            padding: 9px 14px;
-            cursor: pointer;
-            font-family: inherit;
-            font-size: 13px;
-            font-weight: 700;
-        }
-
-        .approve-btn {
-            background: #16a34a;
-            color: #fff;
-        }
-
-        .approve-btn:hover {
-            background: #15803d;
-        }
-
-        .reject-btn {
-            background: #dc2626;
-            color: #fff;
-        }
-
-        .reject-btn:hover {
-            background: #b91c1c;
-        }
-
-        .details-btn {
-            background: #eff6ff;
-            color: #1d4ed8;
-        }
-
-        .details-btn:hover {
-            background: #dbeafe;
-        }
-
-        .status-badge {
-            display: inline-block;
-            padding: 5px 9px;
-            border-radius: 20px;
-            font-size: 12px;
-            font-weight: 700;
-            white-space: nowrap;
-        }
-
-        .status-waiting {
-            background: #fef3c7;
-            color: #92400e;
-        }
-
-        .status-approved {
-            background: #dcfce7;
-            color: #166534;
-        }
-
-        .status-rejected {
-            background: #fee2e2;
-            color: #991b1b;
-        }
-
-        /* Request details */
-
-        .change-table {
-            width: 100%;
-            border-collapse: collapse;
-            margin-top: 15px;
-        }
-
-        .change-table th,
-        .change-table td {
-            border: 1px solid var(--border);
-            padding: 10px;
-            text-align: right;
-            vertical-align: top;
-            font-size: 13px;
-        }
-
-        .change-table th {
-            background: #f8fafc;
-        }
-
-        .old-value {
-            background: #fff7f7;
-        }
-
-        .new-value {
-            background: #f5fff7;
-        }
-
-        .request-image-preview {
-            max-width: 100px;
-            max-height: 100px;
-            border-radius: 8px;
-            object-fit: cover;
-            border: 1px solid var(--border);
-        }
-
-        .delete-warning {
-            background: #fff1f2;
-            border: 1px solid #fecdd3;
-            color: #9f1239;
-            padding: 14px;
-            border-radius: 10px;
-            line-height: 1.8;
-            margin-top: 15px;
-        }
-
-        /* Modals */
-
-        .modal {
-            position: fixed;
-            inset: 0;
-            background: rgba(0, 0, 0, 0.55);
-            display: none;
-            align-items: center;
-            justify-content: center;
-            padding: 20px;
-            z-index: 9999;
-        }
-
-        .modal.open {
-            display: flex;
-        }
-
-        .modal-content {
-            background: #fff;
-            width: 100%;
-            max-width: 650px;
-            max-height: 90vh;
-            overflow-y: auto;
-            border-radius: 14px;
-            padding: 24px;
-        }
-
-        .modal-large {
-            max-width: 900px;
-        }
-
-        .modal-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 20px;
-            padding-bottom: 12px;
-            border-bottom: 1px solid var(--border);
-        }
-
-        .modal-header h2 {
-            font-size: 20px;
-        }
-
-        .close-modal {
-            border: 0;
-            background: transparent;
-            cursor: pointer;
-            font-size: 20px;
-            color: var(--muted);
-        }
-
-        .modal-actions {
-            display: flex;
-            gap: 10px;
-            margin-top: 20px;
-        }
-
-        .modal-actions button {
-            flex: 1;
-            padding: 11px;
-            border: 0;
-            border-radius: 8px;
-            font-family: inherit;
-            font-weight: 700;
-            cursor: pointer;
-        }
-
-        .save-edit-btn {
-            background: var(--blue);
-            color: #fff;
-        }
-
-        .cancel-edit-btn {
-            background: #f3f4f6;
-            color: #374151;
-        }
-
-        .approval-modal-actions {
-            display: flex;
-            gap: 10px;
-            margin-top: 20px;
-        }
-
-        .approval-modal-actions button {
-            flex: 1;
-            padding: 11px;
-            border: 0;
-            border-radius: 8px;
-            font-family: inherit;
-            font-weight: 700;
-            cursor: pointer;
-        }
-
-        .modal-approve {
-            background: #16a34a;
-            color: #fff;
-        }
-
-        .modal-reject {
-            background: #dc2626;
-            color: #fff;
-        }
-
-        @media (max-width: 1100px) {
-            body {
-                flex-direction: column;
-            }
-
-            .sidebar {
-                width: 100%;
-                padding: 16px;
-            }
-
-            .nav-menu {
-                flex-direction: row;
-                flex-wrap: wrap;
-            }
-
-            .nav-item {
-                flex: 1;
-                min-width: 180px;
-            }
-
-            .sidebar-bottom {
-                margin-top: 0;
-            }
-
-            .dashboard-grid {
-                grid-template-columns: 1fr;
-            }
-        }
-
-        @media (max-width: 700px) {
-            .main-content {
-                padding: 18px;
-            }
-
-            .header {
-                align-items: flex-start;
-                flex-direction: column;
-            }
-
-            .stats-grid {
-                grid-template-columns: 1fr;
-            }
-
-            .panel {
-                padding: 16px;
-            }
-
-            .form-row {
-                flex-direction: column;
-                gap: 0;
-            }
-
-            .user-info {
-                width: 100%;
-            }
-
-            .modal-content {
-                padding: 18px;
-            }
-
-            .request-header {
-                align-items: flex-start;
-                flex-direction: column;
-            }
-        }
-    </style>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="admin.css">
 </head>
 
 <body>
 
-    <!-- SIDEBAR -->
-    <aside class="sidebar">
+    <!-- MOBILE SIDEBAR TOGGLE -->
+    <button class="mobile-sidebar-toggle" id="mobileSidebarToggle" type="button">
+        <i class="fa-solid fa-bars"></i>
+    </button>
+    <div class="mobile-overlay" id="mobileOverlay"></div>
 
+    <!-- SIDEBAR -->
+    <aside class="sidebar" id="sidebar">
         <a href="index.html" class="brand">
             <i class="fa-solid fa-shoe-prints"></i>
             STEP Admin
         </a>
 
         <ul class="nav-menu">
-
             <li class="nav-item active" id="tabNavDashboard">
                 <a href="javascript:void(0)" onclick="switchTab('dashboard')">
                     <div class="nav-item-content">
@@ -915,19 +40,16 @@
                         <i class="fa-solid fa-cart-flatbed"></i>
                         <span>طلبات العملاء</span>
                     </div>
-
                     <span class="tab-badge danger" id="sidebarNewOrdersBadge">0</span>
                 </a>
             </li>
 
-            <!-- الموافقات تحت طلبات العملاء مباشرة -->
             <li class="nav-item" id="tabNavApprovals">
                 <a href="javascript:void(0)" onclick="switchTab('approvals')">
                     <div class="nav-item-content">
                         <i class="fa-solid fa-user-check"></i>
-                        <span>طلبات موافقة الموظفين</span>
+                        <span>طلبات الموظفين</span>
                     </div>
-
                     <span class="tab-badge warning" id="sidebarPendingBadge">0</span>
                 </a>
             </li>
@@ -941,6 +63,25 @@
                 </a>
             </li>
 
+            <li class="nav-item" id="tabNavInventory">
+                <a href="javascript:void(0)" onclick="switchTab('inventory')">
+                    <div class="nav-item-content">
+                        <i class="fa-solid fa-warehouse"></i>
+                        <span>المخزون</span>
+                    </div>
+                    <span class="tab-badge danger" id="sidebarLowStockBadge" style="display:none;">0</span>
+                </a>
+            </li>
+
+            <li class="nav-item" id="tabNavReports">
+                <a href="javascript:void(0)" onclick="switchTab('reports')">
+                    <div class="nav-item-content">
+                        <i class="fa-solid fa-chart-line"></i>
+                        <span>التقارير</span>
+                    </div>
+                </a>
+            </li>
+
             <li class="nav-item">
                 <a href="index.html" target="_blank">
                     <div class="nav-item-content">
@@ -949,18 +90,7 @@
                     </div>
                 </a>
             </li>
-
         </ul>
-
-        <div class="sidebar-bottom">
-            <button type="button" class="logout-button" id="logoutButton">
-                <div class="nav-item-content">
-                    <i class="fa-solid fa-right-from-bracket"></i>
-                    <span>تسجيل الخروج</span>
-                </div>
-            </button>
-        </div>
-
     </aside>
 
     <!-- MAIN -->
@@ -972,86 +102,227 @@
                 <p id="pageSubtitle">متابعة الأداء اليومي وطلبات STEP Store</p>
             </div>
 
-            <div class="user-info">
-                <div class="user-info-icon">
-                    <i class="fa-solid fa-user"></i>
+            <div class="header-actions-group">
+                <div class="notifications-wrapper" id="notificationsWrapper">
+                    <button type="button" class="notifications-btn" id="notificationsBtn" aria-label="التنبيهات">
+                        <i class="fa-solid fa-bell"></i>
+                        <span class="notifications-badge" id="notificationsBadge" style="display:none;">0</span>
+                    </button>
+
+                    <div class="notifications-dropdown" id="notificationsDropdown">
+                        <div class="notifications-header">
+                            <strong>
+                                <i class="fa-solid fa-bell"></i>
+                                التنبيهات
+                            </strong>
+                            <span class="notifications-count" id="notificationsCount">0</span>
+                        </div>
+                        <div class="notifications-list" id="notificationsList">
+                            <div class="notifications-empty">
+                                <i class="fa-solid fa-check-circle"></i>
+                                <p>لا توجد تنبيهات</p>
+                            </div>
+                        </div>
+                    </div>
                 </div>
 
-                <div class="user-info-text">
-                    <strong id="adminUsername">المدير العام</strong>
-                    <span id="adminRole">مسؤول النظام</span>
+                <div class="user-dropdown" id="userDropdown">
+                    <div class="user-info" id="userInfoBtn">
+                        <div class="user-info-icon">
+                            <i class="fa-solid fa-user"></i>
+                        </div>
+                        <div class="user-info-text">
+                            <strong id="adminUsername">المدير العام</strong>
+                            <span id="adminRole">مسؤول النظام</span>
+                        </div>
+                        <i class="fa-solid fa-chevron-down user-info-caret"></i>
+                    </div>
+
+                    <div class="user-menu">
+                        <div class="user-menu-header">
+                            <strong id="menuUsername">المدير العام</strong>
+                            <span id="menuEmail">-</span>
+                        </div>
+                        <button type="button" class="user-menu-item danger" id="logoutButton">
+                            <i class="fa-solid fa-right-from-bracket"></i>
+                            تسجيل الخروج
+                        </button>
+                    </div>
                 </div>
             </div>
         </div>
 
         <div id="message" class="message"></div>
 
-        <!-- DASHBOARD -->
+        <!-- ============ DASHBOARD ============ -->
         <div id="viewDashboard" class="tab-content active">
 
-            <div class="stats-grid">
+            <!-- ====== ROW 1: أداء المبيعات ====== -->
+            <div class="dashboard-section-title">
+                <i class="fa-solid fa-chart-line"></i>
+                أداء المبيعات
+            </div>
+            <div class="stats-grid stats-grid-modern">
 
-                <div class="stat-card">
+                <div class="stat-card stat-card-main clickable" onclick="openReport('sales')">
                     <div class="stat-icon success">
                         <i class="fa-solid fa-wallet"></i>
                     </div>
-
-                    <div class="stat-data">
+                    <div class="stat-data" style="flex:1;">
                         <h3 id="dashStatRevenue">0 ج.م</h3>
-                        <p>إجمالي المبيعات المكتملة</p>
+                        <p>إجمالي المبيعات</p>
+                        <span class="stat-action-link">التفاصيل ←</span>
+                    </div>
+                    <canvas id="dashSparkline" class="sparkline-canvas"></canvas>
+                </div>
+
+                <div class="stat-card clickable" onclick="openReport('daily')">
+                    <div class="stat-icon" style="background:#fef3c7;color:#d97706;">
+                        <i class="fa-solid fa-calendar-day"></i>
+                    </div>
+                    <div class="stat-data">
+                        <h3 id="dashStatTodaySales">0 ج.م</h3>
+                        <p>مبيعات اليوم</p>
+                        <span class="stat-action-link">التفاصيل ←</span>
                     </div>
                 </div>
 
-                <div class="stat-card clickable" onclick="switchTab('orders')">
-                    <div class="stat-icon">
-                        <i class="fa-solid fa-cart-shopping"></i>
+                <div class="stat-card clickable" onclick="openReport('daily')">
+                    <div class="stat-icon" style="background:#dbeafe;color:#2563eb;">
+                        <i class="fa-solid fa-calendar-days"></i>
                     </div>
-
                     <div class="stat-data">
-                        <h3 id="dashStatNewOrders">0</h3>
-                        <p>طلبات شراء جديدة</p>
-                        <span class="stat-action-link">عرض الطلبات ←</span>
+                        <h3 id="dashStatMonthSales">0 ج.م</h3>
+                        <p>مبيعات الشهر</p>
+                        <span class="stat-action-link">التفاصيل ←</span>
                     </div>
                 </div>
 
-                <div class="stat-card clickable" onclick="switchTab('approvals')">
-                    <div class="stat-icon warning">
-                        <i class="fa-solid fa-user-check"></i>
+                <div class="stat-card clickable" onclick="openReport('sales')">
+                    <div class="stat-icon" style="background:#f3e8ff;color:#8b5cf6;">
+                        <i class="fa-solid fa-chart-simple"></i>
                     </div>
-
                     <div class="stat-data">
-                        <h3 id="dashStatPending">0</h3>
-                        <p>طلبات بانتظار الموافقة</p>
-                        <span class="stat-action-link">مراجعة الطلبات ←</span>
-                    </div>
-                </div>
-
-                <div class="stat-card clickable" onclick="switchTab('products')">
-                    <div class="stat-icon purple">
-                        <i class="fa-solid fa-boxes-stacked"></i>
-                    </div>
-
-                    <div class="stat-data">
-                        <h3 id="dashStatProducts">0</h3>
-                        <p>إجمالي المنتجات</p>
-                        <span class="stat-action-link">إدارة المنتجات ←</span>
+                        <h3 id="dashStatAOV">0 ج.م</h3>
+                        <p>متوسط قيمة الطلب</p>
+                        <span class="stat-action-link">التفاصيل ←</span>
                     </div>
                 </div>
 
             </div>
 
-            <div class="dashboard-grid">
+            <!-- ====== ROW 2: الطلبات ====== -->
+            <div class="dashboard-section-title">
+                <i class="fa-solid fa-cart-flatbed"></i>
+                الطلبات
+            </div>
+            <div class="stats-grid stats-grid-modern">
 
+                <div class="stat-card clickable" onclick="showActiveOrders()">
+                    <div class="stat-icon">
+                        <i class="fa-solid fa-cart-shopping"></i>
+                    </div>
+                    <div class="stat-data">
+                        <h3 id="dashStatNewOrders">0</h3>
+                        <p>طلبات نشطة</p>
+                        <span class="stat-action-link">عرض ←</span>
+                    </div>
+                </div>
+
+                <div class="stat-card clickable" onclick="switchTab('approvals')" id="dashPendingCard">
+                    <div class="stat-icon warning">
+                        <i class="fa-solid fa-user-check"></i>
+                    </div>
+                    <div class="stat-data">
+                        <h3 id="dashStatPending">0</h3>
+                        <p>بانتظار الموافقة</p>
+                        <span class="stat-action-link">مراجعة ←</span>
+                    </div>
+                </div>
+
+                <div class="stat-card clickable" onclick="showFollowUpOrders()">
+                    <div class="stat-icon danger">
+                        <i class="fa-solid fa-arrows-rotate"></i>
+                    </div>
+                    <div class="stat-data">
+                        <h3 id="dashStatFollowUp">0</h3>
+                        <p>محتاجة متابعة</p>
+                        <span class="stat-action-link">عرض ←</span>
+                    </div>
+                </div>
+
+            </div>
+
+            <!-- ====== ROW 3: العملاء والمنتجات ====== -->
+            <div class="dashboard-section-title">
+                <i class="fa-solid fa-users"></i>
+                العملاء والمنتجات
+            </div>
+            <div class="stats-grid stats-grid-modern">
+
+                <div class="stat-card clickable" onclick="openReport('customers')">
+                    <div class="stat-icon purple">
+                        <i class="fa-solid fa-users"></i>
+                    </div>
+                    <div class="stat-data">
+                        <h3 id="dashStatCustomers">0</h3>
+                        <p>عدد العملاء</p>
+                        <span class="stat-action-link">التفاصيل ←</span>
+                    </div>
+                </div>
+
+                <div class="stat-card clickable" onclick="openReport('customers')">
+                    <div class="stat-icon" style="background:#fef3c7;color:#d97706;">
+                        <i class="fa-solid fa-crown"></i>
+                    </div>
+                    <div class="stat-data" style="min-width:0;">
+                        <h3 id="dashStatTopCustomer" style="font-size:16px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">-</h3>
+                        <p id="dashStatTopCustomerLabel">أعلى عميل</p>
+                        <span class="stat-action-link">التفاصيل ←</span>
+                    </div>
+                </div>
+
+                <div class="stat-card clickable" onclick="switchTab('inventory')">
+                    <div class="stat-icon warning">
+                        <i class="fa-solid fa-triangle-exclamation"></i>
+                    </div>
+                    <div class="stat-data">
+                        <h3 id="dashStatLowStock">0</h3>
+                        <p>منتجات قاربت على النفاد</p>
+                        <span class="stat-action-link">مراجعة ←</span>
+                    </div>
+                </div>
+
+            </div>
+
+            <!-- ✅ إجراءات سريعة -->
+            <div class="quick-actions">
+                <button type="button" class="quick-action-btn" onclick="switchTab('products'); setTimeout(() => document.getElementById('openAddProductBtn')?.click(), 100);">
+                    <i class="fa-solid fa-plus"></i>
+                    <span>إضافة منتج</span>
+                </button>
+                <button type="button" class="quick-action-btn" onclick="switchTab('inventory')">
+                    <i class="fa-solid fa-cubes"></i>
+                    <span>تعديل المخزون</span>
+                </button>
+                <button type="button" class="quick-action-btn" onclick="switchTab('orders')">
+                    <i class="fa-solid fa-cart-flatbed"></i>
+                    <span>الطلبات</span>
+                </button>
+                <button type="button" class="quick-action-btn" onclick="openSalesPage()">
+                    <i class="fa-solid fa-chart-line"></i>
+                    <span>التقارير</span>
+                </button>
+            </div>
+
+            <div class="dashboard-grid">
                 <div class="panel">
                     <div class="panel-header">
                         <span class="panel-title">
                             <i class="fa-solid fa-bag-shopping"></i>
-                            أحدث طلبات العملاء
+                            أحدث الطلبات
                         </span>
-
-                        <button class="btn-link" onclick="switchTab('orders')">
-                            عرض الكل ←
-                        </button>
+                        <button class="btn-link" onclick="switchTab('orders')">عرض الكل ←</button>
                     </div>
 
                     <div class="table-wrap">
@@ -1065,11 +336,10 @@
                                     <th>الحالة</th>
                                 </tr>
                             </thead>
-
                             <tbody id="dashRecentOrdersList">
                                 <tr>
                                     <td colspan="5" style="text-align:center;color:var(--muted)">
-                                        لا توجد طلبات حديثة حالياً
+                                        لا توجد طلبات حديثة
                                     </td>
                                 </tr>
                             </tbody>
@@ -1084,545 +354,1653 @@
                             الأكثر مبيعاً
                         </span>
                     </div>
-
                     <div class="top-selling-list" id="dashTopSellingList">
                         <div class="empty-state">
                             <i class="fa-solid fa-chart-line"></i>
-                            <p>جاري تحليل بيانات المبيعات...</p>
+                            <p>جاري التحليل...</p>
                         </div>
                     </div>
                 </div>
-
             </div>
-
         </div>
 
-        <!-- ORDERS -->
+        <!-- ============ ORDERS ============ -->
         <div id="viewOrders" class="tab-content">
-
-            <div class="orders-filter-bar">
-
-                <button class="filter-btn active"
-                    onclick="filterOrders('all', this)">
-                    الكل
-                </button>
-
-                <button class="filter-btn"
-                    onclick="filterOrders('pending', this)">
+            <div class="orders-filter-bar-modern">
+                <button class="filter-chip active" onclick="filterOrders('pending', this)">
+                    <span class="dot pending"></span>
                     جديدة
                 </button>
-
-                <button class="filter-btn"
-                    onclick="filterOrders('preparing', this)">
+                <button class="filter-chip" onclick="filterOrders('preparing', this)">
+                    <span class="dot preparing"></span>
                     قيد التحضير
                 </button>
-
-                <button class="filter-btn"
-                    onclick="filterOrders('shipped', this)">
+                <button class="filter-chip" onclick="filterOrders('shipped', this)">
+                    <span class="dot shipped"></span>
                     تم الشحن
                 </button>
-
-                <button class="filter-btn"
-                    onclick="filterOrders('delivered', this)">
+                <button class="filter-chip" onclick="filterOrders('delivered', this)">
+                    <span class="dot delivered"></span>
                     تم التوصيل
                 </button>
-
-                <button class="filter-btn"
-                    onclick="filterOrders('returned', this)">
-                    مرتجعة / استبدال
+                <button class="filter-chip" onclick="filterOrders('exchange', this)">
+                    <span class="dot exchange"></span>
+                    استبدال
                 </button>
-
+                <button class="filter-chip" onclick="filterOrders('return', this)">
+                    <span class="dot return"></span>
+                    استرجاع
+                </button>
+                <button class="filter-chip" onclick="filterOrders('cancelled', this)">
+                    <span class="dot cancelled"></span>
+                    ملغى
+                </button>
+                <button class="filter-chip" onclick="filterOrders('all', this)">
+                    <span class="dot all"></span>
+                    الكل
+                </button>
             </div>
 
             <div class="panel">
-
                 <div class="panel-header">
                     <span class="panel-title">
                         <i class="fa-solid fa-boxes-packing"></i>
-                        قائمة الطلبات والشحن
+                        قائمة الطلبات
                     </span>
                 </div>
 
                 <div class="table-wrap">
-                    <table class="products-table">
-
+                    <table class="products-table orders-table-modern">
                         <thead>
                             <tr>
-                                <th>رقم الطلب</th>
-                                <th>اسم العميل</th>
+                                <th style="width:90px;">رقم الطلب</th>
+                                <th>العميل</th>
                                 <th>الهاتف / المحافظة</th>
-                                <th>المبلغ الإجمالي</th>
-                                <th>حالة الطلب</th>
-                                <th>تاريخ الطلب</th>
-                                <th>الإجراء القادم</th>
-                                <th>التفاصيل</th>
+                                <th style="width:110px;">المبلغ</th>
+                                <th style="width:130px;">الحالة</th>
+                                <th style="width:140px;">التاريخ</th>
+                                <th style="width:150px;">الإجراء</th>
+                                <th style="width:100px;">تفاصيل</th>
+                            </tr>
+                            <tr class="search-row">
+                                <th>
+                                    <div class="search-input-wrapper">
+                                        <i class="fa-solid fa-hashtag"></i>
+                                        <input type="text" id="orderSearchId" placeholder="رقم">
+                                    </div>
+                                </th>
+                                <th>
+                                    <div class="search-input-wrapper">
+                                        <i class="fa-solid fa-user"></i>
+                                        <input type="text" id="orderSearchName" placeholder="اسم العميل">
+                                    </div>
+                                </th>
+                                <th>
+                                    <div class="search-input-wrapper">
+                                        <i class="fa-solid fa-phone"></i>
+                                        <input type="text" id="orderSearchPhone" placeholder="هاتف / محافظة">
+                                    </div>
+                                </th>
+                                <th>
+                                    <div class="search-input-wrapper">
+                                        <i class="fa-solid fa-money-bill"></i>
+                                        <input type="text" id="orderSearchAmount" placeholder="مبلغ">
+                                    </div>
+                                </th>
+                                <th></th>
+                                <th></th>
+                                <th></th>
+                                <th></th>
                             </tr>
                         </thead>
-
                         <tbody id="adminOrdersList">
-                            <tr>
-                                <td colspan="8" style="text-align:center">
-                                    لا توجد طلبات مسجلة
-                                </td>
-                            </tr>
+                            <tr><td colspan="8" style="text-align:center">لا توجد طلبات</td></tr>
                         </tbody>
-
                     </table>
                 </div>
-
             </div>
-
         </div>
 
-        <!-- APPROVALS -->
+        <!-- ============ APPROVALS ============ -->
         <div id="viewApprovals" class="tab-content">
-
             <div class="panel">
-
                 <div class="panel-header">
-
                     <span class="panel-title">
                         <i class="fa-solid fa-user-check"></i>
                         طلبات موافقة الموظفين
                     </span>
-
-                    <button class="btn-link" onclick="loadApprovalRequests()">
-                        تحديث ←
-                    </button>
-
+                    <button class="btn-link" onclick="loadApprovalRequests()">تحديث ←</button>
                 </div>
 
-                <div class="approval-filter">
-
-                    <button class="active"
-                        onclick="filterApprovalRequests('pending', this)">
+                <div class="approval-filter-modern">
+                    <button class="active" onclick="filterApprovalRequests('pending', this)">
+                        <i class="fa-solid fa-clock"></i>
                         المعلقة
                     </button>
-
-                    <button
-                        onclick="filterApprovalRequests('approved', this)">
+                    <button onclick="filterApprovalRequests('approved', this)">
+                        <i class="fa-solid fa-circle-check"></i>
                         تمت الموافقة
                     </button>
-
-                    <button
-                        onclick="filterApprovalRequests('rejected', this)">
+                    <button onclick="filterApprovalRequests('rejected', this)">
+                        <i class="fa-solid fa-circle-xmark"></i>
                         مرفوضة
                     </button>
-
-                    <button
-                        onclick="filterApprovalRequests('all', this)">
+                    <button onclick="filterApprovalRequests('all', this)">
+                        <i class="fa-solid fa-list"></i>
                         الكل
                     </button>
-
                 </div>
 
                 <div id="approvalRequests">
                     <div class="empty-state">
-                        <i class="fa-solid fa-check-double"></i>
-                        <p>جاري تحميل طلبات الموافقة...</p>
+                        <i class="fa-solid fa-spinner fa-spin"></i>
+                        <p>جاري التحميل...</p>
                     </div>
                 </div>
-
             </div>
-
         </div>
 
-        <!-- PRODUCTS -->
+        <!-- ============ PRODUCTS ============ -->
         <div id="viewProducts" class="tab-content">
 
-            <div class="stats-grid">
-
-                <div class="stat-card">
-                    <div class="stat-icon">
-                        <i class="fa-solid fa-boxes-stacked"></i>
-                    </div>
-
-                    <div class="stat-data">
-                        <h3 id="statTotal">0</h3>
-                        <p>إجمالي المنتجات</p>
+            <!-- Page Header -->
+            <div class="page-header-bar">
+                <div class="page-header-stats">
+                    <div class="mini-stat">
+                        <i class="fa-solid fa-boxes-stacked" style="color:#8b5cf6;"></i>
+                        <div>
+                            <strong id="statTotal">0</strong>
+                            <span>منتج إجمالي</span>
+                        </div>
                     </div>
                 </div>
 
+                <button type="button" class="btn-add-product" id="openAddProductBtn">
+                    <i class="fa-solid fa-plus"></i>
+                    إضافة منتج جديد
+                </button>
             </div>
 
-            <div class="dashboard-grid">
+            <!-- Products Table -->
+            <div class="panel">
+                <div class="table-wrap">
+                    <table class="products-table products-table-modern">
+                        <thead>
+                            <tr>
+                                <th style="width:70px;">ID</th>
+                                <th style="width:110px;">SKU</th>
+                                <th style="width:80px;">الصورة</th>
+                                <th>الاسم</th>
+                                <th style="width:110px;">السعر</th>
+                                <th style="width:90px;">المتاح</th>
+                                <th style="width:80px;">المحجوز</th>
+                                <th style="width:180px;">إجراءات</th>
+                            </tr>
+                            <tr class="search-row">
+                                <th>
+                                    <div class="search-input-wrapper">
+                                        <i class="fa-solid fa-hashtag"></i>
+                                        <input type="text" id="searchId" placeholder="رقم">
+                                    </div>
+                                </th>
+                                <th>
+                                    <div class="search-input-wrapper">
+                                        <i class="fa-solid fa-barcode"></i>
+                                        <input type="text" id="searchSku" placeholder="SKU">
+                                    </div>
+                                </th>
+                                <th></th>
+                                <th>
+                                    <div class="search-input-wrapper">
+                                        <i class="fa-solid fa-magnifying-glass"></i>
+                                        <input type="text" id="searchName" placeholder="ابحث بالاسم...">
+                                    </div>
+                                </th>
+                                <th>
+                                    <div class="search-input-wrapper">
+                                        <i class="fa-solid fa-tag"></i>
+                                        <input type="text" id="searchPrice" placeholder="سعر">
+                                    </div>
+                                </th>
+                                <th></th>
+                                <th></th>
+                                <th></th>
+                            </tr>
+                        </thead>
+                        <tbody id="adminProductsList">
+                            <tr><td colspan="8" style="text-align:center;padding:40px;color:#94a3b8;">
+                                جاري التحميل...
+                            </td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
 
-                <!-- PRODUCTS ONLY -->
-                <div>
+        <!-- ============ INVENTORY ============ -->
+        <div id="viewInventory" class="tab-content">
+            <div class="inventory-stats">
+                <div class="inv-stat">
+                    <div class="inv-stat-icon" style="background:#eff6ff;color:#2563eb;">
+                        <i class="fa-solid fa-boxes"></i>
+                    </div>
+                    <div class="inv-stat-data">
+                        <h3 id="invTotalProducts">0</h3>
+                        <p>منتج</p>
+                    </div>
+                </div>
 
-                    <div class="panel">
+                <div class="inv-stat">
+                    <div class="inv-stat-icon" style="background:#dcfce7;color:#16a34a;">
+                        <i class="fa-solid fa-cubes"></i>
+                    </div>
+                    <div class="inv-stat-data">
+                        <h3 id="invTotalStock">0</h3>
+                        <p>قطعة في المخزون</p>
+                    </div>
+                </div>
 
-                        <div class="panel-header">
-                            <span class="panel-title">
-                                <i class="fa-solid fa-box"></i>
-                                المنتجات
-                            </span>
+                <div class="inv-stat">
+                    <div class="inv-stat-icon" style="background:#fef3c7;color:#d97706;">
+                        <i class="fa-solid fa-clock"></i>
+                    </div>
+                    <div class="inv-stat-data">
+                        <h3 id="invTotalReserved">0</h3>
+                        <p>قطعة محجوزة</p>
+                    </div>
+                </div>
+
+                <div class="inv-stat">
+                    <div class="inv-stat-icon" style="background:#fee2e2;color:#dc2626;">
+                        <i class="fa-solid fa-triangle-exclamation"></i>
+                    </div>
+                    <div class="inv-stat-data">
+                        <h3 id="invLowStock">0</h3>
+                        <p>منتجات قاربت على النفاد</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="panel">
+                <div class="panel-header">
+                    <span class="panel-title">
+                        <i class="fa-solid fa-warehouse"></i>
+                        إدارة المخزون
+                    </span>
+                    <button class="btn-link" onclick="loadInventory()">تحديث ←</button>
+                </div>
+
+                <div class="inv-toolbar-modern">
+                    <div class="search-input-wrapper">
+                        <i class="fa-solid fa-magnifying-glass"></i>
+                        <input type="text" id="invSearchInput" placeholder="ابحث بالاسم أو SKU...">
+                    </div>
+                    <div class="inv-filter-chips">
+                        <button class="inv-filter-chip active" data-filter="all" onclick="filterInventory('all', this)">
+                            <i class="fa-solid fa-list"></i>
+                            الكل
+                            <span class="count-badge" id="invCountAll">0</span>
+                        </button>
+                        <button class="inv-filter-chip" data-filter="low" onclick="filterInventory('low', this)">
+                            <i class="fa-solid fa-triangle-exclamation"></i>
+                            قارب
+                            <span class="count-badge" id="invCountLow">0</span>
+                        </button>
+                        <button class="inv-filter-chip" data-filter="out" onclick="filterInventory('out', this)">
+                            <i class="fa-solid fa-circle-xmark"></i>
+                            نفذ
+                            <span class="count-badge" id="invCountOut">0</span>
+                        </button>
+                    </div>
+                </div>
+
+                <div class="table-wrap">
+                    <table class="products-table">
+                        <thead>
+                            <tr>
+                                <th style="width:120px;">SKU</th>
+                                <th style="width:80px;">الصورة</th>
+                                <th>المنتج</th>
+                                <th style="width:110px;">المتاح</th>
+                                <th style="width:90px;">المحجوز</th>
+                                <th style="width:90px;">الإجمالي</th>
+                                <th style="width:130px;">إجراءات</th>
+                            </tr>
+                            <tr class="search-row">
+                                <th>
+                                    <div class="search-input-wrapper">
+                                        <i class="fa-solid fa-barcode"></i>
+                                        <input type="text" id="invSearchSku" placeholder="SKU">
+                                    </div>
+                                </th>
+                                <th></th>
+                                <th>
+                                    <div class="search-input-wrapper">
+                                        <i class="fa-solid fa-magnifying-glass"></i>
+                                        <input type="text" id="invSearchName" placeholder="اسم المنتج">
+                                    </div>
+                                </th>
+                                <th>
+                                    <div class="search-input-wrapper">
+                                        <i class="fa-solid fa-cubes"></i>
+                                        <input type="text" id="invSearchAvailable" placeholder="متاح">
+                                    </div>
+                                </th>
+                                <th>
+                                    <div class="search-input-wrapper">
+                                        <i class="fa-solid fa-clock"></i>
+                                        <input type="text" id="invSearchReserved" placeholder="محجوز">
+                                    </div>
+                                </th>
+                                <th></th>
+                                <th></th>
+                            </tr>
+                        </thead>
+                        <tbody id="inventoryList">
+                            <tr><td colspan="7" style="text-align:center">جاري التحميل...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div class="panel">
+                <div class="panel-header">
+                    <span class="panel-title">
+                        <i class="fa-solid fa-clock-rotate-left"></i>
+                        آخر حركات المخزون
+                    </span>
+                    <button class="btn-link" onclick="loadMovements()">تحديث ←</button>
+                </div>
+
+                <div class="movements-list" id="movementsList">
+                    <div class="empty-state">
+                        <i class="fa-solid fa-spinner fa-spin"></i>
+                        <p>جاري التحميل...</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ============ REPORTS ============ -->
+        <div id="viewReports" class="tab-content">
+
+            <!-- ============ REPORTS HOME ============ -->
+            <div id="reportsHome" class="reports-home">
+                <div class="reports-home-header">
+                    <div class="rhh-icon">
+                        <i class="fa-solid fa-chart-pie"></i>
+                    </div>
+                    <div>
+                        <h2>مركز التقارير</h2>
+                        <p>اختر التقرير اللي عايز تشوفه من الأقسام بالأسفل</p>
+                    </div>
+                </div>
+
+                <div class="reports-grid">
+
+                    <div class="report-home-card" onclick="openReport('sales')">
+                        <div class="rhc-icon" style="background:#dcfce7;color:#16a34a;">
+                            <i class="fa-solid fa-chart-line"></i>
                         </div>
-
-                        <div class="table-wrap">
-
-                            <table class="products-table">
-
-                                <thead>
-                                    <tr>
-                                        <th>الصورة</th>
-                                        <th>الاسم</th>
-                                        <th>السعر</th>
-                                        <th>Created User</th>
-                                        <th>Last Updated</th>
-                                        <th>الإجراءات</th>
-                                    </tr>
-                                </thead>
-
-                                <tbody id="adminProductsList">
-                                    <tr>
-                                        <td colspan="6" style="text-align:center">
-                                            لا توجد منتجات معروضة
-                                        </td>
-                                    </tr>
-                                </tbody>
-
-                            </table>
-
+                        <div class="rhc-content">
+                            <h4>المبيعات التفصيلية</h4>
+                            <p>كل الطلبات مع فلترة بالتاريخ وطرق الدفع</p>
+                            <span class="rhc-tag" style="background:#dcfce7;color:#16a34a;">المبيعات</span>
                         </div>
+                    </div>
 
+                    <div class="report-home-card" onclick="openReport('daily')">
+                        <div class="rhc-icon" style="background:#eff6ff;color:#2563eb;">
+                            <i class="fa-solid fa-calendar-day"></i>
+                        </div>
+                        <div class="rhc-content">
+                            <h4>المبيعات اليومية</h4>
+                            <p>توزيع المبيعات على أيام الفترة المحددة</p>
+                            <span class="rhc-tag" style="background:#dcfce7;color:#16a34a;">المبيعات</span>
+                        </div>
+                    </div>
+
+                    <div class="report-home-card" onclick="openReport('governorate')">
+                        <div class="rhc-icon" style="background:#fef3c7;color:#d97706;">
+                            <i class="fa-solid fa-map-location-dot"></i>
+                        </div>
+                        <div class="rhc-content">
+                            <h4>المبيعات حسب المحافظة</h4>
+                            <p>أداء كل محافظة ومناطق التوصيل</p>
+                            <span class="rhc-tag" style="background:#dcfce7;color:#16a34a;">المبيعات</span>
+                        </div>
+                    </div>
+
+                    <div class="report-home-card" onclick="openReport('customers')">
+                        <div class="rhc-icon" style="background:#f3e8ff;color:#8b5cf6;">
+                            <i class="fa-solid fa-users"></i>
+                        </div>
+                        <div class="rhc-content">
+                            <h4>تقرير العملاء</h4>
+                            <p>قائمة العملاء مع VIP والمتكررين</p>
+                            <span class="rhc-tag" style="background:#f3e8ff;color:#8b5cf6;">العملاء</span>
+                        </div>
+                    </div>
+
+                    <div class="report-home-card" onclick="openReport('products')">
+                        <div class="rhc-icon" style="background:#fce7f3;color:#db2777;">
+                            <i class="fa-solid fa-box"></i>
+                        </div>
+                        <div class="rhc-content">
+                            <h4>أداء المنتجات</h4>
+                            <p>المبيعات والمخزون لكل منتج</p>
+                            <span class="rhc-tag" style="background:#fce7f3;color:#db2777;">المنتجات</span>
+                        </div>
+                    </div>
+
+                    <div class="report-home-card" onclick="openReport('inventory')">
+                        <div class="rhc-icon" style="background:#cffafe;color:#0891b2;">
+                            <i class="fa-solid fa-warehouse"></i>
+                        </div>
+                        <div class="rhc-content">
+                            <h4>حركة المخزون</h4>
+                            <p>كل حركات الدخول والخروج والتسويات</p>
+                            <span class="rhc-tag" style="background:#cffafe;color:#0891b2;">المخزون</span>
+                        </div>
+                    </div>
+
+                    <div class="report-home-card" onclick="openReport('status')">
+                        <div class="rhc-icon" style="background:#e0e7ff;color:#4f46e5;">
+                            <i class="fa-solid fa-circle-info"></i>
+                        </div>
+                        <div class="rhc-content">
+                            <h4>حالات الطلبات</h4>
+                            <p>توزيع الطلبات على جميع الحالات</p>
+                            <span class="rhc-tag" style="background:#e0e7ff;color:#4f46e5;">الطلبات</span>
+                        </div>
+                    </div>
+
+                    <div class="report-home-card" onclick="openReport('exchange')">
+                        <div class="rhc-icon" style="background:#fee2e2;color:#dc2626;">
+                            <i class="fa-solid fa-arrows-rotate"></i>
+                        </div>
+                        <div class="rhc-content">
+                            <h4>الاستبدال والاسترجاع</h4>
+                            <p>متابعة طلبات الاستبدال والاسترجاع</p>
+                            <span class="rhc-tag" style="background:#fee2e2;color:#dc2626;">الطلبات</span>
+                        </div>
                     </div>
 
                 </div>
+            </div>
 
-                <!-- ADD PRODUCT -->
-                <div>
-
-                    <div class="panel">
-
-                        <div class="panel-header">
-                            <span class="panel-title">
-                                <i class="fa-solid fa-plus"></i>
-                                إضافة منتج جديد
-                            </span>
-                        </div>
-
-                        <form id="addProductForm">
-
-                            <div class="form-group">
-                                <label for="name">اسم الحذاء</label>
-
-                                <input
-                                    type="text"
-                                    id="name"
-                                    required
-                                    placeholder="مثال: Nike Air Force"
-                                >
-                            </div>
-
-                            <div class="form-row">
-
-                                <div class="form-group">
-                                    <label for="price">السعر الحالي</label>
-
-                                    <input
-                                        type="number"
-                                        id="price"
-                                        min="0"
-                                        step="0.01"
-                                        required
-                                        placeholder="0.00"
-                                    >
-                                </div>
-
-                                <div class="form-group">
-                                    <label for="oldPrice">السعر القديم</label>
-
-                                    <input
-                                        type="number"
-                                        id="oldPrice"
-                                        min="0"
-                                        step="0.01"
-                                        placeholder="0.00"
-                                    >
-                                </div>
-
-                            </div>
-
-                            <!-- Badge وليس Category -->
-                            <div class="form-group">
-
-                                <label for="badge">
-                                    الشارة
-                                </label>
-
-                                <select id="badge">
-
-                                    <option value="">
-                                        بدون شارة
-                                    </option>
-
-                                    <option value="جديد">
-                                        جديد
-                                    </option>
-
-                                    <option value="خصم">
-                                        خصم
-                                    </option>
-
-                                </select>
-
-                            </div>
-
-                            <div class="form-group">
-
-                                <label for="sizes">
-                                    المقاسات
-                                </label>
-
-                                <input
-                                    type="text"
-                                    id="sizes"
-                                    placeholder="مثال: 40, 41, 42, 43"
-                                >
-
-                            </div>
-
-                            <div class="form-group">
-
-                                <label for="imageUrl">
-                                    رابط الصورة
-                                </label>
-
-                                <input
-                                    type="url"
-                                    id="imageUrl"
-                                    placeholder="https://example.com/shoe.jpg"
-                                >
-
-                            </div>
-
-                            <div class="form-group">
-
-                                <label for="description">
-                                    وصف المنتج
-                                </label>
-
-                                <textarea
-                                    id="description"
-                                    placeholder="اكتب تفاصيل ومواصفات المنتج..."
-                                ></textarea>
-
-                            </div>
-
-                            <button
-                                type="submit"
-                                class="btn-submit"
-                                id="submitBtn"
-                            >
-                                إضافة المنتج
-                            </button>
-
-                        </form>
-
-                    </div>
-
+            <!-- ============ SALES REPORT ============ -->
+            <div class="report-panel" id="reportSales">
+                <div class="report-panel-header">
+                    <button class="report-back-btn" onclick="backToReportsHome()">
+                        <i class="fa-solid fa-arrow-right"></i>
+                        رجوع للتقارير
+                    </button>
+                    <h2>
+                        <i class="fa-solid fa-chart-line"></i>
+                        المبيعات التفصيلية
+                    </h2>
+                    <div></div>
                 </div>
 
+                <div class="report-filter-bar">
+                    <div class="report-filter-group">
+                        <label><i class="fa-solid fa-calendar"></i> من تاريخ</label>
+                        <input type="date" id="salesDateFrom">
+                    </div>
+                    <div class="report-filter-group">
+                        <label><i class="fa-solid fa-calendar"></i> إلى تاريخ</label>
+                        <input type="date" id="salesDateTo">
+                    </div>
+                    <div class="report-preset-chips">
+                        <button class="preset-chip" data-preset="today" onclick="setSalesPreset('today', this)">اليوم</button>
+                        <button class="preset-chip" data-preset="week" onclick="setSalesPreset('week', this)">آخر 7 أيام</button>
+                        <button class="preset-chip active" data-preset="month" onclick="setSalesPreset('month', this)">هذا الشهر</button>
+                        <button class="preset-chip" data-preset="all" onclick="setSalesPreset('all', this)">الكل</button>
+                    </div>
+                    <div class="report-filter-actions">
+                        <button class="btn-apply-filter" onclick="applySalesFilters()">
+                            <i class="fa-solid fa-filter"></i> تطبيق
+                        </button>
+                        <button class="btn-export" onclick="exportSalesCSV()">
+                            <i class="fa-solid fa-file-csv"></i> CSV
+                        </button>
+                    </div>
+                </div>
+
+                <div class="report-kpis">
+                    <div class="kpi-card">
+                        <div class="kpi-icon" style="background:#dcfce7;color:#16a34a;">
+                            <i class="fa-solid fa-wallet"></i>
+                        </div>
+                        <div class="kpi-data">
+                            <h3 id="salesKpiRevenue">0</h3>
+                            <p>إجمالي المبيعات (ج.م)</p>
+                        </div>
+                    </div>
+                    <div class="kpi-card">
+                        <div class="kpi-icon" style="background:#eff6ff;color:#2563eb;">
+                            <i class="fa-solid fa-cart-shopping"></i>
+                        </div>
+                        <div class="kpi-data">
+                            <h3 id="salesKpiOrders">0</h3>
+                            <p>عدد الطلبات</p>
+                        </div>
+                    </div>
+                    <div class="kpi-card">
+                        <div class="kpi-icon" style="background:#fef3c7;color:#d97706;">
+                            <i class="fa-solid fa-chart-simple"></i>
+                        </div>
+                        <div class="kpi-data">
+                            <h3 id="salesKpiAOV">0</h3>
+                            <p>متوسط قيمة الطلب</p>
+                        </div>
+                    </div>
+                    <div class="kpi-card">
+                        <div class="kpi-icon" style="background:#f3e8ff;color:#8b5cf6;">
+                            <i class="fa-solid fa-cubes"></i>
+                        </div>
+                        <div class="kpi-data">
+                            <h3 id="salesKpiItems">0</h3>
+                            <p>عدد القطع المُباعة</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="report-split">
+                    <div class="panel">
+                        <div class="panel-header">
+                            <span class="panel-title">
+                                <i class="fa-solid fa-credit-card"></i>
+                                توزيع طرق الدفع
+                            </span>
+                        </div>
+                        <div id="paymentBreakdown" class="breakdown-list">
+                            <div class="empty-state"><p>لا توجد بيانات</p></div>
+                        </div>
+                    </div>
+                    <div class="panel">
+                        <div class="panel-header">
+                            <span class="panel-title">
+                                <i class="fa-solid fa-circle-info"></i>
+                                توزيع حالات الطلبات
+                            </span>
+                        </div>
+                        <div id="statusBreakdown" class="breakdown-list">
+                            <div class="empty-state"><p>لا توجد بيانات</p></div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="panel">
+                    <div class="panel-header">
+                        <span class="panel-title">
+                            <i class="fa-solid fa-fire"></i>
+                            أفضل المنتجات مبيعًا في الفترة المحددة
+                        </span>
+                    </div>
+                    <div id="salesTopProductsList" class="top-selling-list">
+                        <div class="empty-state"><p>لا توجد مبيعات في هذه الفترة</p></div>
+                    </div>
+                </div>
+
+                <div class="panel">
+                    <div class="panel-header">
+                        <span class="panel-title">
+                            <i class="fa-solid fa-list"></i>
+                            تفاصيل الطلبات
+                        </span>
+                        <span class="report-count" id="salesOrdersCount">0 طلب</span>
+                    </div>
+                    <div class="table-wrap">
+                        <table class="products-table orders-table-modern">
+                            <thead>
+                                <tr>
+                                    <th style="width:80px;">رقم الطلب</th>
+                                    <th>العميل</th>
+                                    <th style="width:120px;">الهاتف</th>
+                                    <th style="width:120px;">التاريخ</th>
+                                    <th style="width:140px;">طريقة الدفع</th>
+                                    <th style="width:110px;">الحالة</th>
+                                    <th style="width:110px;">الإجمالي</th>
+                                    <th style="width:70px;">تفاصيل</th>
+                                </tr>
+                            </thead>
+                            <tbody id="salesOrdersList">
+                                <tr><td colspan="8" style="text-align:center;padding:30px;color:#94a3b8;">جاري التحميل...</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ============ DAILY SALES ============ -->
+            <div class="report-panel" id="reportDaily">
+                <div class="report-panel-header">
+                    <button class="report-back-btn" onclick="backToReportsHome()">
+                        <i class="fa-solid fa-arrow-right"></i>
+                        رجوع للتقارير
+                    </button>
+                    <h2><i class="fa-solid fa-calendar-day"></i> المبيعات اليومية</h2>
+                    <div></div>
+                </div>
+
+                <div class="report-filter-bar">
+                    <div class="report-filter-group">
+                        <label><i class="fa-solid fa-calendar"></i> من تاريخ</label>
+                        <input type="date" id="dailyDateFrom">
+                    </div>
+                    <div class="report-filter-group">
+                        <label><i class="fa-solid fa-calendar"></i> إلى تاريخ</label>
+                        <input type="date" id="dailyDateTo">
+                    </div>
+                    <div class="report-preset-chips">
+                        <button class="preset-chip" onclick="setDailyPreset('week', this)">آخر 7 أيام</button>
+                        <button class="preset-chip active" onclick="setDailyPreset('month', this)">هذا الشهر</button>
+                        <button class="preset-chip" onclick="setDailyPreset('all', this)">الكل</button>
+                    </div>
+                    <div class="report-filter-actions">
+                        <button class="btn-apply-filter" onclick="loadDailyReport()">
+                            <i class="fa-solid fa-filter"></i> تطبيق
+                        </button>
+                    </div>
+                </div>
+
+                <div class="report-kpis">
+                    <div class="kpi-card">
+                        <div class="kpi-icon" style="background:#dcfce7;color:#16a34a;">
+                            <i class="fa-solid fa-wallet"></i>
+                        </div>
+                        <div class="kpi-data">
+                            <h3 id="dailyKpiTotal">0</h3>
+                            <p>إجمالي الفترة</p>
+                        </div>
+                    </div>
+                    <div class="kpi-card">
+                        <div class="kpi-icon" style="background:#eff6ff;color:#2563eb;">
+                            <i class="fa-solid fa-calendar"></i>
+                        </div>
+                        <div class="kpi-data">
+                            <h3 id="dailyKpiDays">0</h3>
+                            <p>عدد الأيام</p>
+                        </div>
+                    </div>
+                    <div class="kpi-card">
+                        <div class="kpi-icon" style="background:#fef3c7;color:#d97706;">
+                            <i class="fa-solid fa-chart-simple"></i>
+                        </div>
+                        <div class="kpi-data">
+                            <h3 id="dailyKpiAvg">0</h3>
+                            <p>متوسط اليوم</p>
+                        </div>
+                    </div>
+                    <div class="kpi-card">
+                        <div class="kpi-icon" style="background:#f3e8ff;color:#8b5cf6;">
+                            <i class="fa-solid fa-crown"></i>
+                        </div>
+                        <div class="kpi-data">
+                            <h3 id="dailyKpiBest">-</h3>
+                            <p>أفضل يوم</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="panel">
+                    <div class="panel-header">
+                        <span class="panel-title">
+                            <i class="fa-solid fa-chart-column"></i>
+                            تفصيل المبيعات يوميًا
+                        </span>
+                    </div>
+                    <div id="dailyList" class="daily-list">
+                        <div class="empty-state"><p>لا توجد بيانات</p></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ============ GOVERNORATE SALES ============ -->
+            <div class="report-panel" id="reportGovernorate">
+                <div class="report-panel-header">
+                    <button class="report-back-btn" onclick="backToReportsHome()">
+                        <i class="fa-solid fa-arrow-right"></i>
+                        رجوع للتقارير
+                    </button>
+                    <h2><i class="fa-solid fa-map-location-dot"></i> المبيعات حسب المحافظة</h2>
+                    <div></div>
+                </div>
+
+                <div class="report-filter-bar">
+                    <div class="report-filter-group">
+                        <label><i class="fa-solid fa-calendar"></i> من</label>
+                        <input type="date" id="govDateFrom">
+                    </div>
+                    <div class="report-filter-group">
+                        <label><i class="fa-solid fa-calendar"></i> إلى</label>
+                        <input type="date" id="govDateTo">
+                    </div>
+                    <div class="report-preset-chips">
+                        <button class="preset-chip active" onclick="setGovPreset('month', this)">هذا الشهر</button>
+                        <button class="preset-chip" onclick="setGovPreset('all', this)">الكل</button>
+                    </div>
+                    <div class="report-filter-actions">
+                        <button class="btn-apply-filter" onclick="loadGovernorateReport()">
+                            <i class="fa-solid fa-filter"></i> تطبيق
+                        </button>
+                        <button class="btn-export" onclick="exportGovernorateCSV()">
+                            <i class="fa-solid fa-file-csv"></i> CSV
+                        </button>
+                    </div>
+                </div>
+
+                <div class="report-kpis">
+                    <div class="kpi-card">
+                        <div class="kpi-icon" style="background:#fef3c7;color:#d97706;">
+                            <i class="fa-solid fa-map"></i>
+                        </div>
+                        <div class="kpi-data">
+                            <h3 id="govKpiCount">0</h3>
+                            <p>عدد المحافظات</p>
+                        </div>
+                    </div>
+                    <div class="kpi-card">
+                        <div class="kpi-icon" style="background:#dcfce7;color:#16a34a;">
+                            <i class="fa-solid fa-crown"></i>
+                        </div>
+                        <div class="kpi-data">
+                            <h3 id="govKpiTop">-</h3>
+                            <p>أعلى محافظة</p>
+                        </div>
+                    </div>
+                    <div class="kpi-card">
+                        <div class="kpi-icon" style="background:#eff6ff;color:#2563eb;">
+                            <i class="fa-solid fa-wallet"></i>
+                        </div>
+                        <div class="kpi-data">
+                            <h3 id="govKpiRevenue">0</h3>
+                            <p>إجمالي المبيعات</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="panel">
+                    <div class="panel-header">
+                        <span class="panel-title">
+                            <i class="fa-solid fa-list"></i>
+                            تفاصيل المبيعات لكل محافظة
+                        </span>
+                    </div>
+                    <div class="table-wrap">
+                        <table class="products-table orders-table-modern">
+                            <thead>
+                                <tr>
+                                    <th style="width:50px;">#</th>
+                                    <th>المحافظة</th>
+                                    <th style="width:110px;">عدد الطلبات</th>
+                                    <th style="width:110px;">القطع المباعة</th>
+                                    <th style="width:130px;">إجمالي المبيعات</th>
+                                    <th style="width:130px;">متوسط الطلب</th>
+                                    <th style="width:180px;">النسبة</th>
+                                </tr>
+                            </thead>
+                            <tbody id="govList">
+                                <tr><td colspan="7" style="text-align:center;padding:30px;color:#94a3b8;">جاري التحميل...</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ============ CUSTOMERS REPORT ============ -->
+            <div class="report-panel" id="reportCustomers">
+                <div class="report-panel-header">
+                    <button class="report-back-btn" onclick="backToReportsHome()">
+                        <i class="fa-solid fa-arrow-right"></i>
+                        رجوع للتقارير
+                    </button>
+                    <h2><i class="fa-solid fa-users"></i> تقرير العملاء</h2>
+                    <div></div>
+                </div>
+
+                <div class="report-filter-bar">
+                    <div class="report-filter-group" style="flex:1;min-width:220px;">
+                        <label><i class="fa-solid fa-magnifying-glass"></i> بحث</label>
+                        <input type="text" id="customersSearchInput" placeholder="اسم العميل أو رقم الهاتف...">
+                    </div>
+                    <div class="report-filter-group">
+                        <label><i class="fa-solid fa-sort"></i> ترتيب حسب</label>
+                        <select id="customersSortSelect">
+                            <option value="spent_desc">الأكثر شراءً (مبلغ)</option>
+                            <option value="orders_desc">الأكثر طلبات</option>
+                            <option value="recent">الأحدث طلبًا</option>
+                            <option value="name">الاسم (أ - ي)</option>
+                        </select>
+                    </div>
+                    <div class="report-filter-actions">
+                        <button class="btn-export" onclick="exportCustomersCSV()">
+                            <i class="fa-solid fa-file-csv"></i> CSV
+                        </button>
+                    </div>
+                </div>
+
+                <div class="customer-type-chips">
+                    <button class="preset-chip active" data-type="all" onclick="setCustomerType('all', this)">
+                        <i class="fa-solid fa-users"></i> كل العملاء
+                    </button>
+                    <button class="preset-chip" data-type="vip" onclick="setCustomerType('vip', this)">
+                        <i class="fa-solid fa-crown"></i> VIP
+                    </button>
+                    <button class="preset-chip" data-type="new" onclick="setCustomerType('new', this)">
+                        <i class="fa-solid fa-user-plus"></i> جدد
+                    </button>
+                    <button class="preset-chip" data-type="repeat" onclick="setCustomerType('repeat', this)">
+                        <i class="fa-solid fa-arrows-rotate"></i> متكررين
+                    </button>
+                </div>
+
+                <div class="report-kpis">
+                    <div class="kpi-card">
+                        <div class="kpi-icon" style="background:#eff6ff;color:#2563eb;">
+                            <i class="fa-solid fa-users"></i>
+                        </div>
+                        <div class="kpi-data">
+                            <h3 id="customersKpiTotal">0</h3>
+                            <p>عدد العملاء</p>
+                        </div>
+                    </div>
+                    <div class="kpi-card">
+                        <div class="kpi-icon" style="background:#dcfce7;color:#16a34a;">
+                            <i class="fa-solid fa-sack-dollar"></i>
+                        </div>
+                        <div class="kpi-data">
+                            <h3 id="customersKpiLTV">0</h3>
+                            <p>متوسط قيمة العميل</p>
+                        </div>
+                    </div>
+                    <div class="kpi-card">
+                        <div class="kpi-icon" style="background:#fef3c7;color:#d97706;">
+                            <i class="fa-solid fa-user-plus"></i>
+                        </div>
+                        <div class="kpi-data">
+                            <h3 id="customersKpiNew">0</h3>
+                            <p>عملاء جدد</p>
+                        </div>
+                    </div>
+                    <div class="kpi-card">
+                        <div class="kpi-icon" style="background:#f3e8ff;color:#8b5cf6;">
+                            <i class="fa-solid fa-repeat"></i>
+                        </div>
+                        <div class="kpi-data">
+                            <h3 id="customersKpiRepeatRate">0%</h3>
+                            <p>نسبة المتكررين</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="panel">
+                    <div class="panel-header">
+                        <span class="panel-title">
+                            <i class="fa-solid fa-address-book"></i>
+                            قائمة العملاء
+                        </span>
+                        <span class="report-count" id="customersCount">0 عميل</span>
+                    </div>
+                    <div class="table-wrap">
+                        <table class="products-table orders-table-modern">
+                            <thead>
+                                <tr>
+                                    <th style="width:50px;">#</th>
+                                    <th>العميل</th>
+                                    <th style="width:130px;">الهاتف</th>
+                                    <th style="width:100px;">عدد الطلبات</th>
+                                    <th style="width:130px;">إجمالي الشراء</th>
+                                    <th style="width:130px;">متوسط الطلب</th>
+                                    <th style="width:140px;">آخر طلب</th>
+                                    <th style="width:90px;">النوع</th>
+                                    <th style="width:70px;">تفاصيل</th>
+                                </tr>
+                            </thead>
+                            <tbody id="customersList">
+                                <tr><td colspan="9" style="text-align:center;padding:30px;color:#94a3b8;">جاري التحميل...</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ============ PRODUCTS PERFORMANCE ============ -->
+            <div class="report-panel" id="reportProducts">
+                <div class="report-panel-header">
+                    <button class="report-back-btn" onclick="backToReportsHome()">
+                        <i class="fa-solid fa-arrow-right"></i>
+                        رجوع للتقارير
+                    </button>
+                    <h2><i class="fa-solid fa-box"></i> أداء المنتجات</h2>
+                    <div></div>
+                </div>
+
+                <div class="report-filter-bar">
+                    <div class="report-filter-group">
+                        <label><i class="fa-solid fa-calendar"></i> من</label>
+                        <input type="date" id="prodDateFrom">
+                    </div>
+                    <div class="report-filter-group">
+                        <label><i class="fa-solid fa-calendar"></i> إلى</label>
+                        <input type="date" id="prodDateTo">
+                    </div>
+                    <div class="report-preset-chips">
+                        <button class="preset-chip active" onclick="setProdPreset('month', this)">هذا الشهر</button>
+                        <button class="preset-chip" onclick="setProdPreset('week', this)">آخر 7 أيام</button>
+                        <button class="preset-chip" onclick="setProdPreset('all', this)">الكل</button>
+                    </div>
+                    <div class="report-filter-actions">
+                        <button class="btn-apply-filter" onclick="loadProductsReport()">
+                            <i class="fa-solid fa-filter"></i> تطبيق
+                        </button>
+                        <button class="btn-export" onclick="exportProductsCSV()">
+                            <i class="fa-solid fa-file-csv"></i> CSV
+                        </button>
+                    </div>
+                </div>
+
+                <div class="report-kpis">
+                    <div class="kpi-card">
+                        <div class="kpi-icon" style="background:#fce7f3;color:#db2777;">
+                            <i class="fa-solid fa-boxes-stacked"></i>
+                        </div>
+                        <div class="kpi-data">
+                            <h3 id="prodKpiTotal">0</h3>
+                            <p>منتجات مُباعة</p>
+                        </div>
+                    </div>
+                    <div class="kpi-card">
+                        <div class="kpi-icon" style="background:#dcfce7;color:#16a34a;">
+                            <i class="fa-solid fa-cubes"></i>
+                        </div>
+                        <div class="kpi-data">
+                            <h3 id="prodKpiItems">0</h3>
+                            <p>قطعة مُباعة</p>
+                        </div>
+                    </div>
+                    <div class="kpi-card">
+                        <div class="kpi-icon" style="background:#eff6ff;color:#2563eb;">
+                            <i class="fa-solid fa-wallet"></i>
+                        </div>
+                        <div class="kpi-data">
+                            <h3 id="prodKpiRevenue">0</h3>
+                            <p>إجمالي الإيراد</p>
+                        </div>
+                    </div>
+                    <div class="kpi-card">
+                        <div class="kpi-icon" style="background:#fef3c7;color:#d97706;">
+                            <i class="fa-solid fa-crown"></i>
+                        </div>
+                        <div class="kpi-data">
+                            <h3 id="prodKpiTop">-</h3>
+                            <p>الأكثر مبيعًا</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="panel">
+                    <div class="panel-header">
+                        <span class="panel-title">
+                            <i class="fa-solid fa-list"></i>
+                            تفاصيل كل منتج
+                        </span>
+                    </div>
+                    <div class="table-wrap">
+                        <table class="products-table orders-table-modern">
+                            <thead>
+                                <tr>
+                                    <th style="width:50px;">#</th>
+                                    <th style="width:70px;">الصورة</th>
+                                    <th>المنتج</th>
+                                    <th style="width:100px;">القطع المباعة</th>
+                                    <th style="width:130px;">الإيراد</th>
+                                    <th style="width:110px;">المخزون الحالي</th>
+                                    <th style="width:120px;">الحالة</th>
+                                </tr>
+                            </thead>
+                            <tbody id="productsReportList">
+                                <tr><td colspan="7" style="text-align:center;padding:30px;color:#94a3b8;">جاري التحميل...</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ============ INVENTORY MOVEMENTS ============ -->
+            <div class="report-panel" id="reportInventory">
+                <div class="report-panel-header">
+                    <button class="report-back-btn" onclick="backToReportsHome()">
+                        <i class="fa-solid fa-arrow-right"></i>
+                        رجوع للتقارير
+                    </button>
+                    <h2><i class="fa-solid fa-warehouse"></i> حركة المخزون</h2>
+                    <div></div>
+                </div>
+
+                <div class="report-filter-bar">
+                    <div class="report-filter-group" style="flex:1;min-width:220px;">
+                        <label><i class="fa-solid fa-magnifying-glass"></i> بحث</label>
+                        <input type="text" id="invReportSearch" placeholder="اسم المنتج أو السبب...">
+                    </div>
+                    <div class="report-filter-group">
+                        <label><i class="fa-solid fa-tag"></i> نوع الحركة</label>
+                        <select id="invReportType">
+                            <option value="all">الكل</option>
+                            <option value="purchase">شراء</option>
+                            <option value="sale">بيع</option>
+                            <option value="damage">تلف</option>
+                            <option value="adjustment">تسوية</option>
+                            <option value="initial">رصيد افتتاحي</option>
+                            <option value="return">مرتجع</option>
+                        </select>
+                    </div>
+                    <div class="report-filter-actions">
+                        <button class="btn-apply-filter" onclick="loadInventoryReport()">
+                            <i class="fa-solid fa-filter"></i> تطبيق
+                        </button>
+                        <button class="btn-export" onclick="exportInventoryCSV()">
+                            <i class="fa-solid fa-file-csv"></i> CSV
+                        </button>
+                    </div>
+                </div>
+
+                <div class="report-kpis">
+                    <div class="kpi-card">
+                        <div class="kpi-icon" style="background:#cffafe;color:#0891b2;">
+                            <i class="fa-solid fa-list"></i>
+                        </div>
+                        <div class="kpi-data">
+                            <h3 id="invReportKpiTotal">0</h3>
+                            <p>عدد الحركات</p>
+                        </div>
+                    </div>
+                    <div class="kpi-card">
+                        <div class="kpi-icon" style="background:#dcfce7;color:#16a34a;">
+                            <i class="fa-solid fa-arrow-up"></i>
+                        </div>
+                        <div class="kpi-data">
+                            <h3 id="invReportKpiIn">0</h3>
+                            <p>إجمالي الدخول</p>
+                        </div>
+                    </div>
+                    <div class="kpi-card">
+                        <div class="kpi-icon" style="background:#fee2e2;color:#dc2626;">
+                            <i class="fa-solid fa-arrow-down"></i>
+                        </div>
+                        <div class="kpi-data">
+                            <h3 id="invReportKpiOut">0</h3>
+                            <p>إجمالي الخروج</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="panel">
+                    <div class="panel-header">
+                        <span class="panel-title">
+                            <i class="fa-solid fa-clock-rotate-left"></i>
+                            كل الحركات
+                        </span>
+                    </div>
+                    <div class="table-wrap">
+                        <table class="products-table orders-table-modern">
+                            <thead>
+                                <tr>
+                                    <th style="width:140px;">التاريخ</th>
+                                    <th>المنتج</th>
+                                    <th style="width:110px;">النوع</th>
+                                    <th style="width:100px;">التغيير</th>
+                                    <th style="width:130px;">الرصيد بعد</th>
+                                    <th>السبب</th>
+                                    <th style="width:140px;">بواسطة</th>
+                                </tr>
+                            </thead>
+                            <tbody id="inventoryReportList">
+                                <tr><td colspan="7" style="text-align:center;padding:30px;color:#94a3b8;">جاري التحميل...</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ============ STATUS REPORT ============ -->
+            <div class="report-panel" id="reportStatus">
+                <div class="report-panel-header">
+                    <button class="report-back-btn" onclick="backToReportsHome()">
+                        <i class="fa-solid fa-arrow-right"></i>
+                        رجوع للتقارير
+                    </button>
+                    <h2><i class="fa-solid fa-circle-info"></i> حالات الطلبات</h2>
+                    <div></div>
+                </div>
+
+                <div class="report-filter-bar">
+                    <div class="report-preset-chips">
+                        <button class="preset-chip active" onclick="setStatusPreset('month', this)">هذا الشهر</button>
+                        <button class="preset-chip" onclick="setStatusPreset('week', this)">آخر 7 أيام</button>
+                        <button class="preset-chip" onclick="setStatusPreset('all', this)">الكل</button>
+                    </div>
+                    <div class="report-filter-actions">
+                        <button class="btn-apply-filter" onclick="loadStatusReport()">
+                            <i class="fa-solid fa-refresh"></i> تحديث
+                        </button>
+                    </div>
+                </div>
+
+                <div class="report-kpis">
+                    <div class="kpi-card">
+                        <div class="kpi-icon" style="background:#e0e7ff;color:#4f46e5;">
+                            <i class="fa-solid fa-list"></i>
+                        </div>
+                        <div class="kpi-data">
+                            <h3 id="statusKpiTotal">0</h3>
+                            <p>إجمالي الطلبات</p>
+                        </div>
+                    </div>
+                    <div class="kpi-card">
+                        <div class="kpi-icon" style="background:#dcfce7;color:#16a34a;">
+                            <i class="fa-solid fa-circle-check"></i>
+                        </div>
+                        <div class="kpi-data">
+                            <h3 id="statusKpiDelivered">0</h3>
+                            <p>تم التوصيل</p>
+                        </div>
+                    </div>
+                    <div class="kpi-card">
+                        <div class="kpi-icon" style="background:#fef3c7;color:#d97706;">
+                            <i class="fa-solid fa-clock"></i>
+                        </div>
+                        <div class="kpi-data">
+                            <h3 id="statusKpiActive">0</h3>
+                            <p>قيد التنفيذ</p>
+                        </div>
+                    </div>
+                    <div class="kpi-card">
+                        <div class="kpi-icon" style="background:#fee2e2;color:#dc2626;">
+                            <i class="fa-solid fa-xmark"></i>
+                        </div>
+                        <div class="kpi-data">
+                            <h3 id="statusKpiCancelled">0</h3>
+                            <p>ملغية</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="panel">
+                    <div class="panel-header">
+                        <span class="panel-title">
+                            <i class="fa-solid fa-chart-pie"></i>
+                            توزيع كل الحالات
+                        </span>
+                    </div>
+                    <div id="statusFullBreakdown" class="breakdown-list">
+                        <div class="empty-state"><p>لا توجد بيانات</p></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ============ EXCHANGE / RETURN ============ -->
+            <div class="report-panel" id="reportExchange">
+                <div class="report-panel-header">
+                    <button class="report-back-btn" onclick="backToReportsHome()">
+                        <i class="fa-solid fa-arrow-right"></i>
+                        رجوع للتقارير
+                    </button>
+                    <h2><i class="fa-solid fa-arrows-rotate"></i> الاستبدال والاسترجاع</h2>
+                    <div></div>
+                </div>
+
+                <div class="report-filter-bar">
+                    <div class="report-preset-chips">
+                        <button class="preset-chip active" onclick="setExchangePreset('month', this)">هذا الشهر</button>
+                        <button class="preset-chip" onclick="setExchangePreset('all', this)">الكل</button>
+                    </div>
+                    <div class="report-filter-actions">
+                        <button class="btn-apply-filter" onclick="loadExchangeReport()">
+                            <i class="fa-solid fa-refresh"></i> تحديث
+                        </button>
+                    </div>
+                </div>
+
+                <div class="report-kpis">
+                    <div class="kpi-card">
+                        <div class="kpi-icon" style="background:#fef3c7;color:#d97706;">
+                            <i class="fa-solid fa-rotate-left"></i>
+                        </div>
+                        <div class="kpi-data">
+                            <h3 id="exchKpiReturns">0</h3>
+                            <p>طلبات استرجاع</p>
+                        </div>
+                    </div>
+                    <div class="kpi-card">
+                        <div class="kpi-icon" style="background:#e0f2fe;color:#0369a1;">
+                            <i class="fa-solid fa-arrows-rotate"></i>
+                        </div>
+                        <div class="kpi-data">
+                            <h3 id="exchKpiExchanges">0</h3>
+                            <p>طلبات استبدال</p>
+                        </div>
+                    </div>
+                    <div class="kpi-card">
+                        <div class="kpi-icon" style="background:#dcfce7;color:#16a34a;">
+                            <i class="fa-solid fa-circle-check"></i>
+                        </div>
+                        <div class="kpi-data">
+                            <h3 id="exchKpiCompleted">0</h3>
+                            <p>مكتملة</p>
+                        </div>
+                    </div>
+                    <div class="kpi-card">
+                        <div class="kpi-icon" style="background:#f3e8ff;color:#8b5cf6;">
+                            <i class="fa-solid fa-wallet"></i>
+                        </div>
+                        <div class="kpi-data">
+                            <h3 id="exchKpiValue">0</h3>
+                            <p>قيمة الطلبات</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="panel">
+                    <div class="panel-header">
+                        <span class="panel-title">
+                            <i class="fa-solid fa-list"></i>
+                            كل الطلبات
+                        </span>
+                    </div>
+                    <div class="table-wrap">
+                        <table class="products-table orders-table-modern">
+                            <thead>
+                                <tr>
+                                    <th style="width:90px;">رقم الطلب</th>
+                                    <th>العميل</th>
+                                    <th style="width:120px;">الهاتف</th>
+                                    <th style="width:130px;">التاريخ</th>
+                                    <th style="width:140px;">الحالة</th>
+                                    <th style="width:130px;">القيمة</th>
+                                    <th>السبب</th>
+                                    <th style="width:70px;">تفاصيل</th>
+                                </tr>
+                            </thead>
+                            <tbody id="exchangeList">
+                                <tr><td colspan="8" style="text-align:center;padding:30px;color:#94a3b8;">جاري التحميل...</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
             </div>
 
         </div>
-
     </main>
 
-    <!-- EDIT PRODUCT MODAL -->
-
-    <div class="modal" id="editModal">
-
-        <div class="modal-content">
-
+    <!-- ============ ADD PRODUCT MODAL ============ -->
+    <div class="modal" id="addProductModal">
+        <div class="modal-content modal-large">
             <div class="modal-header">
-
-                <h2>تعديل بيانات المنتج</h2>
-
-                <button
-                    type="button"
-                    class="close-modal"
-                    id="closeEditModal"
-                >
-                    &times;
-                </button>
-
+                <div class="modal-title-group">
+                    <div class="modal-icon" style="background:#f3e8ff;color:#8b5cf6;">
+                        <i class="fa-solid fa-plus"></i>
+                    </div>
+                    <div>
+                        <h2>إضافة منتج جديد</h2>
+                        <p style="font-size:13px;color:#888;margin-top:2px;">أدخل بيانات المنتج بالكامل</p>
+                    </div>
+                </div>
+                <button type="button" class="close-modal" id="closeAddProductModal">&times;</button>
             </div>
 
-            <form id="editProductForm">
-
-                <input
-                    type="hidden"
-                    id="editProductId"
-                >
-
-                <div class="form-group">
-
-                    <label for="editName">
-                        اسم الحذاء
-                    </label>
-
-                    <input
-                        type="text"
-                        id="editName"
-                        required
-                    >
-
-                </div>
-
-                <div class="form-row">
-
-                    <div class="form-group">
-
-                        <label for="editPrice">
-                            السعر الحالي
-                        </label>
-
-                        <input
-                            type="number"
-                            id="editPrice"
-                            min="0"
-                            step="0.01"
-                            required
-                        >
-
+            <form id="addProductForm">
+                <div class="form-section">
+                    <div class="form-section-title">
+                        <i class="fa-solid fa-circle-info"></i>
+                        المعلومات الأساسية
                     </div>
 
                     <div class="form-group">
-
-                        <label for="editOldPrice">
-                            السعر القديم
-                        </label>
-
-                        <input
-                            type="number"
-                            id="editOldPrice"
-                            min="0"
-                            step="0.01"
-                        >
-
+                        <label for="name">اسم الحذاء *</label>
+                        <input type="text" id="name" required placeholder="مثال: Nike Air Force 1">
                     </div>
 
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="price">السعر الحالي *</label>
+                            <input type="number" id="price" min="0" step="0.01" required placeholder="0">
+                        </div>
+                        <div class="form-group">
+                            <label for="oldPrice">السعر القديم</label>
+                            <input type="number" id="oldPrice" min="0" step="0.01" placeholder="0">
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="badge">الشارة</label>
+                        <select id="badge">
+                            <option value="">بدون شارة</option>
+                            <option value="جديد">جديد</option>
+                            <option value="خصم">خصم</option>
+                        </select>
+                    </div>
                 </div>
 
-                <!-- Badge -->
-                <div class="form-group">
+                <div class="form-section">
+                    <div class="form-section-title">
+                        <i class="fa-solid fa-shoe-prints"></i>
+                        المقاسات والكميات
+                    </div>
 
-                    <label for="editBadge">
-                        الشارة
-                    </label>
+                    <div class="sizes-quantities-grid" id="sizesGrid">
+                        <div class="size-qty-row">
+                            <label class="size-check">
+                                <input type="checkbox" value="40" onchange="toggleSizeQuantity(this)">
+                                <span>40</span>
+                            </label>
+                            <input type="number" class="size-qty-input" data-size="40" min="0" value="0" disabled placeholder="0">
+                            <span class="size-unit">قطعة</span>
+                        </div>
+                        <div class="size-qty-row">
+                            <label class="size-check">
+                                <input type="checkbox" value="41" onchange="toggleSizeQuantity(this)">
+                                <span>41</span>
+                            </label>
+                            <input type="number" class="size-qty-input" data-size="41" min="0" value="0" disabled placeholder="0">
+                            <span class="size-unit">قطعة</span>
+                        </div>
+                        <div class="size-qty-row">
+                            <label class="size-check">
+                                <input type="checkbox" value="42" onchange="toggleSizeQuantity(this)">
+                                <span>42</span>
+                            </label>
+                            <input type="number" class="size-qty-input" data-size="42" min="0" value="0" disabled placeholder="0">
+                            <span class="size-unit">قطعة</span>
+                        </div>
+                        <div class="size-qty-row">
+                            <label class="size-check">
+                                <input type="checkbox" value="43" onchange="toggleSizeQuantity(this)">
+                                <span>43</span>
+                            </label>
+                            <input type="number" class="size-qty-input" data-size="43" min="0" value="0" disabled placeholder="0">
+                            <span class="size-unit">قطعة</span>
+                        </div>
+                        <div class="size-qty-row">
+                            <label class="size-check">
+                                <input type="checkbox" value="44" onchange="toggleSizeQuantity(this)">
+                                <span>44</span>
+                            </label>
+                            <input type="number" class="size-qty-input" data-size="44" min="0" value="0" disabled placeholder="0">
+                            <span class="size-unit">قطعة</span>
+                        </div>
+                        <div class="size-qty-row">
+                            <label class="size-check">
+                                <input type="checkbox" value="45" onchange="toggleSizeQuantity(this)">
+                                <span>45</span>
+                            </label>
+                            <input type="number" class="size-qty-input" data-size="45" min="0" value="0" disabled placeholder="0">
+                            <span class="size-unit">قطعة</span>
+                        </div>
+                    </div>
 
-                    <select id="editBadge">
-
-                        <option value="">
-                            بدون شارة
-                        </option>
-
-                        <option value="جديد">
-                            جديد
-                        </option>
-
-                        <option value="خصم">
-                            خصم
-                        </option>
-
-                    </select>
-
+                    <div class="total-preview">
+                        <i class="fa-solid fa-calculator"></i>
+                        الإجمالي: <strong id="totalStockPreview">0</strong> قطعة
+                    </div>
                 </div>
 
-                <div class="form-group">
+                <div class="form-section">
+                    <div class="form-section-title">
+                        <i class="fa-solid fa-image"></i>
+                        الصورة والوصف
+                    </div>
 
-                    <label for="editSizes">
-                        المقاسات
-                    </label>
+                    <div class="form-group">
+                        <label for="imageUrl">رابط الصورة</label>
+                        <input type="url" id="imageUrl" placeholder="https://example.com/shoe.jpg">
+                    </div>
 
-                    <input
-                        type="text"
-                        id="editSizes"
-                        placeholder="40, 41, 42, 43"
-                    >
-
-                </div>
-
-                <div class="form-group">
-
-                    <label for="editImageUrl">
-                        رابط الصورة
-                    </label>
-
-                    <input
-                        type="url"
-                        id="editImageUrl"
-                    >
-
-                </div>
-
-                <div class="form-group">
-
-                    <label for="editDescription">
-                        الوصف
-                    </label>
-
-                    <textarea id="editDescription"></textarea>
-
+                    <div class="form-group">
+                        <label for="description">وصف المنتج</label>
+                        <textarea id="description" rows="3" placeholder="اكتب تفاصيل ومواصفات المنتج..."></textarea>
+                    </div>
                 </div>
 
                 <div class="modal-actions">
-
-                    <button
-                        type="submit"
-                        class="save-edit-btn"
-                        id="saveEditButton"
-                    >
-                        حفظ التغييرات
+                    <button type="submit" class="btn-primary-modal" id="submitBtn">
+                        <i class="fa-solid fa-check"></i>
+                        إضافة المنتج
                     </button>
-
-                    <button
-                        type="button"
-                        class="cancel-edit-btn"
-                        id="cancelEditButton"
-                    >
+                    <button type="button" class="btn-secondary-modal" id="cancelAddBtn">
                         إلغاء
                     </button>
-
                 </div>
-
             </form>
-
         </div>
-
     </div>
 
-    <!-- ORDER DETAILS MODAL -->
-
-    <div class="modal" id="orderModal">
-
-        <div class="modal-content">
-
+    <!-- ============ EDIT PRODUCT MODAL ============ -->
+    <div class="modal" id="editModal">
+        <div class="modal-content modal-large">
             <div class="modal-header">
-
-                <h2>تفاصيل الطلب الكاملة</h2>
-
-                <button
-                    type="button"
-                    class="close-modal"
-                    id="closeOrderModal"
-                >
-                    &times;
-                </button>
-
+                <div class="modal-title-group">
+                    <div class="modal-icon" style="background:#eff6ff;color:#2563eb;">
+                        <i class="fa-solid fa-pen"></i>
+                    </div>
+                    <div>
+                        <h2>تعديل المنتج</h2>
+                        <p style="font-size:13px;color:#888;margin-top:2px;">عدّل بيانات المنتج</p>
+                    </div>
+                </div>
+                <button type="button" class="close-modal" id="closeEditModal">&times;</button>
             </div>
 
-            <div
-                id="orderModalDetails"
-                style="font-size:14px;line-height:1.8;"
-            ></div>
+            <form id="editProductForm">
+                <input type="hidden" id="editProductId">
 
+                <div class="form-section">
+                    <div class="form-section-title">
+                        <i class="fa-solid fa-circle-info"></i>
+                        المعلومات الأساسية
+                    </div>
+
+                    <div class="form-group">
+                        <label for="editName">اسم الحذاء *</label>
+                        <input type="text" id="editName" required>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="editPrice">السعر الحالي *</label>
+                            <input type="number" id="editPrice" min="0" step="0.01" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="editOldPrice">السعر القديم</label>
+                            <input type="number" id="editOldPrice" min="0" step="0.01">
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="editBadge">الشارة</label>
+                        <select id="editBadge">
+                            <option value="">بدون شارة</option>
+                            <option value="جديد">جديد</option>
+                            <option value="خصم">خصم</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="form-section">
+                    <div class="form-section-title">
+                        <i class="fa-solid fa-shoe-prints"></i>
+                        المقاسات والكميات
+                    </div>
+
+                    <div class="sizes-quantities-grid" id="editSizesGrid">
+                        <div class="size-qty-row">
+                            <label class="size-check">
+                                <input type="checkbox" value="40" onchange="toggleSizeQuantity(this, 'edit')">
+                                <span>40</span>
+                            </label>
+                            <input type="number" class="size-qty-input" data-size="40" min="0" value="0" disabled placeholder="0">
+                            <span class="size-unit">قطعة</span>
+                        </div>
+                        <div class="size-qty-row">
+                            <label class="size-check">
+                                <input type="checkbox" value="41" onchange="toggleSizeQuantity(this, 'edit')">
+                                <span>41</span>
+                            </label>
+                            <input type="number" class="size-qty-input" data-size="41" min="0" value="0" disabled placeholder="0">
+                            <span class="size-unit">قطعة</span>
+                        </div>
+                        <div class="size-qty-row">
+                            <label class="size-check">
+                                <input type="checkbox" value="42" onchange="toggleSizeQuantity(this, 'edit')">
+                                <span>42</span>
+                            </label>
+                            <input type="number" class="size-qty-input" data-size="42" min="0" value="0" disabled placeholder="0">
+                            <span class="size-unit">قطعة</span>
+                        </div>
+                        <div class="size-qty-row">
+                            <label class="size-check">
+                                <input type="checkbox" value="43" onchange="toggleSizeQuantity(this, 'edit')">
+                                <span>43</span>
+                            </label>
+                            <input type="number" class="size-qty-input" data-size="43" min="0" value="0" disabled placeholder="0">
+                            <span class="size-unit">قطعة</span>
+                        </div>
+                        <div class="size-qty-row">
+                            <label class="size-check">
+                                <input type="checkbox" value="44" onchange="toggleSizeQuantity(this, 'edit')">
+                                <span>44</span>
+                            </label>
+                            <input type="number" class="size-qty-input" data-size="44" min="0" value="0" disabled placeholder="0">
+                            <span class="size-unit">قطعة</span>
+                        </div>
+                        <div class="size-qty-row">
+                            <label class="size-check">
+                                <input type="checkbox" value="45" onchange="toggleSizeQuantity(this, 'edit')">
+                                <span>45</span>
+                            </label>
+                            <input type="number" class="size-qty-input" data-size="45" min="0" value="0" disabled placeholder="0">
+                            <span class="size-unit">قطعة</span>
+                        </div>
+                    </div>
+
+                    <div class="total-preview">
+                        <i class="fa-solid fa-calculator"></i>
+                        الإجمالي: <strong id="editTotalStockPreview">0</strong> قطعة
+                    </div>
+                </div>
+
+                <div class="form-section">
+                    <div class="form-section-title">
+                        <i class="fa-solid fa-image"></i>
+                        الصورة والوصف
+                    </div>
+
+                    <div class="form-group">
+                        <label for="editImageUrl">رابط الصورة</label>
+                        <input type="url" id="editImageUrl">
+                    </div>
+
+                    <div class="form-group">
+                        <label for="editDescription">الوصف</label>
+                        <textarea id="editDescription" rows="3"></textarea>
+                    </div>
+                </div>
+
+                <div class="modal-actions">
+                    <button type="submit" class="btn-primary-modal" id="saveEditButton">
+                        <i class="fa-solid fa-check"></i>
+                        حفظ التغييرات
+                    </button>
+                    <button type="button" class="btn-secondary-modal" id="cancelEditButton">
+                        إلغاء
+                    </button>
+                </div>
+            </form>
         </div>
-
     </div>
-    <!-- STATUS REASON MODAL -->
+
+    <!-- ============ ORDER DETAILS MODAL ============ -->
+    <div class="modal" id="orderModal">
+        <div class="modal-content modal-large">
+            <div class="modal-header">
+                <h2>تفاصيل الطلب</h2>
+                <button type="button" class="close-modal" id="closeOrderModal">&times;</button>
+            </div>
+            <div id="orderModalDetails" style="font-size:14px;line-height:1.8;"></div>
+        </div>
+    </div>
+
+    <!-- ============ ADJUST STOCK MODAL ============ -->
+    <div class="modal" id="adjustStockModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 id="adjustStockTitle">تعديل المخزون</h2>
+                <button type="button" class="close-modal" id="closeAdjustStockModal">&times;</button>
+            </div>
+
+            <div id="adjustProductInfo" style="margin-bottom:16px;padding:14px;background:#f9fafb;border-radius:10px;">
+                <strong id="adjustProductName">-</strong>
+                <div style="font-size:12px;color:#666;margin-top:4px;" id="adjustProductSku">-</div>
+            </div>
+
+            <div class="form-group">
+                <label for="adjustSizeSelect">المقاس *</label>
+                <select id="adjustSizeSelect" required onchange="updateAdjustPreview()">
+                    <option value="">اختر المقاس</option>
+                </select>
+            </div>
+
+            <div class="movement-type-tabs" id="movementTypeTabs">
+                <button type="button" class="movement-type-tab active" data-type="purchase" onclick="selectMovementType('purchase', this)">
+                    <i class="fa-solid fa-plus"></i> شراء
+                </button>
+                <button type="button" class="movement-type-tab" data-type="adjustment" onclick="selectMovementType('adjustment', this)">
+                    <i class="fa-solid fa-sliders"></i> تعديل
+                </button>
+                <button type="button" class="movement-type-tab" data-type="damage" onclick="selectMovementType('damage', this)">
+                    <i class="fa-solid fa-triangle-exclamation"></i> تلف
+                </button>
+            </div>
+
+            <form id="adjustStockForm">
+                <input type="hidden" id="adjustProductId">
+                <input type="hidden" id="adjustMovementType" value="purchase">
+
+                <div class="form-group">
+                    <label for="adjustQuantity" id="adjustQuantityLabel">الكمية المضافة *</label>
+                    <input type="number" id="adjustQuantity" required min="1" step="1" placeholder="0">
+                </div>
+
+                <div class="adjust-preview">
+                    <div style="font-size:12px;color:#666;">الرصيد الحالي</div>
+                    <div class="from-to">
+                        <span class="from" id="adjustFrom">0</span>
+                        <i class="fa-solid fa-arrow-left arrow"></i>
+                        <span class="to" id="adjustTo">0</span>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label for="adjustReason">السبب *</label>
+                    <input type="text" id="adjustReason" required placeholder="مثال: دفعة جديدة من المورد">
+                </div>
+
+                <div class="form-group">
+                    <label for="adjustNotes">ملاحظات</label>
+                    <textarea id="adjustNotes" rows="2" placeholder="اختياري..."></textarea>
+                </div>
+
+                <div class="modal-actions">
+                    <button type="submit" class="save-edit-btn" id="saveAdjustBtn">تأكيد التعديل</button>
+                    <button type="button" class="cancel-edit-btn" id="cancelAdjustBtn">إلغاء</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- ============ STATUS REASON MODAL ============ -->
     <div class="modal" id="statusReasonModal">
         <div class="modal-content">
             <div class="modal-header">
@@ -1634,10 +2012,8 @@
                 <input type="hidden" id="statusReasonOrderId">
                 <input type="hidden" id="statusReasonNewStatus">
 
-                <div class="form-group" id="reasonSelectGroup">
-                    <label for="statusReasonSelect">
-                        سبب <span id="reasonTypeLabel"></span> *
-                    </label>
+                <div class="form-group">
+                    <label for="statusReasonSelect">سبب <span id="reasonTypeLabel"></span> *</label>
                     <select id="statusReasonSelect" required>
                         <option value="">اختر السبب</option>
                     </select>
@@ -1645,77 +2021,113 @@
 
                 <div class="form-group" id="reasonCustomGroup" style="display:none">
                     <label for="statusReasonCustom">اكتب السبب *</label>
-                    <input 
-                        type="text" 
-                        id="statusReasonCustom" 
-                        placeholder="اكتب السبب بالتفصيل"
-                    >
+                    <input type="text" id="statusReasonCustom">
                 </div>
 
                 <div class="form-group">
                     <label for="statusReasonNotes">ملاحظات إضافية</label>
-                    <textarea 
-                        id="statusReasonNotes" 
-                        placeholder="أي تفاصيل إضافية (اختياري)" 
-                        rows="3"
-                    ></textarea>
+                    <textarea id="statusReasonNotes" rows="3"></textarea>
                 </div>
 
                 <div class="modal-actions">
-                    <button 
-                        type="submit" 
-                        class="save-edit-btn" 
-                        id="saveStatusReasonBtn"
-                    >
-                        تأكيد التغيير
-                    </button>
-                    <button 
-                        type="button" 
-                        class="cancel-edit-btn" 
-                        id="cancelStatusReasonBtn"
-                    >
-                        إلغاء
-                    </button>
+                    <button type="submit" class="save-edit-btn" id="saveStatusReasonBtn">تأكيد</button>
+                    <button type="button" class="cancel-edit-btn" id="cancelStatusReasonBtn">إلغاء</button>
                 </div>
             </form>
         </div>
     </div>
-    <!-- APPROVAL DETAILS MODAL -->
 
+    <!-- ============ APPROVAL MODAL ============ -->
     <div class="modal" id="approvalModal">
-
         <div class="modal-content modal-large">
-
             <div class="modal-header">
-
-                <h2>
-                    مراجعة طلب التعديل
-                </h2>
-
-                <button
-                    type="button"
-                    class="close-modal"
-                    id="closeApprovalModal"
-                >
-                    &times;
-                </button>
-
+                <h2>مراجعة طلب التعديل</h2>
+                <button type="button" class="close-modal" id="closeApprovalModal">&times;</button>
             </div>
-
             <div id="approvalModalBody"></div>
-
-            <div
-                class="approval-modal-actions"
-                id="approvalModalActions"
-            ></div>
-
+            <div class="approval-modal-actions" id="approvalModalActions"></div>
         </div>
-
     </div>
 
-      <!-- SUPABASE -->
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <!-- ============ EXCHANGE REQUEST MODAL ============ -->
+    <div class="modal" id="exchangeRequestModal">
+        <div class="modal-content modal-large">
+            <div class="modal-header">
+                <div class="modal-title-group">
+                    <div class="modal-icon" style="background:#fff7ed;color:#d97706;">
+                        <i class="fa-solid fa-arrows-rotate"></i>
+                    </div>
+                    <div>
+                        <h2>طلب استبدال</h2>
+                        <p style="font-size:13px;color:#888;margin-top:2px;">اختر المنتجات اللي العميل عايز يستبدلها</p>
+                    </div>
+                </div>
+                <button type="button" class="close-modal" id="closeExchangeRequestModal">&times;</button>
+            </div>
 
+            <div id="exchangeRequestBody"></div>
+
+            <div class="form-group">
+                <label for="exchangeRequestReason">السبب الرئيسي *</label>
+                <select id="exchangeRequestReason" required>
+                    <option value="">اختر السبب</option>
+                    <option>المقاس غير مناسب</option>
+                    <option>اللون مختلف عن الصورة</option>
+                    <option>العميل عايز موديل تاني</option>
+                    <option>المنتج به عيب</option>
+                    <option>سبب آخر</option>
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label for="exchangeRequestNotes">ملاحظات إضافية</label>
+                <textarea id="exchangeRequestNotes" rows="2" placeholder="أي تفاصيل إضافية (اختياري)"></textarea>
+            </div>
+
+            <div class="modal-actions">
+                <button type="button" class="btn-primary-modal" id="saveExchangeRequestBtn">
+                    <i class="fa-solid fa-check"></i>
+                    تأكيد طلب الاستبدال
+                </button>
+                <button type="button" class="btn-secondary-modal" id="cancelExchangeRequestBtn">
+                    إلغاء
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ============ EXCHANGE RECEIVED MODAL ============ -->
+    <div class="modal" id="exchangeReceivedModal">
+        <div class="modal-content modal-large">
+            <div class="modal-header">
+                <div class="modal-title-group">
+                    <div class="modal-icon" style="background:#ecfdf5;color:#16a34a;">
+                        <i class="fa-solid fa-box-open"></i>
+                    </div>
+                    <div>
+                        <h2>استلام المنتج + تحديد المقاس الجديد</h2>
+                        <p style="font-size:13px;color:#888;margin-top:2px;">اختر المقاس الجديد لكل منتج</p>
+                    </div>
+                </div>
+                <button type="button" class="close-modal" id="closeExchangeReceivedModal">&times;</button>
+            </div>
+
+            <div id="exchangeReceivedBody"></div>
+
+            <div class="modal-actions">
+                <button type="button" class="btn-primary-modal" id="saveExchangeReceivedBtn">
+                    <i class="fa-solid fa-check"></i>
+                    تأكيد الاستلام
+                </button>
+                <button type="button" class="btn-secondary-modal" id="cancelExchangeReceivedBtn">
+                    إلغاء
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- SUPABASE -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script>
         window.supabaseClient = window.supabase.createClient(
             'https://uobuxepixrqijgciurve.supabase.co',
@@ -1723,8 +2135,6 @@
         );
     </script>
 
-    <!-- ADMIN SCRIPT -->
     <script src="admin.js"></script>
 </body>
-
 </html>

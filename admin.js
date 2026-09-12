@@ -8,9 +8,7 @@
 // ========================================
 
 function getSupabaseClient() {
-    if (window.supabaseClient) {
-        return window.supabaseClient;
-    }
+    if (window.supabaseClient) return window.supabaseClient;
     console.error("Supabase Client غير موجود");
     return null;
 }
@@ -43,44 +41,51 @@ const pageTransition = document.getElementById("pageTransition");
 // ========================================
 // 4. ADMIN ELEMENTS
 // ========================================
-
 const logoutButton = document.getElementById("logoutButton");
 const adminUsername = document.getElementById("adminUsername");
 const adminRole = document.getElementById("adminRole");
-
+const menuUsername = document.getElementById("menuUsername");
+const menuEmail = document.getElementById("menuEmail");
 const adminProductsList = document.getElementById("adminProductsList");
 const adminOrdersList = document.getElementById("adminOrdersList");
 const approvalRequests = document.getElementById("approvalRequests");
-
 const statTotal = document.getElementById("statTotal");
-
 const dashStatRevenue = document.getElementById("dashStatRevenue");
 const dashStatNewOrders = document.getElementById("dashStatNewOrders");
 const dashStatPending = document.getElementById("dashStatPending");
 const dashStatProducts = document.getElementById("dashStatProducts");
-
+const dashStatTodaySales = document.getElementById("dashStatTodaySales");
+const dashStatCustomers = document.getElementById("dashStatCustomers");
+const dashStatLowStock = document.getElementById("dashStatLowStock");
+const dashPendingCard = document.getElementById("dashPendingCard");
+const dashStatMonthSales = document.getElementById("dashStatMonthSales");
+const dashStatAOV = document.getElementById("dashStatAOV");
+const dashStatFollowUp = document.getElementById("dashStatFollowUp");
 const sidebarNewOrdersBadge = document.getElementById("sidebarNewOrdersBadge");
 const sidebarPendingBadge = document.getElementById("sidebarPendingBadge");
-
+const sidebarLowStockBadge = document.getElementById("sidebarLowStockBadge");
 const dashRecentOrdersList = document.getElementById("dashRecentOrdersList");
 const dashTopSellingList = document.getElementById("dashTopSellingList");
 
 // ========================================
-// 5. ADD PRODUCT
+// 5. ADD PRODUCT ELEMENTS
 // ========================================
 
 const addProductForm = document.getElementById("addProductForm");
+const addProductModal = document.getElementById("addProductModal");
+const openAddProductBtn = document.getElementById("openAddProductBtn");
+const closeAddProductModal = document.getElementById("closeAddProductModal");
+const cancelAddBtn = document.getElementById("cancelAddBtn");
 const addName = document.getElementById("name");
 const addPrice = document.getElementById("price");
 const addOldPrice = document.getElementById("oldPrice");
 const addBadge = document.getElementById("badge");
-const addSizes = document.getElementById("sizes");
 const addDescription = document.getElementById("description");
 const addImageUrl = document.getElementById("imageUrl");
 const addSubmitButton = document.getElementById("submitBtn");
 
 // ========================================
-// 6. EDIT PRODUCT
+// 6. EDIT PRODUCT ELEMENTS
 // ========================================
 
 const editModal = document.getElementById("editModal");
@@ -91,14 +96,13 @@ const editName = document.getElementById("editName");
 const editPrice = document.getElementById("editPrice");
 const editOldPrice = document.getElementById("editOldPrice");
 const editBadge = document.getElementById("editBadge");
-const editSizes = document.getElementById("editSizes");
 const editDescription = document.getElementById("editDescription");
 const editImageUrl = document.getElementById("editImageUrl");
 const saveEditButton = document.getElementById("saveEditButton");
 const cancelEditButton = document.getElementById("cancelEditButton");
 
 // ========================================
-// 7. ORDER MODAL
+// 7. ORDER MODAL ELEMENTS
 // ========================================
 
 const orderModal = document.getElementById("orderModal");
@@ -106,7 +110,7 @@ const closeOrderModalBtn = document.getElementById("closeOrderModal");
 const orderModalDetails = document.getElementById("orderModalDetails");
 
 // ========================================
-// 8. APPROVAL MODAL
+// 8. APPROVAL MODAL ELEMENTS
 // ========================================
 
 const approvalModal = document.getElementById("approvalModal");
@@ -115,33 +119,71 @@ const approvalModalBody = document.getElementById("approvalModalBody");
 const approvalModalActions = document.getElementById("approvalModalActions");
 
 // ========================================
-// 9. GLOBAL VARIABLES
+// 9. ADJUST STOCK MODAL ELEMENTS
+// ========================================
+
+const adjustStockModal = document.getElementById("adjustStockModal");
+const closeAdjustStockModal = document.getElementById("closeAdjustStockModal");
+const adjustStockForm = document.getElementById("adjustStockForm");
+const adjustProductId = document.getElementById("adjustProductId");
+const adjustMovementType = document.getElementById("adjustMovementType");
+const adjustQuantity = document.getElementById("adjustQuantity");
+const adjustReason = document.getElementById("adjustReason");
+const adjustNotes = document.getElementById("adjustNotes");
+const cancelAdjustBtn = document.getElementById("cancelAdjustBtn");
+
+// ========================================
+// 10. GLOBAL VARIABLES
 // ========================================
 
 let currentAdmin = null;
 let adminProducts = [];
+let currentSessionToken = null;
+let heartbeatInterval = null;
+let adminProductSizes = {};
 let adminOrders = [];
 let adminApprovalRequests = [];
+
 let currentApprovalFilter = "pending";
+let currentInventoryFilter = "all";
+let inventorySearchTerm = "";
+let inventoryMovements = [];
+
+let productsSearchFilters = { id: "", sku: "", name: "", price: "" };
+let ordersSearchFilters = { id: "", name: "", phone: "", amount: "" };
+let inventoryColumnFilters = { sku: "", name: "", available: "", reserved: "" };
+
+let customOrderStatuses = null;
+let currentExchangeOrder = null;
+let currentExchangeReceivedOrder = null;
+let currentAdjustProduct = null;
+let currentAdjustType = "purchase";
+
+// ✅ الحالات اللي بتُحسب كمبيعات
+const SOLD_STATUSES = [
+    "delivered",
+    "return_requested",
+    "return_received",
+    "exchange_requested",
+    "exchange_received",
+    "exchange_shipped",
+    "exchanged"
+];
 
 // ========================================
-// 10. HELPERS
+// 11. HELPERS
 // ========================================
 
 function showLoginMessage(message, type = "error") {
     if (!loginMessage) return;
-
     if (!message) {
         loginMessage.textContent = "";
         loginMessage.className = "message";
         return;
     }
-
     loginMessage.textContent = message;
     loginMessage.className = "message show";
-    loginMessage.classList.add(
-        type === "success" ? "success" : "error"
-    );
+    loginMessage.classList.add(type === "success" ? "success" : "error");
 }
 
 function showPageTransition() {
@@ -153,13 +195,29 @@ function formatDate(dateValue) {
     if (!dateValue) return "-";
     const date = new Date(dateValue);
     if (isNaN(date.getTime())) return "-";
-    return date.toLocaleString("ar-EG", {
+    return date.toLocaleString("en-US", {
         year: "numeric",
         month: "short",
         day: "numeric",
         hour: "2-digit",
         minute: "2-digit"
     });
+}
+
+function formatRelative(dateValue) {
+    if (!dateValue) return "-";
+    const date = new Date(dateValue);
+    const now = new Date();
+    const diffMs = now - date;
+    const diffMin = Math.floor(diffMs / 60000);
+    const diffHr = Math.floor(diffMs / 3600000);
+    const diffDay = Math.floor(diffMs / 86400000);
+
+    if (diffMin < 1) return "الآن";
+    if (diffMin < 60) return `منذ ${diffMin} د`;
+    if (diffHr < 24) return `منذ ${diffHr} س`;
+    if (diffDay < 7) return `منذ ${diffDay} يوم`;
+    return formatDate(dateValue);
 }
 
 function escapeAdminHTML(value) {
@@ -185,7 +243,7 @@ function parseSizes(value) {
 }
 
 function formatPrice(value) {
-    return Number(value || 0).toLocaleString("ar-EG");
+    return Number(value || 0).toLocaleString("en-US");
 }
 
 function normalizeBadge(value) {
@@ -196,8 +254,235 @@ function normalizeBadge(value) {
     return text;
 }
 
+function getTrackingUrl(orderId, customerPhone) {
+    const baseUrl = window.location.origin;
+    return `${baseUrl}/track.html?id=${orderId}&phone=${encodeURIComponent(customerPhone)}`;
+}
+
+function getProductById(id) {
+    return adminProducts.find(p => Number(p.id) === Number(id));
+}
+
+function showToast(message) {
+    document.querySelector('.toast-notification')?.remove();
+    const toast = document.createElement('div');
+    toast.className = 'toast-notification';
+    toast.textContent = message;
+    document.body.appendChild(toast);
+    setTimeout(() => toast.classList.add('show'), 30);
+    setTimeout(() => {
+        toast.classList.remove('show');
+        setTimeout(() => toast.remove(), 300);
+    }, 2500);
+}
+
 // ========================================
-// 11. LOGIN PASSWORD TOGGLE
+// 12. SIZE-BASED STOCK HELPERS
+// ========================================
+
+function getProductSizes(productId) {
+    return adminProductSizes[Number(productId)] || [];
+}
+
+function getSizeData(productId, size) {
+    const sizes = getProductSizes(productId);
+    return sizes.find(s => String(s.size) === String(size)) || null;
+}
+
+function getAvailableStock(product) {
+    const sizes = getProductSizes(product.id);
+    if (!sizes.length) {
+        return Math.max(0, Number(product.stock_quantity || 0) - Number(product.reserved_quantity || 0));
+    }
+    return sizes.reduce((sum, s) => {
+        return sum + Math.max(0, Number(s.stock || 0) - Number(s.reserved || 0));
+    }, 0);
+}
+
+function getProductReservedTotal(product) {
+    const sizes = getProductSizes(product.id);
+    if (!sizes.length) return Number(product.reserved_quantity || 0);
+    return sizes.reduce((sum, s) => sum + Number(s.reserved || 0), 0);
+}
+
+function getProductTotalStock(product) {
+    const sizes = getProductSizes(product.id);
+    if (!sizes.length) return Number(product.stock_quantity || 0);
+    return sizes.reduce((sum, s) => sum + Number(s.stock || 0), 0);
+}
+
+function getStockStatus(product) {
+    const sizes = getProductSizes(product.id);
+
+    if (sizes.length) {
+        const totalAvailable = sizes.reduce((sum, s) => {
+            return sum + Math.max(0, Number(s.stock || 0) - Number(s.reserved || 0));
+        }, 0);
+
+        if (totalAvailable === 0) return "out";
+
+        const hasOutSize = sizes.some(s => {
+            const avail = Math.max(0, Number(s.stock) - Number(s.reserved));
+            return avail === 0;
+        });
+
+        const hasLowSize = sizes.some(s => {
+            const avail = Math.max(0, Number(s.stock) - Number(s.reserved));
+            return avail > 0 && avail <= 5;
+        });
+
+        if (hasOutSize || hasLowSize) return "low";
+        return "good";
+    }
+
+    const available = getAvailableStock(product);
+    const threshold = Number(product.low_stock_threshold || 5);
+    if (available === 0) return "out";
+    if (available <= threshold) return "low";
+    return "good";
+}
+
+// ========================================
+// 13. SIZE TOGGLES HELPERS
+// ========================================
+
+function getSelectedSizes(gridId) {
+    const grid = document.getElementById(gridId);
+    if (!grid) return [];
+    const checked = grid.querySelectorAll('input[type="checkbox"]:checked');
+    return Array.from(checked)
+        .map(input => input.value)
+        .sort((a, b) => Number(a) - Number(b));
+}
+
+function getSizesWithQuantities(gridId) {
+    const grid = document.getElementById(gridId);
+    if (!grid) return [];
+    const result = [];
+    grid.querySelectorAll('input[type="checkbox"]:checked').forEach(cb => {
+        const row = cb.closest(".size-qty-row");
+        if (!row) return;
+        const qtyInput = row.querySelector(".size-qty-input");
+        const qty = parseInt(qtyInput?.value || "0", 10) || 0;
+        result.push({ size: cb.value, quantity: qty });
+    });
+    return result.sort((a, b) => Number(a.size) - Number(b.size));
+}
+
+function setSizeQuantities(gridId, sizesData) {
+    const grid = document.getElementById(gridId);
+    if (!grid) return;
+
+    grid.querySelectorAll('input[type="checkbox"]').forEach(cb => {
+        cb.checked = false;
+        const row = cb.closest(".size-qty-row");
+        const qtyInput = row?.querySelector(".size-qty-input");
+        if (qtyInput) {
+            qtyInput.value = "0";
+            qtyInput.disabled = true;
+        }
+    });
+
+    (sizesData || []).forEach(item => {
+        const cb = grid.querySelector(`input[type="checkbox"][value="${item.size}"]`);
+        if (!cb) return;
+        cb.checked = true;
+        const row = cb.closest(".size-qty-row");
+        const qtyInput = row?.querySelector(".size-qty-input");
+        if (qtyInput) {
+            qtyInput.disabled = false;
+            qtyInput.value = item.stock ?? item.quantity ?? 0;
+        }
+    });
+
+    const mode = gridId === "editSizesGrid" ? "edit" : "add";
+    updateTotalPreview(mode);
+}
+
+function resetSizesGrid(gridId) {
+    const grid = document.getElementById(gridId);
+    if (!grid) return;
+    grid.querySelectorAll('input[type="checkbox"]').forEach(cb => {
+        cb.checked = false;
+        const row = cb.closest(".size-qty-row");
+        const qtyInput = row?.querySelector(".size-qty-input");
+        if (qtyInput) {
+            qtyInput.value = "0";
+            qtyInput.disabled = true;
+        }
+    });
+    const mode = gridId === "editSizesGrid" ? "edit" : "add";
+    updateTotalPreview(mode);
+}
+
+function toggleSizeQuantity(checkbox, mode = "add") {
+    const row = checkbox.closest(".size-qty-row");
+    if (!row) return;
+    const qtyInput = row.querySelector(".size-qty-input");
+    if (!qtyInput) return;
+
+    if (checkbox.checked) {
+        qtyInput.disabled = false;
+        if (parseInt(qtyInput.value || "0", 10) === 0) {
+            qtyInput.value = "";
+        }
+        qtyInput.focus();
+    } else {
+        qtyInput.disabled = true;
+        qtyInput.value = "0";
+    }
+
+    updateTotalPreview(mode);
+}
+
+function updateTotalPreview(mode = "add") {
+    const gridId = mode === "edit" ? "editSizesGrid" : "sizesGrid";
+    const previewId = mode === "edit" ? "editTotalStockPreview" : "totalStockPreview";
+    const grid = document.getElementById(gridId);
+    const preview = document.getElementById(previewId);
+
+    if (!grid || !preview) return;
+
+    let total = 0;
+    grid.querySelectorAll('input[type="checkbox"]:checked').forEach(cb => {
+        const row = cb.closest(".size-qty-row");
+        const qty = parseInt(row?.querySelector(".size-qty-input")?.value || "0", 10) || 0;
+        total += qty;
+    });
+
+    preview.textContent = total;
+}
+
+// ========================================
+// 14. TIME HELPERS
+// ========================================
+
+function getOrderTimeRemaining(order) {
+    if (order.status !== "pending") return null;
+
+    const created = new Date(order.created_at);
+    const expiresAt = new Date(created.getTime() + 24 * 60 * 60 * 1000);
+    const now = new Date();
+    const diffMs = expiresAt - now;
+
+    if (diffMs <= 0) {
+        return { expired: true, text: "منتهي" };
+    }
+
+    const hours = Math.floor(diffMs / 3600000);
+    const minutes = Math.floor((diffMs % 3600000) / 60000);
+
+    if (hours > 6) {
+        return { expired: false, text: `باقي ${hours}س`, color: "#16a34a" };
+    } else if (hours > 2) {
+        return { expired: false, text: `باقي ${hours}س ${minutes}د`, color: "#d97706" };
+    } else {
+        return { expired: false, text: `⚠️ باقي ${hours}س ${minutes}د`, color: "#dc2626" };
+    }
+}
+
+// ========================================
+// 15. LOGIN PASSWORD TOGGLE
 // ========================================
 
 if (passwordToggle && passwordInput) {
@@ -220,7 +505,7 @@ if (passwordToggle && passwordInput) {
 }
 
 // ========================================
-// 12. CURRENT ADMIN
+// 16. CURRENT ADMIN
 // ========================================
 
 async function getCurrentAdmin() {
@@ -249,6 +534,149 @@ async function getCurrentAdmin() {
     }
 }
 
+// ========================================
+// SESSION MANAGEMENT
+// ========================================
+
+function getDeviceInfo() {
+    const ua = navigator.userAgent;
+    let device = "جهاز غير معروف";
+
+    if (ua.includes("Windows")) device = "Windows";
+    else if (ua.includes("Mac")) device = "Mac";
+    else if (ua.includes("Linux")) device = "Linux";
+    else if (ua.includes("Android")) device = "Android";
+    else if (ua.includes("iPhone") || ua.includes("iPad")) device = "iOS";
+
+    let browser = "متصفح";
+    if (ua.includes("Chrome")) browser = "Chrome";
+    else if (ua.includes("Firefox")) browser = "Firefox";
+    else if (ua.includes("Safari")) browser = "Safari";
+    else if (ua.includes("Edge")) browser = "Edge";
+
+    return `${browser} على ${device}`;
+}
+
+function generateSessionToken() {
+    const rand = Math.random().toString(36).substring(2, 15)
+        + Math.random().toString(36).substring(2, 15);
+    return `${Date.now()}_${rand}`;
+}
+
+async function checkActiveSession(adminId) {
+    const client = getSupabaseClient();
+    if (!client) return { has_active: false };
+
+    try {
+        const { data, error } = await client.rpc("check_admin_session", {
+            p_admin_id: adminId
+        });
+
+        if (error) {
+            console.warn("Check session error:", error);
+            return { has_active: false };
+        }
+
+        return data || { has_active: false };
+    } catch (err) {
+        console.warn("Check session exception:", err);
+        return { has_active: false };
+    }
+}
+
+async function createAdminSession(adminId) {
+    const client = getSupabaseClient();
+    if (!client) return null;
+
+    const token = generateSessionToken();
+    const deviceInfo = getDeviceInfo();
+
+    try {
+        const { data, error } = await client.rpc("create_admin_session", {
+            p_admin_id: adminId,
+            p_session_token: token,
+            p_device_info: deviceInfo
+        });
+
+        if (error) throw error;
+
+        currentSessionToken = token;
+        localStorage.setItem("adminSessionToken", token);
+
+        return token;
+    } catch (err) {
+        console.error("Create session error:", err);
+        return null;
+    }
+}
+
+async function endAdminSession(reason = "logout") {
+    const client = getSupabaseClient();
+    const token = currentSessionToken || localStorage.getItem("adminSessionToken");
+
+    if (!client || !token) return;
+
+    try {
+        await client.rpc("end_admin_session", {
+            p_session_token: token,
+            p_reason: reason
+        });
+    } catch (err) {
+        console.warn("End session error:", err);
+    }
+
+    currentSessionToken = null;
+    localStorage.removeItem("adminSessionToken");
+}
+
+async function verifyCurrentSession() {
+    const client = getSupabaseClient();
+    const token = localStorage.getItem("adminSessionToken");
+
+    if (!client || !token || !currentAdmin) return true;
+
+    try {
+        const { data, error } = await client.rpc("verify_admin_session", {
+            p_session_token: token
+        });
+
+        if (error) {
+            console.warn("Verify session error:", error);
+            return true; // ✅ نسمح بالمرور لو حصل خطأ مؤقت
+        }
+
+        return Boolean(data?.valid);
+    } catch (err) {
+        console.warn("Verify session exception:", err);
+        return true;
+    }
+}
+
+function startHeartbeat() {
+    stopHeartbeat();
+
+    heartbeatInterval = setInterval(async () => {
+        const client = getSupabaseClient();
+        const token = currentSessionToken || localStorage.getItem("adminSessionToken");
+        if (!client || !token) return;
+
+        try {
+            await client.rpc("heartbeat_admin_session", {
+                p_session_token: token
+            });
+        } catch (err) {
+            console.warn("Heartbeat error:", err);
+        }
+    }, 60 * 1000); // كل دقيقة
+}
+
+function stopHeartbeat() {
+    if (heartbeatInterval) {
+        clearInterval(heartbeatInterval);
+        heartbeatInterval = null;
+    }
+}
+
 function getRoleName(role) {
     const roles = {
         super_admin: "مدير النظام",
@@ -267,17 +695,39 @@ function isManager() {
 }
 
 // ========================================
-// 13. LOGIN PAGE SESSION
+// 17. LOGIN PAGE SESSION
 // ========================================
 
 async function checkLoginPageSession() {
     if (!isLoginPage()) return;
+
+    // ✅ نتحقق من وجود التوكن الأول
+    const token = localStorage.getItem("adminSessionToken");
+    if (!token) return;
+
     const admin = await getCurrentAdmin();
-    if (admin) {
+    if (!admin) {
+        // مستخدم مسجل بس مش أدمن — نمسح التوكن
+        localStorage.removeItem("adminSessionToken");
+        return;
+    }
+
+    // ✅ نتحقق إن الجلسة لسه صالحة قبل ما نعمل redirect
+    const client = getSupabaseClient();
+    if (!client) return;
+
+    const { data } = await client.rpc("verify_admin_session", {
+        p_session_token: token
+    });
+
+    if (data?.valid && data.admin_id === admin.id) {
         showPageTransition();
         setTimeout(() => {
             window.location.replace("admin.html");
         }, 500);
+    } else {
+        // جلسة منتهية — نمسحها ونخليه يسجل دخول
+        localStorage.removeItem("adminSessionToken");
     }
 }
 
@@ -304,9 +754,7 @@ if (loginForm) {
                 await client.auth.signInWithPassword({ email, password });
 
             if (error || !data?.user) {
-                showLoginMessage(
-                    "البريد الإلكتروني أو كلمة المرور غير صحيحة"
-                );
+                showLoginMessage("البريد الإلكتروني أو كلمة المرور غير صحيحة");
                 return;
             }
 
@@ -317,7 +765,6 @@ if (loginForm) {
                 .maybeSingle();
 
             if (adminError || !adminData) {
-                // نتحقق لو ده حساب عميل
                 const { data: customerData } = await client
                     .from("customer_profiles")
                     .select("id")
@@ -327,9 +774,7 @@ if (loginForm) {
                 await client.auth.signOut();
 
                 if (customerData) {
-                    showLoginMessage(
-                        "هذا حساب عميل. جاري تحويلك لصفحة حسابك..."
-                    );
+                    showLoginMessage("هذا حساب عميل. جاري تحويلك...");
                     setTimeout(() => {
                         window.location.replace("account-login.html");
                     }, 1500);
@@ -343,6 +788,32 @@ if (loginForm) {
             if (adminData.is_active === false) {
                 await client.auth.signOut();
                 showLoginMessage("هذا الحساب تم تعطيله");
+                return;
+            }
+
+            // ✅ فحص الجلسة النشطة
+            const sessionCheck = await checkActiveSession(data.user.id);
+
+            if (sessionCheck.has_active) {
+                await client.auth.signOut();
+                const loggedInTime = sessionCheck.last_active_at
+                    ? new Date(sessionCheck.last_active_at).toLocaleString("ar-EG")
+                    : "-";
+
+                showLoginMessage(
+                    `⚠️ هذا الحساب مفتوح حاليًا على جهاز آخر\n` +
+                    `الجهاز: ${sessionCheck.device_info || "غير معروف"}\n` +
+                    `آخر نشاط: ${loggedInTime}\n\n` +
+                    `اطلب من المدير إنهاء الجلسة`,
+                    "error"
+                );
+                return;
+            }
+
+            // ✅ إنشاء جلسة جديدة
+            const token = await createAdminSession(data.user.id);
+            if (!token) {
+                showLoginMessage("فشل إنشاء الجلسة، حاول مرة أخرى");
                 return;
             }
 
@@ -362,7 +833,7 @@ if (loginForm) {
 }
 
 // ========================================
-// 14. TAB NAVIGATION
+// 18. TAB NAVIGATION
 // ========================================
 
 function switchTab(tabId) {
@@ -390,19 +861,36 @@ function switchTab(tabId) {
         document.getElementById("viewApprovals")?.classList.add("active");
         document.getElementById("tabNavApprovals")?.classList.add("active");
         title.textContent = "طلبات موافقة الموظفين";
-        subtitle.textContent = "مراجعة واعتماد تعديلات الموظفين على المنتجات";
+        subtitle.textContent = "مراجعة واعتماد تعديلات الموظفين";
     } else if (tabId === "products") {
         document.getElementById("viewProducts")?.classList.add("active");
         document.getElementById("tabNavProducts")?.classList.add("active");
         title.textContent = "إدارة المنتجات";
         subtitle.textContent = "إضافة وتعديل وحذف منتجات المتجر";
+    } else if (tabId === "inventory") {
+        document.getElementById("viewInventory")?.classList.add("active");
+        document.getElementById("tabNavInventory")?.classList.add("active");
+        title.textContent = "المخزون";
+        subtitle.textContent = "متابعة حركات المخزون والكميات المتاحة";
+        loadInventory();
+        loadMovements();
+    } else if (tabId === "reports") {
+        document.getElementById("viewReports")?.classList.add("active");
+        document.getElementById("tabNavReports")?.classList.add("active");
+        title.textContent = "التقارير والتحليلات";
+        subtitle.textContent = "مركز التقارير الشامل";
+
+        backToReportsHome();
     }
+
+    document.getElementById("sidebar")?.classList.remove("open");
+    document.getElementById("mobileOverlay")?.classList.remove("show");
 
     if (tabId === "approvals") loadApprovalRequests();
 }
 
 // ========================================
-// 15. PROTECT ADMIN DASHBOARD
+// 19. PROTECT ADMIN DASHBOARD
 // ========================================
 
 async function protectAdminDashboard() {
@@ -428,17 +916,45 @@ async function protectAdminDashboard() {
         return;
     }
 
+    // ✅ التحقق من وجود جلسة
+    const sessionToken = localStorage.getItem("adminSessionToken");
+    if (!sessionToken) {
+        window.location.replace("admin-login.html");
+        return;
+    }
+
     currentAdmin = admin;
     window.currentAdmin = admin;
 
-    if (adminUsername) {
-        adminUsername.textContent =
-            admin.username || admin.email || "Admin";
+    // ✅ التحقق من صحة الجلسة عبر RPC
+    const { data: sessionCheck } = await client.rpc("verify_admin_session", {
+        p_session_token: sessionToken
+    });
+
+    if (!sessionCheck?.valid) {
+        localStorage.removeItem("adminSessionToken");
+        await client.auth.signOut();
+        window.location.replace("admin-login.html");
+        return;
     }
 
-    if (adminRole) {
-        adminRole.textContent = getRoleName(admin.role);
+    // ✅ تأكد إن الجلسة لصاحب الحساب ده
+    if (sessionCheck.admin_id !== admin.id) {
+        localStorage.removeItem("adminSessionToken");
+        await client.auth.signOut();
+        window.location.replace("admin-login.html");
+        return;
     }
+
+    currentSessionToken = sessionToken;
+    startHeartbeat();
+
+    if (adminUsername) adminUsername.textContent = admin.username || admin.email || "Admin";
+    if (adminRole) adminRole.textContent = getRoleName(admin.role);
+    if (menuUsername) menuUsername.textContent = admin.username || "Admin";
+    if (menuEmail) menuEmail.textContent = admin.email || "";
+
+    await autoReleaseStaleOrders();
 
     await Promise.all([
         loadAdminProducts(),
@@ -447,10 +963,136 @@ async function protectAdminDashboard() {
     ]);
 
     updateDashboard();
+    setupMobileMenu();
+    setupUserDropdown();
+    setupProductsSearch();
+    setupAddProductModal();
+    setupNotificationsDropdown();
 }
 
 // ========================================
-// 16. ORDERS
+// 20. MOBILE MENU
+// ========================================
+
+function setupMobileMenu() {
+    const toggle = document.getElementById("mobileSidebarToggle");
+    const sidebar = document.getElementById("sidebar");
+    const overlay = document.getElementById("mobileOverlay");
+
+    toggle?.addEventListener("click", () => {
+        sidebar?.classList.toggle("open");
+        overlay?.classList.toggle("show");
+    });
+
+    overlay?.addEventListener("click", () => {
+        sidebar?.classList.remove("open");
+        overlay?.classList.remove("show");
+    });
+}
+
+// ========================================
+// 21. USER DROPDOWN
+// ========================================
+
+function setupUserDropdown() {
+    const dropdown = document.getElementById("userDropdown");
+    const btn = document.getElementById("userInfoBtn");
+
+    if (!dropdown || !btn) return;
+
+    btn.addEventListener("click", (e) => {
+        e.stopPropagation();
+        dropdown.classList.toggle("open");
+    });
+
+    document.addEventListener("click", (e) => {
+        if (!dropdown.contains(e.target)) {
+            dropdown.classList.remove("open");
+        }
+    });
+}
+
+// ========================================
+// 22. NOTIFICATIONS DROPDOWN
+// ========================================
+
+function setupNotificationsDropdown() {
+    const btn = document.getElementById("notificationsBtn");
+    const dropdown = document.getElementById("notificationsDropdown");
+
+    if (!btn || !dropdown) return;
+
+    btn.addEventListener("click", (e) => {
+        e.stopPropagation();
+        dropdown.classList.toggle("open");
+    });
+
+    document.addEventListener("click", (e) => {
+        if (!dropdown.contains(e.target) && !btn.contains(e.target)) {
+            dropdown.classList.remove("open");
+        }
+    });
+}
+
+function closeNotificationsDropdown() {
+    document.getElementById("notificationsDropdown")?.classList.remove("open");
+}
+
+// ========================================
+// 23. ADD PRODUCT MODAL SETUP
+// ========================================
+
+function setupAddProductModal() {
+    openAddProductBtn?.addEventListener("click", () => {
+        addProductForm.reset();
+        resetSizesGrid("sizesGrid");
+        addProductModal?.classList.add("open");
+    });
+
+    closeAddProductModal?.addEventListener("click", () => {
+        addProductModal?.classList.remove("open");
+    });
+
+    cancelAddBtn?.addEventListener("click", () => {
+        addProductModal?.classList.remove("open");
+    });
+
+    document.querySelectorAll("#sizesGrid .size-qty-input").forEach(input => {
+        input.addEventListener("input", () => updateTotalPreview("add"));
+    });
+    document.querySelectorAll("#editSizesGrid .size-qty-input").forEach(input => {
+        input.addEventListener("input", () => updateTotalPreview("edit"));
+    });
+}
+
+// ========================================
+// 24. AUTO RELEASE STALE ORDERS
+// ========================================
+
+async function autoReleaseStaleOrders() {
+    const client = getSupabaseClient();
+    if (!client) return;
+
+    try {
+        const { data, error } = await client.rpc("auto_release_stale_orders");
+        if (error) {
+            console.warn("Auto release failed:", error);
+            return;
+        }
+
+        const count = data?.released_count || 0;
+        if (count > 0) {
+            showToast(`تم تحرير ${count} طلب منتهي الصلاحية ⏱️`);
+            await loadAdminProducts();
+            await loadAdminOrders();
+        }
+    } catch (err) {
+        console.warn("Auto release error:", err);
+    }
+}
+
+// ========================================
+// 25. ORDERS — LOAD & RENDER
 // ========================================
 
 async function loadAdminOrders() {
@@ -476,7 +1118,19 @@ async function loadAdminOrders() {
         adminOrders = data || [];
         window.adminOrders = adminOrders;
 
-        renderAdminOrders();
+        // ✅ تطبيق فلتر "جديدة" افتراضيًا
+        const defaultFilter = "pending";
+        const filteredDefault = adminOrders.filter(o => o.status === defaultFilter);
+
+        if (filteredDefault.length > 0) {
+            const oldOrders = adminOrders;
+            adminOrders = filteredDefault;
+            renderAdminOrders();
+            adminOrders = oldOrders;
+        } else {
+            renderAdminOrders();
+        }
+
         updateDashboard();
     } catch (error) {
         console.error("Load Orders Error:", error);
@@ -499,10 +1153,10 @@ function getStatusBadge(status) {
         shipped: { text: "تم الشحن", bg: "#f3e8ff", color: "#6b21a8" },
         delivered: { text: "تم التوصيل", bg: "#dcfce7", color: "#15803d" },
         return_requested: { text: "طلب استرجاع", bg: "#fef3c7", color: "#92400e" },
-        return_received: { text: "تم استلام المنتج للاسترجاع", bg: "#fed7aa", color: "#9a3412" },
+        return_received: { text: "تم استلام المنتج", bg: "#fed7aa", color: "#9a3412" },
         refunded: { text: "تم رد المبلغ", bg: "#dbeafe", color: "#1e40af" },
         exchange_requested: { text: "طلب استبدال", bg: "#fef3c7", color: "#92400e" },
-        exchange_received: { text: "تم استلام المنتج للاستبدال", bg: "#fed7aa", color: "#9a3412" },
+        exchange_received: { text: "تم استلام المنتج", bg: "#fed7aa", color: "#9a3412" },
         exchange_shipped: { text: "تم شحن البديل", bg: "#e9d5ff", color: "#6b21a8" },
         exchanged: { text: "تم الاستبدال", bg: "#bbf7d0", color: "#166534" },
         cancelled: { text: "ملغى", bg: "#f3f4f6", color: "#4b5563" }
@@ -521,28 +1175,6 @@ function getStatusBadge(status) {
         </span>
     `;
 }
-
-function getNextOrderAction(status) {
-    const actions = {
-        pending: "بدء تجهيز الطلب",
-        preparing: "تأكيد الشحن",
-        shipped: "تأكيد التوصيل",
-        delivered: "تم التسليم",
-        return_requested: "استلام المنتج",
-        return_received: "رد المبلغ",
-        refunded: "تم الاسترجاع",
-        exchange_requested: "استلام المنتج",
-        exchange_received: "شحن البديل",
-        exchange_shipped: "تأكيد الاستبدال",
-        exchanged: "تم الاستبدال",
-        cancelled: "الطلب ملغى"
-    };
-    return actions[status] || "متابعة الطلب";
-}
-
-// ========================================
-// STATUS FLOW
-// ========================================
 
 function getAllowedStatuses(currentStatus) {
     const flows = {
@@ -593,19 +1225,46 @@ const STATUS_LABELS = {
 
 function renderStatusControl(order) {
     const current = order.status;
+
     if (isLockedStatus(current)) return getStatusBadge(current);
 
+    // ✅ "تم التوصيل" → زرارين صريحين
+    if (current === "delivered") {
+        return `
+            <div style="display:flex;gap:6px;justify-content:center;">
+                <button type="button" 
+                    onclick="updateOrderStatus(${Number(order.id)}, 'return_requested')"
+                    style="background:#fef3c7;color:#92400e;padding:7px 12px;border-radius:8px;font-size:12px;font-weight:700;border:1.5px solid #fcd34d;cursor:pointer;font-family:inherit;"
+                    title="طلب استرجاع">
+                    <i class="fa-solid fa-rotate-left"></i>
+                    استرجاع
+                </button>
+                <button type="button" 
+                    onclick="openExchangeRequestModal(${Number(order.id)})"
+                    style="background:#e0f2fe;color:#0369a1;padding:7px 12px;border-radius:8px;font-size:12px;font-weight:700;border:1.5px solid #7dd3fc;cursor:pointer;font-family:inherit;"
+                    title="طلب استبدال">
+                    <i class="fa-solid fa-arrows-rotate"></i>
+                    استبدال
+                </button>
+            </div>
+        `;
+    }
+
     const allowed = getAllowedStatuses(current);
-    const options = allowed.map(s => `
-        <option value="${s}" ${s === current ? "selected" : ""}>
+    const nextOptions = allowed.filter(s => s !== current);
+
+    if (!nextOptions.length) return getStatusBadge(current);
+
+    const options = nextOptions.map(s => `
+        <option value="${s}">
             ${STATUS_LABELS[s] || s}
         </option>
     `).join("");
 
     return `
-        <select
-            onchange="updateOrderStatus(${Number(order.id)}, this.value)"
-            style="padding:6px 8px;border-radius:6px;border:1px solid #cbd5e1;font-family:inherit;cursor:pointer;background:#fff;">
+        <select class="status-modern-select status-${current}"
+            onchange="if(this.value) updateOrderStatus(${Number(order.id)}, this.value)">
+            <option value="">تغيير إلى...</option>
             ${options}
         </select>
     `;
@@ -614,19 +1273,48 @@ function renderStatusControl(order) {
 function renderAdminOrders() {
     if (!adminOrdersList) return;
 
-    if (!adminOrders.length) {
+    let filtered = adminOrders;
+    const f = ordersSearchFilters;
+
+    // ✅ فلتر مخصص من التنبيهات
+    if (customOrderStatuses && customOrderStatuses.length > 0) {
+        filtered = filtered.filter(o => customOrderStatuses.includes(o.status));
+    }
+
+    if (f.id) {
+        filtered = filtered.filter(o => String(o.id).includes(f.id.trim()));
+    }
+    if (f.name) {
+        filtered = filtered.filter(o =>
+            String(o.customer_name || "").toLowerCase().includes(f.name.trim().toLowerCase())
+        );
+    }
+    if (f.phone) {
+        const term = f.phone.trim().toLowerCase();
+        filtered = filtered.filter(o =>
+            String(o.customer_phone || "").includes(term) ||
+            String(o.governorate || o.city || "").toLowerCase().includes(term)
+        );
+    }
+    if (f.amount) {
+        filtered = filtered.filter(o =>
+            String(o.total_amount || "").includes(f.amount.trim())
+        );
+    }
+
+    if (!filtered.length) {
         adminOrdersList.innerHTML = `
             <tr>
                 <td colspan="8" style="text-align:center;padding:35px;color:#64748b;">
-                    لا توجد طلبات مسجلة حالياً
+                    ${adminOrders.length === 0 ? "لا توجد طلبات مسجلة حالياً" : "لا توجد نتائج مطابقة للبحث"}
                 </td>
             </tr>
         `;
         return;
     }
 
-    adminOrdersList.innerHTML = adminOrders.map(order => {
-        const totalAmount = Number(order.total_amount || 0).toLocaleString("ar-EG");
+    adminOrdersList.innerHTML = filtered.map(order => {
+        const totalAmount = Number(order.total_amount || 0).toLocaleString("en-US");
         const phone = escapeAdminHTML(order.customer_phone || "-");
         const governorate = escapeAdminHTML(
             order.governorate || order.customer_governorate || order.city || "-"
@@ -634,25 +1322,58 @@ function renderAdminOrders() {
 
         return `
             <tr>
-                <td><strong>#${escapeAdminHTML(order.id)}</strong></td>
-                <td><strong>${escapeAdminHTML(order.customer_name || "عميل")}</strong></td>
-                <td>
-                    <div>${phone}</div>
-                    <small style="color:#64748b;">${governorate}</small>
+                <td class="order-id-cell">
+                    <span>#</span>${escapeAdminHTML(order.id)}
                 </td>
-                <td><strong>${totalAmount} جنيه</strong></td>
+                <td class="customer-cell">
+                    <strong>${escapeAdminHTML(order.customer_name || "عميل")}</strong>
+                </td>
+                <td class="phone-cell">
+                    <div class="phone">
+                        <i class="fa-solid fa-phone"></i>
+                        ${phone}
+                    </div>
+                    <div class="gov">
+                        <i class="fa-solid fa-location-dot"></i>
+                        ${governorate}
+                    </div>
+                </td>
+                <td class="amount-cell">
+                    ${totalAmount}
+                    <span class="currency">ج.م</span>
+                </td>
                 <td>${getStatusBadge(order.status)}</td>
-                <td>${formatDate(order.created_at)}</td>
+                <td class="date-cell">
+                    ${formatDate(order.created_at)}
+                    ${
+                        (() => {
+                            const rem = getOrderTimeRemaining(order);
+                            if (!rem) return "";
+                            const bg = rem.expired ? '#fee2e2' 
+                                : rem.color === '#dc2626' ? '#fef2f2' 
+                                : rem.color === '#d97706' ? '#fef3c7' 
+                                : '#dcfce7';
+                            return `
+                                <div style="margin-top:6px;">
+                                    <span style="display:inline-block;padding:4px 10px;border-radius:6px;font-size:11px;font-weight:800;background:${bg};color:${rem.color};">
+                                        <i class="fa-solid fa-clock"></i>
+                                        ${rem.text}
+                                    </span>
+                                </div>
+                            `;
+                        })()
+                    }
+                </td>
                 <td>${renderStatusControl(order)}</td>
                 <td>
                     <div style="display:flex;gap:6px;">
-                        <button type="button" onclick="viewOrderDetails(${Number(order.id)})"
-                            style="border:none;background:#eff6ff;color:#2563eb;border-radius:6px;padding:7px 10px;cursor:pointer;"
+                        <button type="button" class="action-icon-btn preview"
+                            onclick="viewOrderDetails(${Number(order.id)})"
                             title="عرض التفاصيل">
                             <i class="fa-solid fa-eye"></i>
                         </button>
-                        <button type="button" onclick="sendWhatsAppStatusUpdate(${Number(order.id)})"
-                            style="border:none;background:#dcfce7;color:#16a34a;border-radius:6px;padding:7px 10px;cursor:pointer;"
+                        <button type="button" class="action-icon-btn wa"
+                            onclick="sendWhatsAppStatusUpdate(${Number(order.id)})"
                             title="إرسال واتساب">
                             <i class="fa-brands fa-whatsapp"></i>
                         </button>
@@ -664,12 +1385,15 @@ function renderAdminOrders() {
 }
 
 // ========================================
-// 17. ORDER FILTER
+// 26. ORDER FILTER
 // ========================================
 
 function filterOrders(status, btnElement) {
+    // ✅ مسح الفلتر المخصص لما المستخدم يضغط على فلتر عادي
+    customOrderStatuses = null;
+
     if (btnElement) {
-        document.querySelectorAll(".filter-btn").forEach(button => {
+        document.querySelectorAll(".filter-chip").forEach(button => {
             button.classList.remove("active");
         });
         btnElement.classList.add("active");
@@ -677,9 +1401,21 @@ function filterOrders(status, btnElement) {
 
     if (!adminOrdersList) return;
 
-    const filtered = status === "all"
-        ? adminOrders
-        : adminOrders.filter(order => order.status === status);
+    let filtered;
+
+    if (status === "all") {
+        filtered = adminOrders;
+    } else if (status === "exchange") {
+        filtered = adminOrders.filter(o =>
+            ["exchange_requested", "exchange_received", "exchange_shipped", "exchanged"].includes(o.status)
+        );
+    } else if (status === "return") {
+        filtered = adminOrders.filter(o =>
+            ["return_requested", "return_received", "refunded"].includes(o.status)
+        );
+    } else {
+        filtered = adminOrders.filter(order => order.status === status);
+    }
 
     if (!filtered.length) {
         adminOrdersList.innerHTML = `
@@ -699,7 +1435,7 @@ function filterOrders(status, btnElement) {
 }
 
 // ========================================
-// 18. UPDATE ORDER STATUS
+// 27. UPDATE ORDER STATUS
 // ========================================
 
 async function updateOrderStatus(orderId, newStatus) {
@@ -707,6 +1443,12 @@ async function updateOrderStatus(orderId, newStatus) {
         item => Number(item.id) === Number(orderId)
     );
     if (!order) return;
+
+    // ✅ لو استلام استبدال → افتح المودال
+    if (newStatus === "exchange_received" && order.status === "exchange_requested") {
+        openExchangeReceivedModal(orderId);
+        return;
+    }
 
     if (isLockedStatus(order.status)) {
         alert("لا يمكن تعديل حالة هذا الطلب — الحالة نهائية");
@@ -730,8 +1472,7 @@ async function updateOrderStatus(orderId, newStatus) {
         `هل تريد تغيير حالة الطلب #${order.id} إلى "${STATUS_LABELS[newStatus]}"؟`;
 
     if (newStatus === "refunded" || newStatus === "exchanged") {
-        confirmMessage +=
-            "\n\n⚠️ تحذير: هذه حالة نهائية ولا يمكن التراجع عنها!";
+        confirmMessage += "\n\n⚠️ تحذير: هذه حالة نهائية!";
     }
 
     if (!confirm(confirmMessage)) {
@@ -785,6 +1526,7 @@ async function applyStatusChange(orderId, newStatus, reason, notes) {
 
         if (error) throw error;
 
+        const oldStatus = order.status;
         order.status = newStatus;
         order.status_history = newHistory;
 
@@ -795,8 +1537,33 @@ async function applyStatusChange(orderId, newStatus, reason, notes) {
             order.exchange_reason = reason;
         }
 
+        // خصم المخزون عند التوصيل
+        if (newStatus === "delivered" && oldStatus !== "delivered") {
+            try {
+                await client.rpc("process_order_delivery", {
+                    p_order_id: orderId
+                });
+                showToast("تم تحديث المخزون تلقائيًا ✅");
+            } catch (e) {
+                console.warn("Stock update failed:", e);
+            }
+        }
+
+        // تحرير الحجز عند الإلغاء
+        if ((newStatus === "cancelled" || newStatus === "refunded") &&
+            oldStatus !== newStatus) {
+            try {
+                await client.rpc("release_order_stock", {
+                    p_order_id: orderId
+                });
+            } catch (e) {
+                console.warn("Release stock failed:", e);
+            }
+        }
+
         renderAdminOrders();
         updateDashboard();
+        await loadAdminProducts();
     } catch (error) {
         console.error("Update Order Status Error:", error);
         alert("فشل تحديث حالة الطلب:\n\n" + error.message);
@@ -805,7 +1572,7 @@ async function applyStatusChange(orderId, newStatus, reason, notes) {
 }
 
 // ========================================
-// 19. WHATSAPP
+// 28. WHATSAPP
 // ========================================
 
 function sendWhatsAppStatusUpdate(orderId) {
@@ -821,17 +1588,22 @@ function sendWhatsAppStatusUpdate(orderId) {
     let phone = String(order.customer_phone).replace(/\D/g, "");
     if (phone.startsWith("0")) phone = "2" + phone;
 
+    const trackingUrl = getTrackingUrl(order.id, order.customer_phone);
+    const customerName = order.customer_name || "عميل";
+
     const messages = {
-        preparing: `مرحباً ${order.customer_name || "عميل"} 👋\nتم البدء في تجهيز طلبك رقم #${order.id} من متجر STEP! 👟`,
-        shipped: `مرحباً ${order.customer_name || "عميل"} 🚚\nبشرى سارة! تم شحن طلبك رقم #${order.id} وهو في طريقه إليك.`,
-        delivered: `مرحباً ${order.customer_name || "عميل"} ✅\nتم توصيل طلبك رقم #${order.id} بنجاح. شكراً لتسوقك من STEP!`,
-        return_requested: `مرحباً ${order.customer_name || "عميل"}\nتم تسجيل طلب الاسترجاع للطلب رقم #${order.id}.`,
-        refunded: `مرحباً ${order.customer_name || "عميل"}\nتم رد مبلغ الطلب #${order.id} بنجاح.`,
-        exchanged: `مرحباً ${order.customer_name || "عميل"}\nتم استبدال الطلب #${order.id} بنجاح.`
+        pending: `مرحباً ${customerName} 👋\n\nتم استلام طلبك رقم #${order.id} من متجر STEP بنجاح ✅\n\n📍 لتتبع طلبك:\n${trackingUrl}`,
+        preparing: `مرحباً ${customerName} 👋\n\nجاري تجهيز طلبك رقم #${order.id} من متجر STEP 👟\n\n📍 لتتبع طلبك:\n${trackingUrl}`,
+        shipped: `مرحباً ${customerName} 🚚\n\nبشرى سارة! تم شحن طلبك رقم #${order.id} وهو في طريقه إليك 📦\n\n📍 لتتبع طلبك مباشرة:\n${trackingUrl}`,
+        delivered: `مرحباً ${customerName} ✅\n\nتم توصيل طلبك رقم #${order.id} بنجاح 🎉\n\nشكراً لتسوقك من STEP! 🛍️\n\n📍 لمتابعة طلباتك:\n${trackingUrl}`,
+        return_requested: `مرحباً ${customerName}\n\nتم تسجيل طلب الاسترجاع للطلب رقم #${order.id} 🔄\n\n📍 لمتابعة حالة الطلب:\n${trackingUrl}`,
+        refunded: `مرحباً ${customerName}\n\nتم رد مبلغ الطلب رقم #${order.id} بنجاح 💰\n\n📍 لمتابعة الطلب:\n${trackingUrl}`,
+        exchanged: `مرحباً ${customerName}\n\nتم استبدال الطلب رقم #${order.id} بنجاح ✅\n\n📍 لمتابعة الطلب:\n${trackingUrl}`,
+        cancelled: `مرحباً ${customerName}\n\nتم إلغاء طلبك رقم #${order.id} ❌\n\nلو محتاج مساعدة كلمنا في أي وقت.`
     };
 
     const text = messages[order.status] ||
-        `مرحباً ${order.customer_name || "عميل"}، تحديث بخصوص طلبك رقم #${order.id}.`;
+        `مرحباً ${customerName}، تحديث بخصوص طلبك رقم #${order.id}.\n\n📍 لمتابعة الطلب:\n${trackingUrl}`;
 
     window.open(
         `https://wa.me/${phone}?text=${encodeURIComponent(text)}`,
@@ -840,7 +1612,30 @@ function sendWhatsAppStatusUpdate(orderId) {
 }
 
 // ========================================
-// 20. VIEW ORDER DETAILS
+// 29. COPY TRACKING LINK
+// ========================================
+
+function copyTrackingLink(orderId, customerPhone, buttonEl) {
+    const url = getTrackingUrl(orderId, customerPhone);
+
+    navigator.clipboard.writeText(url).then(() => {
+        if (buttonEl) {
+            const originalHTML = buttonEl.innerHTML;
+            buttonEl.innerHTML = '<i class="fa-solid fa-check"></i> تم النسخ!';
+            buttonEl.style.background = '#16a34a';
+            setTimeout(() => {
+                buttonEl.innerHTML = originalHTML;
+                buttonEl.style.background = '#2563eb';
+            }, 2000);
+        }
+    }).catch(err => {
+        console.error('Copy failed:', err);
+        prompt('انسخ الرابط ده:', url);
+    });
+}
+
+// ========================================
+// 30. VIEW ORDER DETAILS
 // ========================================
 
 function viewOrderDetails(orderId) {
@@ -851,21 +1646,100 @@ function viewOrderDetails(orderId) {
     if (!order || !orderModal || !orderModalDetails) return;
 
     const items = Array.isArray(order.items) ? order.items : [];
+    const exchangeItems = order.exchange_details?.items || [];
 
-    const itemsHTML = items.map(item => {
+    const itemsHTML = items.map((item, index) => {
         const quantity = Number(item.quantity || 1);
         const price = Number(item.price || 0);
-        return `
-            <div style="display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid #eee;padding:10px 0;gap:15px;">
-                <div>
-                    <strong>${escapeAdminHTML(item.name || "منتج")}</strong>
-                    <div style="font-size:12px;color:#64748b;">
-                        المقاس: ${escapeAdminHTML(item.size || "-")} |
-                        الكمية: ${quantity}
-                    </div>
+
+        const product = getProductById(item.id);
+        const image = item.image || product?.image || "";
+
+        const exchangeInfo = exchangeItems.find(e =>
+            Number(e.product_id) === Number(item.id) &&
+            String(e.old_size) === String(item.size)
+        );
+
+        const effectiveSize = exchangeInfo?.new_size || item.size;
+        const isExchanged = Boolean(exchangeInfo?.new_size);
+
+        const sizeData = product ? getSizeData(product.id, effectiveSize) : null;
+        const sizeAvailable = sizeData ? Math.max(0, Number(sizeData.stock) - Number(sizeData.reserved)) : 0;
+        const sizeReserved = sizeData ? Number(sizeData.reserved) : 0;
+        const sizeStock = sizeData ? Number(sizeData.stock) : 0;
+
+        let stockHTML = "";
+        if (product && sizeData) {
+            const sizeStatus = sizeAvailable === 0 ? "out" : (sizeAvailable <= 5 ? "low" : "good");
+            const availableClass = sizeStatus === "out" || sizeStatus === "low" ? "low" : "available";
+
+            stockHTML = `
+                <div class="stock-info">
+                    <span class="${availableClass}">
+                        <i class="fa-solid fa-check"></i>
+                        متاح في مقاس ${escapeAdminHTML(effectiveSize)}: ${sizeAvailable}
+                    </span>
+                    ${sizeReserved > 0 ? `
+                        <span class="reserved">
+                            <i class="fa-solid fa-clock"></i>
+                            محجوز: ${sizeReserved}
+                        </span>
+                    ` : ""}
+                    <span>
+                        <i class="fa-solid fa-warehouse"></i>
+                        إجمالي: ${sizeStock}
+                    </span>
+                    ${product.sku ? `
+                        <span>
+                            <i class="fa-solid fa-barcode"></i>
+                            ${escapeAdminHTML(product.sku)}
+                        </span>
+                    ` : ""}
                 </div>
-                <div>
-                    <strong>${(price * quantity).toLocaleString("ar-EG")} جنيه</strong>
+            `;
+        } else if (product) {
+            stockHTML = `
+                <div class="stock-info">
+                    <span class="low">
+                        <i class="fa-solid fa-triangle-exclamation"></i>
+                        المقاس ${escapeAdminHTML(effectiveSize)} غير موجود
+                    </span>
+                </div>
+            `;
+        }
+
+        const sizeDisplayHTML = isExchanged
+            ? `
+                <div class="size-display exchanged">
+                    <span class="size-old">${escapeAdminHTML(item.size)}</span>
+                    <i class="fa-solid fa-arrow-left size-arrow"></i>
+                    <span class="size-new">${escapeAdminHTML(exchangeInfo.new_size)}</span>
+                    <span class="size-tag">مستبدل</span>
+                </div>
+            `
+            : `
+                <div class="size-display">
+                    <span class="size-label">المقاس:</span>
+                    <span class="size-value">${escapeAdminHTML(item.size || "-")}</span>
+                </div>
+            `;
+
+        return `
+            <div class="order-detail-item">
+                <div class="order-detail-img"
+                    style="background-image:url('${escapeAdminHTML(image)}');">
+                </div>
+                <div class="order-detail-info">
+                    <h4>${escapeAdminHTML(item.name || "منتج")}</h4>
+                    ${sizeDisplayHTML}
+                    <div class="qty-info">
+                        <i class="fa-solid fa-cubes"></i>
+                        الكمية: <strong>${quantity}</strong>
+                    </div>
+                    ${stockHTML}
+                </div>
+                <div class="order-detail-price">
+                    ${(price * quantity).toLocaleString("en-US")} ج
                 </div>
             </div>
         `;
@@ -915,6 +1789,28 @@ function viewOrderDetails(orderId) {
         `
         : "";
 
+    const trackUrl = order.customer_phone
+        ? getTrackingUrl(order.id, order.customer_phone)
+        : null;
+
+    const trackingHTML = trackUrl ? `
+        <div style="margin-top:16px;padding:14px;background:#eff6ff;border:1px solid #dbeafe;border-radius:10px;">
+            <div style="font-size:13px;font-weight:800;color:#1e40af;margin-bottom:10px;display:flex;align-items:center;gap:8px;">
+                <i class="fa-solid fa-truck-fast"></i>
+                رابط تتبع الطلب للعميل:
+            </div>
+            <div style="font-size:11px;color:#475569;word-break:break-all;background:#fff;padding:10px;border-radius:6px;margin-bottom:10px;line-height:1.6;">
+                ${escapeAdminHTML(trackUrl)}
+            </div>
+            <button type="button"
+                onclick="copyTrackingLink(${order.id}, '${escapeAdminHTML(order.customer_phone)}', this)"
+                style="background:#2563eb;color:#fff;padding:9px 16px;border-radius:8px;font-size:13px;font-weight:700;border:0;cursor:pointer;font-family:inherit;display:inline-flex;align-items:center;gap:6px;">
+                <i class="fa-solid fa-copy"></i>
+                نسخ الرابط
+            </button>
+        </div>
+    ` : "";
+
     orderModalDetails.innerHTML = `
         <h3>تفاصيل الطلب #${escapeAdminHTML(order.id)}</h3>
 
@@ -924,6 +1820,7 @@ function viewOrderDetails(orderId) {
         <p><strong>الحالة:</strong> ${getStatusBadge(order.status)}</p>
         <p><strong>تاريخ الطلب:</strong> ${formatDate(order.created_at)}</p>
 
+        ${trackingHTML}
         ${returnReasonHTML}
         ${exchangeReasonHTML}
 
@@ -935,27 +1832,40 @@ function viewOrderDetails(orderId) {
         <div style="margin-top:15px;padding-top:15px;border-top:2px solid #f0f0f0;">
             <div style="display:flex;justify-content:space-between;font-size:14px;color:#555;padding:5px 0;">
                 <span>المنتجات:</span>
-                <strong>
-                    ${Number(order.subtotal || order.total_amount || 0).toLocaleString("ar-EG")} جنيه
-                </strong>
+                <strong>${Number(order.subtotal || order.total_amount || 0).toLocaleString("en-US")} جنيه</strong>
             </div>
             <div style="display:flex;justify-content:space-between;font-size:14px;color:#555;padding:5px 0;">
                 <span>الشحن:</span>
                 <strong style="color:${Number(order.shipping_cost) === 0 ? '#16a34a' : '#111'};">
-                    ${
-                        Number(order.shipping_cost) === 0
-                            ? 'مجاني'
-                            : Number(order.shipping_cost || 0).toLocaleString("ar-EG") + ' جنيه'
-                    }
+                    ${Number(order.shipping_cost) === 0
+                        ? 'مجاني'
+                        : Number(order.shipping_cost || 0).toLocaleString("en-US") + ' جنيه'}
                 </strong>
             </div>
             <div style="display:flex;justify-content:space-between;font-size:16px;padding:10px 0 0;border-top:1px solid #eee;margin-top:8px;">
-                <strong>الإجمالي الكلي:</strong>
-                <strong style="color:#2563eb;">
-                    ${Number(order.total_amount || 0).toLocaleString("ar-EG")} جنيه
-                </strong>
+                <strong>الإجمالي:</strong>
+                <strong style="color:#2563eb;">${Number(order.total_amount || 0).toLocaleString("en-US")} جنيه</strong>
             </div>
         </div>
+
+        ${
+            (order.status === "pending" || order.status === "preparing")
+                ? `
+                    <div style="margin-top:16px;padding:14px;background:#fef3c7;border:1px solid #fcd34d;border-radius:10px;">
+                        <div style="font-size:13px;font-weight:800;color:#78350f;margin-bottom:10px;">
+                            <i class="fa-solid fa-clock"></i>
+                            إجراءات الحجز
+                        </div>
+                        <button type="button"
+                            onclick="releaseOrderReservation(${order.id})"
+                            style="background:#d97706;color:#fff;padding:9px 16px;border-radius:8px;font-size:13px;font-weight:700;border:0;cursor:pointer;font-family:inherit;display:inline-flex;align-items:center;gap:6px;">
+                            <i class="fa-solid fa-unlock"></i>
+                            تحرير الحجز
+                        </button>
+                    </div>
+                `
+                : ""
+        }
 
         ${historyHTML}
     `;
@@ -970,48 +1880,87 @@ if (closeOrderModalBtn) {
 }
 
 // ========================================
-// 21. PRODUCTS
+// 31. RELEASE ORDER RESERVATION
+// ========================================
+
+async function releaseOrderReservation(orderId) {
+    const confirmed = confirm(
+        "هل تريد تحرير حجز هذا الطلب؟\n\n" +
+        "⚠️ الكميات هترجع للمخزون المتاح"
+    );
+    if (!confirmed) return;
+
+    const client = getSupabaseClient();
+    if (!client) return;
+
+    try {
+        const { error } = await client.rpc("release_order_stock", {
+            p_order_id: orderId
+        });
+
+        if (error) throw error;
+
+        showToast("تم تحرير الحجز ✅");
+        orderModal?.classList.remove("open");
+
+        await loadAdminProducts();
+        await loadAdminOrders();
+    } catch (err) {
+        console.error("Release error:", err);
+        alert("فشل التحرير:\n\n" + err.message);
+    }
+}
+
+// ========================================
+// 32. PRODUCTS — LOAD & RENDER
 // ========================================
 
 async function loadAdminProducts() {
     const client = getSupabaseClient();
     if (!client || !adminProductsList) return;
 
-    adminProductsList.innerHTML = `
-        <tr>
-            <td colspan="6" style="text-align:center;padding:30px;color:#64748b;">
-                جاري تحميل المنتجات...
-            </td>
-        </tr>
-    `;
-
     try {
-        const { data, error } = await client
-            .from("products")
-            .select(`
-                id, name, price, old_price, badge, sizes, image,
-                created_at, description,
-                created_by, created_by_username,
-                updated_by, updated_by_username, updated_at,
-                created_user_id, created_username,
-                updated_user_id, updated_username
-            `)
-            .order("id", { ascending: false });
+        const [productsRes, sizesRes] = await Promise.all([
+            client
+                .from("products")
+                .select(`
+                    id, name, price, old_price, badge, sizes, image,
+                    created_at, description, sku,
+                    stock_quantity, reserved_quantity, low_stock_threshold,
+                    created_by, created_by_username,
+                    updated_by, updated_by_username, updated_at,
+                    created_user_id, created_username,
+                    updated_user_id, updated_username
+                `)
+                .order("id", { ascending: false }),
+            client
+                .from("product_sizes")
+                .select("*")
+                .order("size", { ascending: true })
+        ]);
 
-        if (error) throw error;
+        if (productsRes.error) throw productsRes.error;
 
-        adminProducts = data || [];
+        adminProducts = productsRes.data || [];
         window.adminProducts = adminProducts;
+
+        adminProductSizes = {};
+        (sizesRes.data || []).forEach(row => {
+            const pid = Number(row.product_id);
+            if (!adminProductSizes[pid]) adminProductSizes[pid] = [];
+            adminProductSizes[pid].push(row);
+        });
 
         if (statTotal) statTotal.textContent = adminProducts.length;
         if (dashStatProducts) dashStatProducts.textContent = adminProducts.length;
 
         renderAdminProducts();
+        updateLowStockBadge();
     } catch (error) {
         console.error("Load Products Error:", error);
         adminProductsList.innerHTML = `
             <tr>
-                <td colspan="6" style="text-align:center;padding:30px;color:#dc2626;font-weight:700;">
+                <td colspan="8" style="text-align:center;padding:30px;color:#dc2626;font-weight:700;">
                     حدث خطأ أثناء تحميل المنتجات
                     <br>
                     <small>${escapeAdminHTML(error.message)}</small>
@@ -1021,65 +1970,126 @@ async function loadAdminProducts() {
     }
 }
 
+function updateLowStockBadge() {
+    const lowCount = adminProducts.filter(p => {
+        const status = getStockStatus(p);
+        return status === "low" || status === "out";
+    }).length;
+
+    if (sidebarLowStockBadge) {
+        if (lowCount > 0) {
+            sidebarLowStockBadge.textContent = lowCount;
+            sidebarLowStockBadge.style.display = "inline-block";
+        } else {
+            sidebarLowStockBadge.style.display = "none";
+        }
+    }
+}
+
 function renderAdminProducts() {
     if (!adminProductsList) return;
 
-    if (!adminProducts.length) {
+    let filtered = adminProducts;
+    const f = productsSearchFilters;
+
+    if (f.id) {
+        filtered = filtered.filter(p => String(p.id).includes(f.id.trim()));
+    }
+    if (f.sku) {
+        filtered = filtered.filter(p =>
+            String(p.sku || "").toLowerCase().includes(f.sku.trim().toLowerCase())
+        );
+    }
+    if (f.name) {
+        filtered = filtered.filter(p =>
+            String(p.name || "").toLowerCase().includes(f.name.trim().toLowerCase())
+        );
+    }
+    if (f.price) {
+        filtered = filtered.filter(p =>
+            String(p.price || "").includes(f.price.trim())
+        );
+    }
+
+    if (!filtered.length) {
         adminProductsList.innerHTML = `
             <tr>
-                <td colspan="6" style="text-align:center;padding:35px;color:#64748b;">
-                    لا توجد منتجات حالياً
+                <td colspan="8" style="text-align:center;padding:35px;color:#64748b;">
+                    ${adminProducts.length === 0 ? "لا توجد منتجات" : "لا توجد نتائج مطابقة"}
                 </td>
             </tr>
         `;
         return;
     }
 
-    adminProductsList.innerHTML = adminProducts.map(product => {
+    adminProductsList.innerHTML = filtered.map(product => {
         const image = product.image ? escapeAdminHTML(product.image) : "";
         const name = escapeAdminHTML(product.name);
         const price = Number(product.price || 0);
-        const creator = product.created_username || product.created_by_username || "System";
-        const updater = product.updated_username || product.updated_by_username || "-";
-        const lastUpdated = product.updated_at
-            ? formatDate(product.updated_at)
-            : formatDate(product.created_at);
+        const available = getAvailableStock(product);
+        const reserved = getProductReservedTotal(product);
+        const status = getStockStatus(product);
+        const sizesCount = getProductSizes(product.id).length;
 
         return `
             <tr>
+                <td class="product-id-cell">#${product.id}</td>
                 <td>
+                    ${product.sku ? `
+                        <span class="sku-badge">${escapeAdminHTML(product.sku)}</span>
+                    ` : "<span style='color:#cbd5e1;'>—</span>"}
+                </td>
+                <td class="product-img-cell">
                     ${image ? `
-                        <img src="${image}" alt="${name}"
-                            style="width:60px;height:60px;object-fit:cover;border-radius:10px;border:1px solid #e5e7eb;">
+                        <img src="${image}" alt="${name}">
                     ` : `
-                        <div style="width:60px;height:60px;border-radius:10px;background:#f1f5f9;display:flex;align-items:center;justify-content:center;color:#94a3b8;">
+                        <div style="width:55px;height:55px;border-radius:12px;background:#f1f5f9;display:flex;align-items:center;justify-content:center;color:#94a3b8;">
                             <i class="fa-solid fa-image"></i>
                         </div>
                     `}
                 </td>
-                <td>
+                <td class="product-name-cell">
                     <strong>${name}</strong>
                     ${product.badge ? `
-                        <div style="margin-top:5px;font-size:11px;color:#2563eb;font-weight:700;">
+                        <span style="display:inline-block;font-size:11px;padding:3px 8px;border-radius:6px;font-weight:800;background:${normalizeBadge(product.badge) === 'خصم' ? '#fee2e2' : '#dcfce7'};color:${normalizeBadge(product.badge) === 'خصم' ? '#991b1b' : '#166534'};">
                             ${escapeAdminHTML(normalizeBadge(product.badge))}
+                        </span>
+                    ` : ""}
+                    ${sizesCount > 0 ? `
+                        <div style="font-size:11px;color:#94a3b8;margin-top:4px;">
+                            <i class="fa-solid fa-shoe-prints"></i>
+                            ${sizesCount} مقاس
                         </div>
                     ` : ""}
                 </td>
-                <td>${price.toLocaleString("ar-EG")} جنيه</td>
-                <td>${escapeAdminHTML(creator)}</td>
-                <td>
-                    <div>${escapeAdminHTML(updater)}</div>
-                    <small style="color:#94a3b8;">${lastUpdated}</small>
+                <td class="price-cell">${price.toLocaleString("en-US")} ج</td>
+                <td class="stock-cell">
+                    <span class="stock-pill ${status}">
+                        <i class="fa-solid fa-cubes"></i>
+                        ${available}
+                    </span>
                 </td>
                 <td>
-                    <div style="display:flex;gap:7px;flex-wrap:wrap;">
-                        <button type="button" onclick="prepareEditProduct(${Number(product.id)})"
-                            style="border:none;background:#eff6ff;color:#2563eb;border-radius:8px;padding:8px 12px;cursor:pointer;font-weight:700;">
-                            <i class="fa-solid fa-pen"></i> تعديل
+                    ${reserved > 0
+                        ? `<span class="stock-pill reserved">${reserved}</span>`
+                        : `<span style="color:#cbd5e1;">0</span>`}
+                </td>
+                <td>
+                    <div class="action-btns-group">
+                        <button type="button" class="action-icon-btn edit"
+                            onclick="prepareEditProduct(${Number(product.id)})"
+                            title="تعديل">
+                            <i class="fa-solid fa-pen"></i>
                         </button>
-                        <button type="button" onclick="prepareDeleteProduct(${Number(product.id)})"
-                            style="border:none;background:#fef2f2;color:#dc2626;border-radius:8px;padding:8px 12px;cursor:pointer;font-weight:700;">
-                            <i class="fa-solid fa-trash"></i> حذف
+                        <button type="button" class="action-icon-btn stock"
+                            onclick="openAdjustStockModal(${Number(product.id)})"
+                            title="تعديل المخزون">
+                            <i class="fa-solid fa-cubes"></i>
+                        </button>
+                        <button type="button" class="action-icon-btn delete"
+                            onclick="prepareDeleteProduct(${Number(product.id)})"
+                            title="حذف">
+                            <i class="fa-solid fa-trash"></i>
                         </button>
                     </div>
                 </td>
@@ -1089,10 +2099,62 @@ function renderAdminProducts() {
 }
 
 // ========================================
-// 22. PRODUCT SNAPSHOT
+// 33. PRODUCTS SEARCH
+// ========================================
+
+function setupProductsSearch() {
+    const productFields = ["Id", "Sku", "Name", "Price"];
+    productFields.forEach(field => {
+        const input = document.getElementById("search" + field);
+        if (!input) return;
+
+        input.addEventListener("input", () => {
+            const key = field.toLowerCase();
+            productsSearchFilters[key] = input.value;
+            renderAdminProducts();
+        });
+    });
+
+    const orderFields = ["Id", "Name", "Phone", "Amount"];
+    orderFields.forEach(field => {
+        const input = document.getElementById("orderSearch" + field);
+        if (!input) return;
+
+        input.addEventListener("input", () => {
+            const key = field.toLowerCase();
+            ordersSearchFilters[key] = input.value;
+            renderAdminOrders();
+        });
+    });
+
+    document.getElementById("invSearchInput")?.addEventListener("input", (e) => {
+        inventorySearchTerm = e.target.value;
+        renderInventoryList();
+    });
+
+    const invColumnFields = ["Sku", "Name", "Available", "Reserved"];
+    invColumnFields.forEach(field => {
+        const input = document.getElementById("invSearch" + field);
+        if (!input) return;
+
+        input.addEventListener("input", () => {
+            const key = field.toLowerCase();
+            inventoryColumnFilters[key] = input.value;
+            renderInventoryList();
+        });
+    });
+}
+
+// ========================================
+// 34. PRODUCT SNAPSHOT & CHANGE LOG
 // ========================================
 
 function getProductSnapshot(product) {
+    const sizes = getProductSizes(product.id).map(s => ({
+        size: s.size,
+        stock: s.stock
+    }));
+
     return {
         id: product.id,
         name: product.name || "",
@@ -1100,14 +2162,11 @@ function getProductSnapshot(product) {
         old_price: product.old_price == null ? null : Number(product.old_price),
         badge: product.badge || null,
         sizes: parseSizes(product.sizes),
+        sizes_with_quantities: sizes,
         image: product.image || null,
         description: product.description || ""
     };
 }
-
-// ========================================
-// 23. PRODUCT CHANGE LOG
-// ========================================
 
 async function createProductChangeLog({
     productId, action, oldData = null, newData = null,
@@ -1131,13 +2190,19 @@ async function createProductChangeLog({
     if (error) throw error;
 }
 
+// ========================================
+// 35. EDIT PRODUCT FORM HELPERS
+// ========================================
+
 function getEditProductData() {
+    const sizesWithQty = getSizesWithQuantities("editSizesGrid");
     return {
         name: editName?.value.trim() || "",
         price: Number(editPrice?.value || 0),
         old_price: editOldPrice?.value === "" ? null : Number(editOldPrice.value),
         badge: editBadge?.value.trim() || null,
-        sizes: parseSizes(editSizes?.value || ""),
+        sizes: sizesWithQty.map(s => s.size),
+        sizes_with_quantities: sizesWithQty,
         image: editImageUrl?.value.trim() || null,
         description: editDescription?.value.trim() || ""
     };
@@ -1152,17 +2217,19 @@ function validateProductData(data) {
         alert("اكتب سعر صحيح للمنتج");
         return false;
     }
+    if (!data.sizes || data.sizes.length === 0) {
+        alert("اختر مقاس واحد على الأقل");
+        return false;
+    }
     return true;
 }
 
 // ========================================
-// 24. EDIT PRODUCT
+// 36. EDIT PRODUCT
 // ========================================
 
 function prepareEditProduct(productId) {
-    const product = adminProducts.find(
-        item => Number(item.id) === Number(productId)
-    );
+    const product = getProductById(productId);
     if (!product || !editModal) return;
 
     editProductId.value = product.id;
@@ -1170,9 +2237,15 @@ function prepareEditProduct(productId) {
     editPrice.value = product.price ?? "";
     editOldPrice.value = product.old_price ?? "";
     editBadge.value = normalizeBadge(product.badge);
-    editSizes.value = parseSizes(product.sizes).join(", ");
     editDescription.value = product.description || "";
     editImageUrl.value = product.image || "";
+
+    const sizesData = getProductSizes(product.id).map(s => ({
+        size: s.size,
+        stock: s.stock
+    }));
+
+    setSizeQuantities("editSizesGrid", sizesData);
 
     editModal.classList.add("open");
 }
@@ -1190,7 +2263,7 @@ if (cancelEditButton) {
 }
 
 // ========================================
-// 25. CHANGE REQUEST
+// 37. CHANGE REQUEST
 // ========================================
 
 async function createChangeRequest(product, action, newData) {
@@ -1215,7 +2288,81 @@ async function createChangeRequest(product, action, newData) {
 }
 
 // ========================================
-// 26. EDIT SUBMIT
+// 38. APPLY SIZE CHANGES
+// ========================================
+
+async function applySizeChanges(client, productId, newSizesWithQty, oldSizes) {
+    const oldSizeMap = {};
+    (oldSizes || []).forEach(s => {
+        oldSizeMap[String(s.size)] = s;
+    });
+
+    const newSizeMap = {};
+    newSizesWithQty.forEach(s => {
+        newSizeMap[String(s.size)] = s;
+    });
+
+    const toDelete = Object.keys(oldSizeMap).filter(sz => !newSizeMap[sz]);
+    if (toDelete.length) {
+        await client
+            .from("product_sizes")
+            .delete()
+            .eq("product_id", productId)
+            .in("size", toDelete);
+    }
+
+    for (const item of newSizesWithQty) {
+        const sizeKey = String(item.size);
+        const existing = oldSizeMap[sizeKey];
+
+        if (existing) {
+            if (Number(existing.stock) !== Number(item.quantity)) {
+                await client
+                    .from("product_sizes")
+                    .update({
+                        stock: item.quantity,
+                        updated_at: new Date().toISOString()
+                    })
+                    .eq("product_id", productId)
+                    .eq("size", item.size);
+
+                await client.from("inventory_movements").insert({
+                    product_id: productId,
+                    movement_type: "adjustment",
+                    quantity: item.quantity - Number(existing.stock),
+                    previous_stock: Number(existing.stock),
+                    new_stock: item.quantity,
+                    reason: `تعديل مخزون مقاس ${item.size}`,
+                    performed_by: currentAdmin.id,
+                    performed_by_username: currentAdmin.username || currentAdmin.email
+                });
+            }
+        } else {
+            await client.from("product_sizes").insert({
+                product_id: productId,
+                size: item.size,
+                stock: item.quantity,
+                reserved: 0
+            });
+
+            if (item.quantity > 0) {
+                await client.from("inventory_movements").insert({
+                    product_id: productId,
+                    movement_type: "initial",
+                    quantity: item.quantity,
+                    previous_stock: 0,
+                    new_stock: item.quantity,
+                    reason: `إضافة مقاس ${item.size}`,
+                    performed_by: currentAdmin.id,
+                    performed_by_username: currentAdmin.username || currentAdmin.email
+                });
+            }
+        }
+    }
+}
+
+// ========================================
+// 39. EDIT PRODUCT SUBMIT
 // ========================================
 
 if (editProductForm) {
@@ -1224,27 +2371,34 @@ if (editProductForm) {
         if (!currentAdmin) return;
 
         const productId = Number(editProductId.value);
-        const product = adminProducts.find(
-            item => Number(item.id) === productId
-        );
+        const product = getProductById(productId);
         if (!product) return;
 
         const newData = getEditProductData();
         if (!validateProductData(newData)) return;
 
         saveEditButton.disabled = true;
-        saveEditButton.textContent = isManager()
-            ? "جاري الحفظ..."
-            : "جاري إرسال الطلب...";
+        saveEditButton.textContent = isManager() ? "جاري الحفظ..." : "جاري الإرسال...";
 
         try {
             const client = getSupabaseClient();
 
             if (isManager()) {
+                const totalStock = newData.sizes_with_quantities.reduce(
+                    (sum, s) => sum + Number(s.quantity || 0), 0
+                );
+
                 const { error } = await client
                     .from("products")
                     .update({
-                        ...newData,
+                        name: newData.name,
+                        price: newData.price,
+                        old_price: newData.old_price,
+                        badge: newData.badge,
+                        sizes: newData.sizes,
+                        image: newData.image,
+                        description: newData.description,
+                        stock_quantity: totalStock,
                         updated_by: currentAdmin.id,
                         updated_by_username: currentAdmin.username || currentAdmin.email,
                         updated_at: new Date().toISOString(),
@@ -1255,6 +2409,14 @@ if (editProductForm) {
 
                 if (error) throw error;
 
+                const oldSizes = getProductSizes(product.id);
+                await applySizeChanges(
+                    client,
+                    product.id,
+                    newData.sizes_with_quantities,
+                    oldSizes
+                );
+
                 await createProductChangeLog({
                     productId: product.id,
                     action: "update",
@@ -1264,10 +2426,10 @@ if (editProductForm) {
                     performedByUsername: currentAdmin.username || currentAdmin.email || "Manager"
                 });
 
-                alert("تم تعديل المنتج بنجاح ✅");
+                showToast("تم تعديل المنتج بنجاح ✅");
             } else {
                 await createChangeRequest(product, "update", newData);
-                alert("تم إرسال طلب تعديل المنتج للمدير للموافقة ⏳");
+                showToast("تم إرسال الطلب للموافقة ⏳");
             }
 
             closeEditProductModal();
@@ -1275,7 +2437,7 @@ if (editProductForm) {
             await loadApprovalRequests();
         } catch (error) {
             console.error("Edit Product Error:", error);
-            alert("حدث خطأ أثناء تعديل المنتج:\n\n" + error.message);
+            alert("حدث خطأ:\n\n" + error.message);
         } finally {
             saveEditButton.disabled = false;
             saveEditButton.textContent = "حفظ التغييرات";
@@ -1284,13 +2446,11 @@ if (editProductForm) {
 }
 
 // ========================================
-// 27. DELETE PRODUCT
+// 40. DELETE PRODUCT
 // ========================================
 
 async function prepareDeleteProduct(productId) {
-    const product = adminProducts.find(
-        item => Number(item.id) === Number(productId)
-    );
+    const product = getProductById(productId);
     if (!product) return;
 
     const confirmed = confirm(`هل تريد حذف المنتج؟\n\n${product.name}`);
@@ -1316,22 +2476,22 @@ async function prepareDeleteProduct(productId) {
                 performedByUsername: currentAdmin.username || currentAdmin.email || "Manager"
             });
 
-            alert("تم حذف المنتج بنجاح ✅");
+            showToast("تم حذف المنتج بنجاح ✅");
         } else {
             await createChangeRequest(product, "delete", null);
-            alert("تم إرسال طلب حذف المنتج للمدير للموافقة ⏳");
+            showToast("تم إرسال طلب الحذف للموافقة ⏳");
         }
 
         await loadAdminProducts();
         await loadApprovalRequests();
     } catch (error) {
         console.error("Delete Product Error:", error);
-        alert("حدث خطأ أثناء حذف المنتج:\n\n" + error.message);
+        alert("حدث خطأ:\n\n" + error.message);
     }
 }
 
 // ========================================
-// 28. ADD PRODUCT
+// 41. ADD PRODUCT SUBMIT
 // ========================================
 
 if (addProductForm) {
@@ -1342,14 +2502,27 @@ if (addProductForm) {
 
         const name = addName?.value.trim() || "";
         const price = Number(addPrice?.value || 0);
+        const sizesWithQty = getSizesWithQuantities("sizesGrid");
+        const sizes = sizesWithQty.map(s => s.size);
+        const totalStock = sizesWithQty.reduce((sum, s) => sum + Number(s.quantity || 0), 0);
 
         if (!name || !Number.isFinite(price) || price <= 0) {
             alert("يرجى التأكد من إدخال البيانات الصحيحة");
             return;
         }
 
+        if (sizes.length === 0) {
+            alert("اختر مقاس واحد على الأقل");
+            return;
+        }
+
+        if (totalStock === 0) {
+            alert("اكتب كمية لكل مقاس مختار");
+            return;
+        }
+
         addSubmitButton.disabled = true;
-        addSubmitButton.textContent = "جاري الإضافة...";
+        addSubmitButton.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> جاري الإضافة...';
 
         try {
             const productData = {
@@ -1357,9 +2530,11 @@ if (addProductForm) {
                 price,
                 old_price: addOldPrice?.value === "" ? null : Number(addOldPrice.value),
                 badge: addBadge?.value.trim() || null,
-                sizes: parseSizes(addSizes?.value || ""),
+                sizes: sizes,
                 image: addImageUrl?.value.trim() || null,
                 description: addDescription?.value.trim() || "",
+                stock_quantity: totalStock,
+                reserved_quantity: 0,
                 created_by: currentAdmin.id,
                 created_by_username: currentAdmin.username || currentAdmin.email,
                 created_user_id: currentAdmin.id,
@@ -1374,6 +2549,41 @@ if (addProductForm) {
 
             if (error) throw error;
 
+            const sizeRows = sizesWithQty.map(item => ({
+                product_id: insertedProduct.id,
+                size: item.size,
+                stock: Number(item.quantity || 0),
+                reserved: 0
+            }));
+
+            if (sizeRows.length) {
+                const { error: sizesError } = await client
+                    .from("product_sizes")
+                    .insert(sizeRows);
+                if (sizesError) {
+                    console.warn("Size insert failed:", sizesError);
+                }
+            }
+
+            for (const item of sizesWithQty) {
+                if (Number(item.quantity) > 0) {
+                    try {
+                        await client.from("inventory_movements").insert({
+                            product_id: insertedProduct.id,
+                            movement_type: "initial",
+                            quantity: Number(item.quantity),
+                            previous_stock: 0,
+                            new_stock: Number(item.quantity),
+                            reason: `رصيد افتتاحي - مقاس ${item.size}`,
+                            performed_by: currentAdmin.id,
+                            performed_by_username: currentAdmin.username || currentAdmin.email
+                        });
+                    } catch (e) {
+                        console.warn("Movement insert failed:", e);
+                    }
+                }
+            }
+
             await createProductChangeLog({
                 productId: insertedProduct.id,
                 action: "create",
@@ -1383,21 +2593,503 @@ if (addProductForm) {
                 performedByUsername: currentAdmin.username || currentAdmin.email || "Admin"
             });
 
-            alert("تم إضافة المنتج بنجاح ✅");
+            showToast("تم إضافة المنتج بنجاح ✅");
+            addProductModal?.classList.remove("open");
             addProductForm.reset();
+            resetSizesGrid("sizesGrid");
             await loadAdminProducts();
         } catch (error) {
             console.error(error);
-            alert("حدث خطأ أثناء إضافة المنتج:\n\n" + error.message);
+            alert("حدث خطأ:\n\n" + error.message);
         } finally {
             addSubmitButton.disabled = false;
-            addSubmitButton.textContent = "إضافة المنتج";
+            addSubmitButton.innerHTML = '<i class="fa-solid fa-check"></i> إضافة المنتج';
         }
     });
 }
 
 // ========================================
-// 29. APPROVAL REQUESTS
+// 42. INVENTORY
+// ========================================
+
+async function loadInventory() {
+    const client = getSupabaseClient();
+    if (!client) return;
+
+    const listEl = document.getElementById("inventoryList");
+    if (!listEl) return;
+
+    listEl.innerHTML = `<tr><td colspan="7" style="text-align:center;padding:30px;">جاري التحميل...</td></tr>`;
+
+    if (!adminProducts.length) {
+        await loadAdminProducts();
+    }
+
+    const totalProducts = adminProducts.length;
+    const totalStock = adminProducts.reduce((s, p) => s + getProductTotalStock(p), 0);
+    const totalReserved = adminProducts.reduce((s, p) => s + getProductReservedTotal(p), 0);
+    // ✅ عدد المنتجات اللي حالتها low فقط (مش out)
+    const lowStockCount = adminProducts.filter(p => {
+        return getStockStatus(p) === "low";
+    }).length;
+
+    // ✅ عدد المنتجات اللي حالتها out فقط
+    const outStockCount = adminProducts.filter(p => {
+        return getStockStatus(p) === "out";
+    }).length;
+
+    // ✅ التنبيه الذكي بيجمع الاتنين
+    const lowStock = lowStockCount + outStockCount;
+
+    const set = (id, val) => {
+        const el = document.getElementById(id);
+        if (el) el.textContent = val;
+    };
+
+    set("invTotalProducts", totalProducts);
+    set("invTotalStock", totalStock.toLocaleString("en-US"));
+    set("invTotalReserved", totalReserved.toLocaleString("en-US"));
+    set("invLowStock", lowStock);
+
+    const countAll = document.getElementById("invCountAll");
+    const countLow = document.getElementById("invCountLow");
+    const countOut = document.getElementById("invCountOut");
+
+    if (countAll) countAll.textContent = totalProducts;
+    if (countLow) countLow.textContent = lowStockCount;
+    if (countOut) countOut.textContent = outStockCount;
+
+    renderInventoryList();
+}
+
+function renderInventoryList() {
+    const listEl = document.getElementById("inventoryList");
+    if (!listEl) return;
+
+    let filtered = [...adminProducts];
+
+    if (inventorySearchTerm) {
+        const term = inventorySearchTerm.toLowerCase();
+        filtered = filtered.filter(p =>
+            String(p.name || "").toLowerCase().includes(term) ||
+            String(p.sku || "").toLowerCase().includes(term)
+        );
+    }
+
+    const cf = inventoryColumnFilters;
+    if (cf.sku) {
+        filtered = filtered.filter(p =>
+            String(p.sku || "").toLowerCase().includes(cf.sku.trim().toLowerCase())
+        );
+    }
+    if (cf.name) {
+        filtered = filtered.filter(p =>
+            String(p.name || "").toLowerCase().includes(cf.name.trim().toLowerCase())
+        );
+    }
+    if (cf.available) {
+        filtered = filtered.filter(p =>
+            String(getAvailableStock(p)).includes(cf.available.trim())
+        );
+    }
+    if (cf.reserved) {
+        filtered = filtered.filter(p =>
+            String(getProductReservedTotal(p)).includes(cf.reserved.trim())
+        );
+    }
+
+    if (currentInventoryFilter === "low") {
+        filtered = filtered.filter(p => getStockStatus(p) === "low");
+    } else if (currentInventoryFilter === "out") {
+        filtered = filtered.filter(p => getStockStatus(p) === "out");
+    }
+
+    if (!filtered.length) {
+        listEl.innerHTML = `
+            <tr>
+                <td colspan="7" style="text-align:center;padding:30px;color:#64748b;">
+                    لا توجد منتجات مطابقة
+                </td>
+            </tr>
+        `;
+        return;
+    }
+
+    filtered.sort((a, b) => getAvailableStock(a) - getAvailableStock(b));
+
+    listEl.innerHTML = filtered.map(product => {
+        const available = getAvailableStock(product);
+        const reserved = getProductReservedTotal(product);
+        const total = getProductTotalStock(product);
+        const status = getStockStatus(product);
+
+        const barClass = status === "good" ? "good"
+            : status === "low" ? "medium" : "low";
+
+        const max = Math.max(total, 20);
+        const percent = total > 0 ? Math.min(100, (available / max) * 100) : 0;
+
+        const sizes = getProductSizes(product.id).sort((a, b) => Number(a.size) - Number(b.size));
+        const sizesHTML = sizes.length
+            ? `<div class="sizes-wrapper">${sizes.map(s => {
+                const avail = Math.max(0, Number(s.stock) - Number(s.reserved));
+                const cls = avail === 0 ? "out" : (avail <= 3 ? "low" : "good");
+                return `
+                    <span class="size-chip ${cls}" title="مقاس ${escapeAdminHTML(s.size)}: ${avail} متاح من ${s.stock}">
+                        <span class="size-chip-num">${escapeAdminHTML(s.size)}</span>
+                        <span class="size-chip-sep"></span>
+                        <span class="size-chip-qty">${avail}</span>
+                    </span>
+                `;
+            }).join("")}</div>`
+            : `<span style="color:#cbd5e1;font-size:11px;">لا توجد مقاسات</span>`;
+
+        return `
+            <tr>
+                <td>
+                    ${product.sku ? `
+                        <span class="sku-badge">${escapeAdminHTML(product.sku)}</span>
+                    ` : "-"}
+                </td>
+                <td>
+                    ${product.image ? `
+                        <img src="${escapeAdminHTML(product.image)}"
+                            style="width:50px;height:50px;object-fit:cover;border-radius:10px;border:1px solid #e5e7eb;">
+                    ` : `
+                        <div style="width:50px;height:50px;border-radius:10px;background:#f1f5f9;display:flex;align-items:center;justify-content:center;color:#94a3b8;">
+                            <i class="fa-solid fa-image"></i>
+                        </div>
+                    `}
+                </td>
+                <td>
+                    <strong>${escapeAdminHTML(product.name)}</strong>
+                    <div style="margin-top:6px;">${sizesHTML}</div>
+                </td>
+                <td>
+                    <div style="font-weight:800;font-size:16px;color:${status === "out" ? "#dc2626" : status === "low" ? "#d97706" : "#16a34a"};">
+                        ${available}
+                    </div>
+                    <div class="stock-bar">
+                        <div class="stock-bar-fill ${barClass}" style="width:${percent}%"></div>
+                    </div>
+                </td>
+                <td>
+                    ${reserved > 0
+                        ? `<span style="background:#fef3c7;color:#92400e;padding:3px 8px;border-radius:6px;font-weight:700;">${reserved}</span>`
+                        : `<span style="color:#cbd5e1;">0</span>`}
+                </td>
+                <td><strong>${total}</strong></td>
+                <td>
+                    <button type="button" onclick="openAdjustStockModal(${Number(product.id)})"
+                        style="border:none;background:#2563eb;color:#fff;border-radius:8px;padding:8px 12px;cursor:pointer;font-weight:700;font-size:12px;">
+                        <i class="fa-solid fa-plus-minus"></i>
+                        تعديل
+                    </button>
+                </td>
+            </tr>
+        `;
+    }).join("");
+}
+
+function filterInventory(filter, btnEl) {
+    currentInventoryFilter = filter;
+
+    document.querySelectorAll(".inv-filter-chip").forEach(b => {
+        b.classList.remove("active");
+    });
+    btnEl?.classList.add("active");
+
+    renderInventoryList();
+}
+
+// ========================================
+// 43. MOVEMENTS
+// ========================================
+
+async function loadMovements() {
+    const client = getSupabaseClient();
+    if (!client) return;
+
+    const listEl = document.getElementById("movementsList");
+    if (!listEl) return;
+
+    listEl.innerHTML = `
+        <div class="empty-state">
+            <i class="fa-solid fa-spinner fa-spin"></i>
+            <p>جاري التحميل...</p>
+        </div>
+    `;
+
+    try {
+        const { data, error } = await client
+            .from("inventory_movements")
+            .select("*")
+            .order("created_at", { ascending: false })
+            .limit(20);
+
+        if (error) throw error;
+
+        inventoryMovements = data || [];
+        renderMovements();
+    } catch (error) {
+        console.error("Load Movements Error:", error);
+        listEl.innerHTML = `
+            <div class="empty-state" style="color:#dc2626;">
+                <i class="fa-solid fa-circle-exclamation"></i>
+                <p>تعذر تحميل الحركات</p>
+                <small>${escapeAdminHTML(error.message)}</small>
+            </div>
+        `;
+    }
+}
+
+function renderMovements() {
+    const listEl = document.getElementById("movementsList");
+    if (!listEl) return;
+
+    if (!inventoryMovements.length) {
+        listEl.innerHTML = `
+            <div class="empty-state">
+                <i class="fa-solid fa-box-open"></i>
+                <p>لا توجد حركات بعد</p>
+            </div>
+        `;
+        return;
+    }
+
+    const typeLabels = {
+        purchase: "شراء",
+        sale: "بيع",
+        damage: "تلف",
+        adjustment: "تسوية",
+        initial: "رصيد افتتاحي",
+        return: "مرتجع"
+    };
+
+    listEl.innerHTML = inventoryMovements.map(m => {
+        const product = getProductById(m.product_id);
+        const isPositive = m.quantity > 0;
+        const iconClass = m.movement_type === "sale"
+            ? "out"
+            : m.movement_type === "damage"
+                ? "out"
+                : isPositive ? "in" : "adjust";
+
+        const icon = m.movement_type === "sale" ? "fa-cart-shopping"
+            : m.movement_type === "damage" ? "fa-triangle-exclamation"
+            : m.movement_type === "purchase" ? "fa-truck-ramp-box"
+            : m.movement_type === "initial" ? "fa-flag"
+            : "fa-sliders";
+
+        return `
+            <div class="movement-item">
+                <div class="movement-icon ${iconClass}">
+                    <i class="fa-solid ${icon}"></i>
+                </div>
+                <div class="movement-info">
+                    <h4>${escapeAdminHTML(product?.name || "منتج محذوف")}</h4>
+                    <p>
+                        ${escapeAdminHTML(typeLabels[m.movement_type] || m.movement_type)}
+                        ${m.reason ? ` · ${escapeAdminHTML(m.reason)}` : ""}
+                        · ${escapeAdminHTML(m.performed_by_username || "system")}
+                        · ${formatRelative(m.created_at)}
+                    </p>
+                </div>
+                <div class="movement-change ${isPositive ? "positive" : "negative"}">
+                    ${isPositive ? "+" : ""}${m.quantity}
+                </div>
+            </div>
+        `;
+    }).join("");
+}
+
+// ========================================
+// 44. ADJUST STOCK MODAL
+// ========================================
+
+function openAdjustStockModal(productId) {
+    const product = getProductById(productId);
+    if (!product) return;
+
+    currentAdjustProduct = product;
+    currentAdjustType = "purchase";
+
+    document.querySelectorAll(".movement-type-tab").forEach(t => {
+        t.classList.remove("active");
+    });
+    document.querySelector('.movement-type-tab[data-type="purchase"]')?.classList.add("active");
+
+    document.getElementById("adjustProductName").textContent = product.name;
+    document.getElementById("adjustProductSku").textContent = product.sku || "-";
+
+    document.getElementById("adjustProductId").value = product.id;
+    document.getElementById("adjustMovementType").value = "purchase";
+
+    const sizeSelect = document.getElementById("adjustSizeSelect");
+    const productSizes = getProductSizes(product.id)
+        .sort((a, b) => Number(a.size) - Number(b.size));
+
+    if (sizeSelect) {
+        sizeSelect.innerHTML = '<option value="">اختر المقاس</option>' +
+            productSizes.map(s => {
+                const avail = Math.max(0, Number(s.stock) - Number(s.reserved));
+                return `<option value="${escapeAdminHTML(s.size)}">
+                    مقاس ${escapeAdminHTML(s.size)} (متاح: ${avail})
+                </option>`;
+            }).join("");
+    }
+
+    document.getElementById("adjustQuantityLabel").textContent = "الكمية المضافة *";
+    document.getElementById("adjustQuantity").value = "";
+    document.getElementById("adjustQuantity").min = "1";
+    document.getElementById("adjustReason").value = "";
+    document.getElementById("adjustNotes").value = "";
+
+    updateAdjustPreview();
+
+    adjustStockModal.classList.add("open");
+}
+
+function closeAdjustStockModalFn() {
+    adjustStockModal?.classList.remove("open");
+    currentAdjustProduct = null;
+}
+
+function selectMovementType(type, btnEl) {
+    currentAdjustType = type;
+
+    document.querySelectorAll(".movement-type-tab").forEach(t => {
+        t.classList.remove("active");
+    });
+    btnEl?.classList.add("active");
+
+    document.getElementById("adjustMovementType").value = type;
+
+    const label = document.getElementById("adjustQuantityLabel");
+    const input = document.getElementById("adjustQuantity");
+
+    if (type === "purchase") {
+        label.textContent = "الكمية المضافة *";
+        input.min = "1";
+    } else if (type === "damage") {
+        label.textContent = "الكمية التالفة *";
+        input.min = "1";
+    } else {
+        label.textContent = "الكمية (موجب = إضافة، سالب = خصم) *";
+        input.min = "";
+    }
+
+    updateAdjustPreview();
+}
+
+function updateAdjustPreview() {
+    if (!currentAdjustProduct) return;
+
+    const sizeSelect = document.getElementById("adjustSizeSelect");
+    const selectedSize = sizeSelect?.value;
+
+    let current = 0;
+    if (selectedSize) {
+        const sizeData = getSizeData(currentAdjustProduct.id, selectedSize);
+        current = sizeData ? Number(sizeData.stock) : 0;
+    }
+
+    const qtyVal = parseInt(adjustQuantity.value || "0", 10);
+    let change = 0;
+
+    if (!isNaN(qtyVal)) {
+        if (currentAdjustType === "purchase") change = Math.abs(qtyVal);
+        else if (currentAdjustType === "damage") change = -Math.abs(qtyVal);
+        else change = qtyVal;
+    }
+
+    const newVal = Math.max(0, current + change);
+
+    document.getElementById("adjustFrom").textContent = current;
+    const toEl = document.getElementById("adjustTo");
+    toEl.textContent = newVal;
+    toEl.classList.toggle("decrease", change < 0);
+}
+
+adjustQuantity?.addEventListener("input", updateAdjustPreview);
+
+if (closeAdjustStockModal) {
+    closeAdjustStockModal.addEventListener("click", closeAdjustStockModalFn);
+}
+if (cancelAdjustBtn) {
+    cancelAdjustBtn.addEventListener("click", closeAdjustStockModalFn);
+}
+
+if (adjustStockForm) {
+    adjustStockForm.addEventListener("submit", async function (e) {
+        e.preventDefault();
+
+        if (!currentAdjustProduct) return;
+
+        const client = getSupabaseClient();
+        if (!client) return;
+
+        const productId = currentAdjustProduct.id;
+        const size = document.getElementById("adjustSizeSelect")?.value;
+        const type = currentAdjustType;
+        const qtyVal = parseInt(adjustQuantity.value || "0", 10);
+        const reason = adjustReason.value.trim();
+        const notes = adjustNotes.value.trim();
+
+        if (!size) {
+            alert("اختر المقاس");
+            return;
+        }
+
+        if (isNaN(qtyVal) || qtyVal === 0) {
+            alert("اكتب كمية صحيحة");
+            return;
+        }
+
+        if (!reason) {
+            alert("اكتب السبب");
+            return;
+        }
+
+        let change = 0;
+        if (type === "purchase") change = Math.abs(qtyVal);
+        else if (type === "damage") change = -Math.abs(qtyVal);
+        else change = qtyVal;
+
+        const saveBtn = document.getElementById("saveAdjustBtn");
+        saveBtn.disabled = true;
+        saveBtn.textContent = "جاري الحفظ...";
+
+        try {
+            const { error } = await client.rpc("adjust_stock", {
+                p_product_id: productId,
+                p_size: size,
+                p_quantity_change: change,
+                p_movement_type: type,
+                p_reason: reason,
+                p_notes: notes || null
+            });
+
+            if (error) throw error;
+
+            showToast("تم تعديل المخزون بنجاح ✅");
+            closeAdjustStockModalFn();
+
+            await loadAdminProducts();
+            await loadInventory();
+            await loadMovements();
+        } catch (error) {
+            console.error("Adjust Stock Error:", error);
+            alert("فشل التعديل:\n\n" + error.message);
+        } finally {
+            saveBtn.disabled = false;
+            saveBtn.textContent = "تأكيد التعديل";
+        }
+    });
+}
+
+// ========================================
+// 45. APPROVAL REQUESTS
 // ========================================
 
 async function loadApprovalRequests() {
@@ -1425,8 +3117,22 @@ async function loadApprovalRequests() {
             request => request.status === "pending"
         ).length;
 
-        if (dashStatPending) dashStatPending.textContent = pendingCount;
-        if (sidebarPendingBadge) sidebarPendingBadge.textContent = pendingCount;
+        if (dashStatPending) {
+            dashStatPending.textContent = pendingCount;
+        }
+
+        if (dashPendingCard) {
+            dashPendingCard.style.display = "";
+        }
+
+        if (sidebarPendingBadge) {
+            if (pendingCount > 0) {
+                sidebarPendingBadge.textContent = pendingCount;
+                sidebarPendingBadge.style.display = "inline-block";
+            } else {
+                sidebarPendingBadge.style.display = "none";
+            }
+        }
 
         renderApprovalRequests();
     } catch (error) {
@@ -1441,35 +3147,21 @@ async function loadApprovalRequests() {
     }
 }
 
-// ========================================
-// 30. APPROVAL FILTER
-// ========================================
-
 function filterApprovalRequests(status, button) {
     currentApprovalFilter = status;
-
-    document.querySelectorAll(".approval-filter button").forEach(btn => {
+    document.querySelectorAll(".approval-filter-modern button").forEach(btn => {
         btn.classList.remove("active");
     });
-
     if (button) button.classList.add("active");
-
     renderApprovalRequests();
 }
-
-// ========================================
-// 31. RENDER APPROVAL REQUESTS
-// ========================================
 
 function renderApprovalRequests() {
     if (!approvalRequests) return;
 
     let requests = adminApprovalRequests;
-
     if (currentApprovalFilter !== "all") {
-        requests = requests.filter(
-            request => request.status === currentApprovalFilter
-        );
+        requests = requests.filter(r => r.status === currentApprovalFilter);
     }
 
     if (!requests.length) {
@@ -1482,37 +3174,23 @@ function renderApprovalRequests() {
         return;
     }
 
-    approvalRequests.innerHTML = requests.map(
-        request => buildApprovalCard(request)
-    ).join("");
+    approvalRequests.innerHTML = requests.map(r => buildApprovalCard(r)).join("");
 }
-
-// ========================================
-// 32. APPROVAL CARD
-// ========================================
 
 function buildApprovalCard(request) {
     const actionText = request.action === "update"
         ? "تعديل منتج"
-        : request.action === "delete"
-            ? "حذف منتج"
-            : request.action;
+        : request.action === "delete" ? "حذف منتج" : request.action;
 
     const statusText = request.status === "pending"
         ? "في انتظار الموافقة"
-        : request.status === "approved"
-            ? "تمت الموافقة"
-            : "مرفوض";
+        : request.status === "approved" ? "تمت الموافقة" : "مرفوض";
 
     const statusClass = request.status === "pending"
         ? "status-waiting"
-        : request.status === "approved"
-            ? "status-approved"
-            : "status-rejected";
+        : request.status === "approved" ? "status-approved" : "status-rejected";
 
-    const product = adminProducts.find(
-        item => Number(item.id) === Number(request.product_id)
-    );
+    const product = getProductById(request.product_id);
 
     const productName = request.new_data?.name ||
         request.old_data?.name ||
@@ -1568,35 +3246,25 @@ function buildApprovalCard(request) {
 }
 
 // ========================================
-// 33. FORMAT REQUEST VALUE
+// 46. FORMAT REQUEST VALUE
 // ========================================
 
 function formatRequestValue(field, value) {
     if (value === null || value === undefined || value === "") {
         return "غير موجود";
     }
-
     if (field === "price") {
-        return Number(value).toLocaleString("ar-EG") + " جنيه";
+        return Number(value).toLocaleString("en-US") + " جنيه";
     }
-
     if (field === "old_price") {
-        return value === null
-            ? "غير موجود"
-            : Number(value).toLocaleString("ar-EG") + " جنيه";
+        return value === null ? "غير موجود" : Number(value).toLocaleString("en-US") + " جنيه";
     }
-
     if (field === "sizes") {
         const sizes = parseSizes(value);
         return sizes.length
-            ? sizes.map(size => `
-                <span style="display:inline-block;background:#f1f5f9;padding:3px 7px;border-radius:5px;margin:2px;">
-                    ${escapeAdminHTML(size)}
-                </span>
-            `).join("")
+            ? sizes.map(size => `<span style="display:inline-block;background:#f1f5f9;padding:3px 7px;border-radius:5px;margin:2px;">${escapeAdminHTML(size)}</span>`).join("")
             : "لا توجد مقاسات";
     }
-
     if (field === "image") {
         const image = String(value);
         return `
@@ -1609,13 +3277,8 @@ function formatRequestValue(field, value) {
             </div>
         `;
     }
-
     return escapeAdminHTML(String(value)).replace(/\n/g, "<br>");
 }
-
-// ========================================
-// 34. BUILD REQUEST CHANGES
-// ========================================
 
 function buildRequestChanges(request) {
     const oldData = request.old_data || {};
@@ -1674,7 +3337,7 @@ function buildRequestChanges(request) {
 }
 
 // ========================================
-// 35. VIEW APPROVAL DETAILS
+// 47. VIEW APPROVAL DETAILS
 // ========================================
 
 function viewApprovalRequest(requestId) {
@@ -1686,9 +3349,7 @@ function viewApprovalRequest(requestId) {
 
     const actionText = request.action === "update"
         ? "تعديل المنتج"
-        : request.action === "delete"
-            ? "حذف المنتج"
-            : request.action;
+        : request.action === "delete" ? "حذف المنتج" : request.action;
 
     const productName = request.new_data?.name ||
         request.old_data?.name ||
@@ -1708,11 +3369,8 @@ function viewApprovalRequest(requestId) {
         const oldData = request.old_data || {};
         bodyHTML += `
             <div class="delete-warning">
-                <strong>
-                    <i class="fa-solid fa-triangle-exclamation"></i>
-                    طلب حذف المنتج
-                </strong>
-                <p>سيتم حذف المنتج بالكامل من جدول المنتجات إذا تمت الموافقة على هذا الطلب.</p>
+                <strong><i class="fa-solid fa-triangle-exclamation"></i> طلب حذف المنتج</strong>
+                <p>سيتم حذف المنتج بالكامل إذا تمت الموافقة.</p>
                 <hr style="border:0;border-top:1px solid #fecdd3;margin:10px 0;">
                 <div><strong>اسم المنتج:</strong> ${escapeAdminHTML(oldData.name || "-")}</div>
                 <div><strong>السعر:</strong> ${formatRequestValue("price", oldData.price)}</div>
@@ -1725,8 +3383,7 @@ function viewApprovalRequest(requestId) {
             <div>
                 <h3 style="margin-bottom:10px;">مقارنة البيانات</h3>
                 <p style="color:#64748b;font-size:13px;margin-bottom:10px;">
-                    البيانات باللون الأحمر هي البيانات الحالية،
-                    والبيانات باللون الأخضر هي التعديل المقترح.
+                    البيانات باللون الأحمر هي الحالية، والأخضر هي التعديل المقترح.
                 </p>
                 ${buildRequestChanges(request)}
             </div>
@@ -1740,13 +3397,11 @@ function viewApprovalRequest(requestId) {
         approvalModalActions.innerHTML = `
             <button type="button" class="modal-approve"
                 onclick="approveChangeRequest(${Number(request.id)}, true)">
-                <i class="fa-solid fa-check"></i>
-                الموافقة وتنفيذ التعديل
+                <i class="fa-solid fa-check"></i> الموافقة وتنفيذ
             </button>
             <button type="button" class="modal-reject"
                 onclick="rejectChangeRequest(${Number(request.id)}, true)">
-                <i class="fa-solid fa-xmark"></i>
-                رفض الطلب
+                <i class="fa-solid fa-xmark"></i> رفض
             </button>
         `;
     }
@@ -1763,18 +3418,18 @@ if (closeApprovalModal) {
 }
 
 // ========================================
-// 36. APPROVE CHANGE REQUEST
+// 48. APPROVE CHANGE REQUEST
 // ========================================
 
 async function approveChangeRequest(requestId, fromModal = false) {
     if (!isManager()) {
-        alert("ليس لديك صلاحية الموافقة على الطلبات");
+        alert("ليس لديك صلاحية الموافقة");
         return;
     }
     const client = getSupabaseClient();
     if (!client) return;
 
-    const confirmed = confirm("هل تريد الموافقة على هذا الطلب وتنفيذه؟");
+    const confirmed = confirm("هل تريد الموافقة على هذا الطلب؟");
     if (!confirmed) return;
 
     try {
@@ -1793,18 +3448,22 @@ async function approveChangeRequest(requestId, fromModal = false) {
 
         if (request.action === "update") {
             const newData = request.new_data || {};
+            const sizesWithQty = newData.sizes_with_quantities || [];
+            const totalStock = sizesWithQty.reduce(
+                (sum, s) => sum + Number(s.quantity || 0), 0
+            );
+
             const { error } = await client
                 .from("products")
                 .update({
                     name: newData.name || "",
                     price: Number(newData.price || 0),
-                    old_price: newData.old_price == null
-                        ? null
-                        : Number(newData.old_price),
+                    old_price: newData.old_price == null ? null : Number(newData.old_price),
                     badge: newData.badge || null,
                     sizes: Array.isArray(newData.sizes) ? newData.sizes : [],
                     image: newData.image || null,
                     description: newData.description || "",
+                    stock_quantity: totalStock,
                     updated_by: request.requested_by,
                     updated_by_username: request.requested_by_username,
                     updated_at: new Date().toISOString(),
@@ -1814,6 +3473,16 @@ async function approveChangeRequest(requestId, fromModal = false) {
                 .eq("id", request.product_id);
 
             if (error) throw error;
+
+            if (sizesWithQty.length) {
+                const oldSizes = (request.old_data?.sizes_with_quantities || []);
+                await applySizeChanges(
+                    client,
+                    request.product_id,
+                    sizesWithQty,
+                    oldSizes
+                );
+            }
 
             await createProductChangeLog({
                 productId: request.product_id,
@@ -1858,24 +3527,24 @@ async function approveChangeRequest(requestId, fromModal = false) {
 
         if (approvalError) throw approvalError;
 
-        alert("تمت الموافقة على الطلب وتنفيذه بنجاح ✅");
+        showToast("تمت الموافقة بنجاح ✅");
         closeApprovalRequestModal();
 
         await loadAdminProducts();
         await loadApprovalRequests();
     } catch (error) {
         console.error("Approve Request Error:", error);
-        alert("حدث خطأ أثناء الموافقة:\n\n" + error.message);
+        alert("حدث خطأ:\n\n" + error.message);
     }
 }
 
 // ========================================
-// 37. REJECT CHANGE REQUEST
+// 49. REJECT CHANGE REQUEST
 // ========================================
 
 async function rejectChangeRequest(requestId, fromModal = false) {
     if (!isManager()) {
-        alert("ليس لديك صلاحية رفض الطلبات");
+        alert("ليس لديك صلاحية الرفض");
         return;
     }
     const client = getSupabaseClient();
@@ -1898,35 +3567,832 @@ async function rejectChangeRequest(requestId, fromModal = false) {
 
         if (error) throw error;
 
-        alert("تم رفض الطلب ❌");
+        showToast("تم رفض الطلب ❌");
         closeApprovalRequestModal();
         await loadApprovalRequests();
     } catch (error) {
         console.error("Reject Request Error:", error);
-        alert("حدث خطأ أثناء رفض الطلب:\n\n" + error.message);
+        alert("حدث خطأ:\n\n" + error.message);
     }
 }
 
 // ========================================
-// 38. DASHBOARD
+// 50. STATUS REASON MODAL
+// ========================================
+
+const REASON_OPTIONS = {
+    return_requested: [
+        "المقاس غير مناسب", "اللون مختلف عن الصورة", "المنتج به عيب",
+        "المنتج مختلف عن الوصف", "العميل غير رأيه", "سبب آخر"
+    ],
+    exchange_requested: [
+        "المقاس غير مناسب", "اللون مختلف",
+        "العميل عايز موديل تاني", "المنتج به عيب", "سبب آخر"
+    ],
+    cancelled: [
+        "العميل غيّر رأيه", "العميل مش بيرد",
+        "العنوان غلط", "المنتج مش متوفر", "سبب آخر"
+    ]
+};
+
+function openStatusReasonModal(order, newStatus) {
+    const modal = document.getElementById("statusReasonModal");
+    if (!modal) return;
+
+    document.getElementById("statusReasonOrderId").value = order.id;
+    document.getElementById("statusReasonNewStatus").value = newStatus;
+
+    const titles = {
+        return_requested: "طلب استرجاع",
+        exchange_requested: "طلب استبدال",
+        cancelled: "إلغاء الطلب"
+    };
+
+    document.getElementById("statusReasonTitle").textContent =
+        `${titles[newStatus]} - الطلب #${order.id}`;
+    document.getElementById("reasonTypeLabel").textContent = titles[newStatus];
+
+    const select = document.getElementById("statusReasonSelect");
+    const options = REASON_OPTIONS[newStatus] || [];
+
+    select.innerHTML = '<option value="">اختر السبب</option>' +
+        options.map(o => `<option value="${escapeAdminHTML(o)}">${escapeAdminHTML(o)}</option>`).join("");
+
+    document.getElementById("statusReasonCustom").value = "";
+    document.getElementById("statusReasonNotes").value = "";
+    document.getElementById("reasonCustomGroup").style.display = "none";
+    document.getElementById("statusReasonCustom").required = false;
+
+    modal.classList.add("open");
+    renderAdminOrders();
+}
+
+function closeStatusReasonModal() {
+    document.getElementById("statusReasonModal")?.classList.remove("open");
+}
+
+document.getElementById("statusReasonSelect")?.addEventListener("change", function () {
+    const customGroup = document.getElementById("reasonCustomGroup");
+    const customInput = document.getElementById("statusReasonCustom");
+
+    if (this.value === "سبب آخر") {
+        customGroup.style.display = "block";
+        customInput.required = true;
+        customInput.focus();
+    } else {
+        customGroup.style.display = "none";
+        customInput.required = false;
+    }
+});
+
+document.getElementById("closeStatusReasonModal")?.addEventListener(
+    "click", closeStatusReasonModal
+);
+document.getElementById("cancelStatusReasonBtn")?.addEventListener(
+    "click", closeStatusReasonModal
+);
+
+document.getElementById("statusReasonForm")?.addEventListener("submit", async function (e) {
+    e.preventDefault();
+
+    const orderId = Number(document.getElementById("statusReasonOrderId").value);
+    const newStatus = document.getElementById("statusReasonNewStatus").value;
+    const selectedReason = document.getElementById("statusReasonSelect").value;
+    const customReason = document.getElementById("statusReasonCustom").value.trim();
+    const notes = document.getElementById("statusReasonNotes").value.trim();
+
+    let finalReason = selectedReason;
+
+    if (selectedReason === "سبب آخر") {
+        if (!customReason) { alert("اكتب السبب"); return; }
+        finalReason = customReason;
+    }
+
+    if (!finalReason) { alert("اختر السبب"); return; }
+
+    const btn = document.getElementById("saveStatusReasonBtn");
+    btn.disabled = true;
+    btn.textContent = "جاري الحفظ...";
+
+    await applyStatusChange(orderId, newStatus, finalReason, notes);
+
+    btn.disabled = false;
+    btn.textContent = "تأكيد التغيير";
+    closeStatusReasonModal();
+});
+
+// ========================================
+// 51. EXCHANGE REQUEST
+// ========================================
+
+function openExchangeRequestModal(orderId) {
+    const order = adminOrders.find(o => Number(o.id) === Number(orderId));
+    if (!order) return;
+
+    if (!["delivered", "exchange_requested"].includes(order.status)) {
+        alert("الاستبدال متاح فقط للطلبات المُسلَّمة");
+        return;
+    }
+
+    currentExchangeOrder = order;
+
+    const items = Array.isArray(order.items) ? order.items : [];
+
+    const previousExchanges = order.exchange_details?.items || [];
+    const previousKeys = new Set(
+        previousExchanges.map(e => `${e.product_id}_${e.old_size}`)
+    );
+
+    const previousMap = {};
+    previousExchanges.forEach(e => {
+        previousMap[`${e.product_id}_${e.old_size}`] = e;
+    });
+
+    const itemsHTML = items.map((item, index) => {
+        const product = getProductById(item.id);
+        const image = item.image || product?.image || "";
+        const key = `${item.id}_${item.size}`;
+        const previous = previousMap[key];
+        const wasSelected = previousKeys.has(key);
+        const totalQty = Number(item.quantity || 1);
+        const selectedQty = previous?.quantity || totalQty;
+
+        return `
+            <div class="exchange-item-row ${wasSelected ? "selected" : ""}" data-index="${index}">
+                <div class="exchange-item-header">
+                    <label class="exchange-checkbox-label">
+                        <input type="checkbox" class="exchange-item-check" 
+                            data-index="${index}" 
+                            ${wasSelected ? "checked" : ""}
+                            onchange="toggleExchangeItem(this)">
+                        <span class="exchange-checkbox-custom"></span>
+                    </label>
+                    <div class="exchange-item-img"
+                        style="background-image:url('${escapeAdminHTML(image)}');"></div>
+                    <div class="exchange-item-info">
+                        <div class="exchange-item-name">
+                            ${escapeAdminHTML(item.name || "منتج")}
+                        </div>
+                        <div class="exchange-item-meta">
+                            المقاس الحالي: 
+                            <strong style="color:#8b5cf6;">${escapeAdminHTML(item.size || "-")}</strong>
+                            · الكمية الأصلية: 
+                            <strong>${totalQty}</strong>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="exchange-item-qty-row">
+                    <label class="exchange-qty-label">
+                        <i class="fa-solid fa-cubes"></i>
+                        الكمية المطلوب استبدالها:
+                    </label>
+                    <input 
+                        type="number" 
+                        class="exchange-qty-input" 
+                        data-index="${index}"
+                        min="1" 
+                        max="${totalQty}" 
+                        value="${selectedQty}"
+                        ${wasSelected ? "" : "disabled"}
+                    >
+                    <span class="exchange-qty-max">/ ${totalQty}</span>
+                </div>
+            </div>
+        `;
+    }).join("");
+
+    document.getElementById("exchangeRequestBody").innerHTML = `
+        <div style="margin-bottom:16px;padding:12px 14px;background:#eff6ff;border:1px solid #dbeafe;border-radius:10px;">
+            <div style="font-size:13px;color:#1e40af;font-weight:700;">
+                <i class="fa-solid fa-info-circle"></i>
+                الطلب رقم #${escapeAdminHTML(order.id)} — ${escapeAdminHTML(order.customer_name || "عميل")}
+            </div>
+        </div>
+        ${itemsHTML}
+    `;
+
+    if (order.exchange_reason) {
+        const reasonSelect = document.getElementById("exchangeRequestReason");
+        for (let opt of reasonSelect.options) {
+            if (opt.value === order.exchange_reason || opt.text === order.exchange_reason) {
+                reasonSelect.value = opt.value || opt.text;
+                break;
+            }
+        }
+    } else {
+        document.getElementById("exchangeRequestReason").value = "";
+    }
+
+    document.getElementById("exchangeRequestNotes").value =
+        order.exchange_details?.notes || "";
+
+    document.getElementById("exchangeRequestModal").classList.add("open");
+}
+
+function closeExchangeRequestModalFn() {
+    document.getElementById("exchangeRequestModal")?.classList.remove("open");
+    currentExchangeOrder = null;
+}
+
+function toggleExchangeItem(checkbox) {
+    const index = checkbox.dataset.index;
+    const row = document.querySelector(`.exchange-item-row[data-index="${index}"]`);
+    const qtyInput = row?.querySelector(".exchange-qty-input");
+    const checkboxes = document.querySelectorAll(".exchange-item-check:checked");
+
+    if (currentExchangeOrder?.status === "exchange_requested") {
+        if (checkboxes.length > 1) {
+            checkbox.checked = false;
+            alert("في وضع التعديل، نقدر نغيّر منتج واحد بس. احذف الطلب الأول لو عايز تبدّل منتجات تانية.");
+            return;
+        }
+    }
+
+    if (checkbox.checked) {
+        row?.classList.add("selected");
+        if (qtyInput) qtyInput.disabled = false;
+    } else {
+        row?.classList.remove("selected");
+        if (qtyInput) {
+            qtyInput.disabled = true;
+            qtyInput.value = qtyInput.max;
+        }
+    }
+}
+
+async function saveExchangeRequest() {
+    if (!currentExchangeOrder) return;
+
+    const order = currentExchangeOrder;
+    const client = getSupabaseClient();
+    if (!client) return;
+
+    const checkedBoxes = document.querySelectorAll(".exchange-item-check:checked");
+    if (!checkedBoxes.length) {
+        alert("اختر منتج واحد على الأقل");
+        return;
+    }
+
+    const reason = document.getElementById("exchangeRequestReason")?.value;
+    if (!reason) {
+        alert("اختر السبب");
+        return;
+    }
+
+    const notes = document.getElementById("exchangeRequestNotes")?.value.trim() || "";
+    const items = Array.isArray(order.items) ? order.items : [];
+
+    const previousExchanges = order.exchange_details?.items || [];
+    const previousMap = {};
+    previousExchanges.forEach(e => {
+        previousMap[`${e.product_id}_${e.old_size}`] = e;
+    });
+
+    const selectedItems = Array.from(checkedBoxes).map(cb => {
+        const idx = Number(cb.dataset.index);
+        const item = items[idx];
+        const key = `${item.id}_${item.size}`;
+        const previous = previousMap[key];
+
+        const row = document.querySelector(`.exchange-item-row[data-index="${idx}"]`);
+        const qtyInput = row?.querySelector(".exchange-qty-input");
+        const totalQty = Number(item.quantity || 1);
+        let selectedQty = parseInt(qtyInput?.value || totalQty, 10);
+
+        if (isNaN(selectedQty) || selectedQty < 1) selectedQty = 1;
+        if (selectedQty > totalQty) selectedQty = totalQty;
+
+        return {
+            product_id: item.id,
+            product_name: item.name,
+            image: item.image,
+            old_size: item.size,
+            new_size: previous?.new_size || null,
+            quantity: selectedQty,
+            original_quantity: totalQty,
+            reason: previous?.reason || reason
+        };
+    });
+
+    const exchangeDetails = {
+        items: selectedItems,
+        notes: notes,
+        requested_at: order.exchange_details?.requested_at || new Date().toISOString(),
+        updated_at: new Date().toISOString()
+    };
+
+    const btn = document.getElementById("saveExchangeRequestBtn");
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> جاري الحفظ...';
+
+    try {
+        const historyEntry = {
+            status: "exchange_requested",
+            reason: reason,
+            notes: notes || null,
+            by: currentAdmin?.username || currentAdmin?.email || "admin",
+            at: new Date().toISOString()
+        };
+
+        const currentHistory = Array.isArray(order.status_history) ? order.status_history : [];
+        const newHistory = [...currentHistory, historyEntry];
+
+        const { error } = await client
+            .from("orders")
+            .update({
+                status: "exchange_requested",
+                exchange_reason: reason,
+                exchange_details: exchangeDetails,
+                status_history: newHistory,
+                updated_at: new Date().toISOString()
+            })
+            .eq("id", order.id);
+
+        if (error) throw error;
+
+        order.status = "exchange_requested";
+        order.exchange_reason = reason;
+        order.exchange_details = exchangeDetails;
+        order.status_history = newHistory;
+
+        showToast("تم تسجيل طلب الاستبدال ✅");
+        closeExchangeRequestModalFn();
+
+        renderAdminOrders();
+        updateDashboard();
+    } catch (error) {
+        console.error("Exchange Request Error:", error);
+        alert("فشل تسجيل الطلب:\n\n" + error.message);
+    } finally {
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fa-solid fa-check"></i> تأكيد طلب الاستبدال';
+    }
+}
+
+document.getElementById("closeExchangeRequestModal")?.addEventListener(
+    "click", closeExchangeRequestModalFn
+);
+document.getElementById("cancelExchangeRequestBtn")?.addEventListener(
+    "click", closeExchangeRequestModalFn
+);
+document.getElementById("saveExchangeRequestBtn")?.addEventListener(
+    "click", saveExchangeRequest
+);
+document.getElementById("exchangeRequestModal")?.addEventListener("click", (e) => {
+    if (e.target.id === "exchangeRequestModal") {
+        closeExchangeRequestModalFn();
+    }
+});
+
+// ========================================
+// 52. EXCHANGE RECEIVED
+// ========================================
+
+function selectExchangeSize(btn, index) {
+    const picker = btn.closest(".size-picker");
+    if (!picker) return;
+
+    picker.querySelectorAll(".size-pick-btn").forEach(b => {
+        b.classList.remove("selected");
+    });
+
+    btn.classList.add("selected");
+
+    const hidden = picker.querySelector(".exchange-newsize-value");
+    if (hidden) hidden.value = btn.dataset.size;
+}
+
+function openExchangeReceivedModal(orderId) {
+    const order = adminOrders.find(o => Number(o.id) === Number(orderId));
+    if (!order) return;
+
+    if (order.status !== "exchange_requested") {
+        alert("هذا الإجراء متاح فقط لطلبات الاستبدال");
+        return;
+    }
+
+    const items = order.exchange_details?.items || [];
+    if (!items.length) {
+        alert("لا يوجد منتجات في طلب الاستبدال");
+        return;
+    }
+
+    currentExchangeReceivedOrder = order;
+
+    const itemsHTML = items.map((item, index) => {
+        const product = getProductById(item.product_id);
+        const allSizes = product ? parseSizes(product.sizes) : [];
+        const productSizesData = getProductSizes(item.product_id);
+
+        const sizesOptions = allSizes.map(sizeStr => {
+            const sizeData = productSizesData.find(
+                s => String(s.size) === String(sizeStr)
+            );
+            const available = sizeData
+                ? Math.max(0, Number(sizeData.stock) - Number(sizeData.reserved))
+                : 0;
+            const isOld = String(sizeStr) === String(item.old_size);
+
+            if (isOld) {
+                return `
+                    <button type="button" class="size-pick-btn old" disabled>
+                        <span class="size-pick-num">${escapeAdminHTML(sizeStr)}</span>
+                        <span class="size-pick-label">الحالي</span>
+                    </button>
+                `;
+            }
+
+            if (available === 0) {
+                return `
+                    <button type="button" class="size-pick-btn unavailable" disabled>
+                        <span class="size-pick-num">${escapeAdminHTML(sizeStr)}</span>
+                        <span class="size-pick-label">غير متاح</span>
+                    </button>
+                `;
+            }
+
+            return `
+                <button type="button" class="size-pick-btn available" 
+                    data-size="${escapeAdminHTML(sizeStr)}"
+                    onclick="selectExchangeSize(this, ${index})">
+                    <span class="size-pick-num">${escapeAdminHTML(sizeStr)}</span>
+                    <span class="size-pick-label">متاح ${available}</span>
+                </button>
+            `;
+        }).join("");
+
+        return `
+            <div class="exchange-received-item" data-index="${index}">
+                <div class="exchange-received-header">
+                    <div class="exchange-item-img" 
+                        style="background-image:url('${escapeAdminHTML(item.image || '')}');"></div>
+                    <div class="exchange-item-info">
+                        <div class="exchange-item-name">
+                            ${escapeAdminHTML(item.product_name || "منتج")}
+                        </div>
+                        <div class="exchange-item-meta">
+                            المقاس القديم: 
+                            <strong style="color:#dc2626;">${escapeAdminHTML(item.old_size)}</strong>
+                            · الكمية: 
+                            <strong>${item.quantity}</strong>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="exchange-received-newsize">
+                    <label>
+                        <i class="fa-solid fa-shoe-prints"></i>
+                        المقاس الجديد *
+                    </label>
+                    <div class="size-picker" data-index="${index}">
+                        ${sizesOptions}
+                        <input type="hidden" class="exchange-newsize-value" data-index="${index}" required>
+                    </div>
+                </div>
+            </div>
+        `;
+    }).join("");
+
+    document.getElementById("exchangeReceivedBody").innerHTML = `
+        <div style="margin-bottom:16px;padding:12px 14px;background:#ecfdf5;border:1px solid #86efac;border-radius:10px;">
+            <div style="font-size:13px;color:#166534;font-weight:700;">
+                <i class="fa-solid fa-info-circle"></i>
+                الطلب رقم #${escapeAdminHTML(order.id)} — 
+                ${escapeAdminHTML(order.customer_name || "عميل")}
+            </div>
+            <div style="font-size:12px;color:#166534;margin-top:6px;">
+                سيرجع المقاس القديم للمخزون، ويتم حجز المقاس الجديد تلقائيًا.
+            </div>
+        </div>
+        ${itemsHTML}
+    `;
+
+    document.getElementById("exchangeReceivedModal").classList.add("open");
+}
+
+function closeExchangeReceivedModalFn() {
+    document.getElementById("exchangeReceivedModal")?.classList.remove("open");
+    currentExchangeReceivedOrder = null;
+}
+
+async function saveExchangeReceived() {
+    if (!currentExchangeReceivedOrder) return;
+
+    const order = currentExchangeReceivedOrder;
+    const client = getSupabaseClient();
+    if (!client) return;
+
+    const selects = document.querySelectorAll(".exchange-newsize-value");
+    const newItems = [];
+
+    for (const select of selects) {
+        const idx = Number(select.dataset.index);
+        const newSize = select.value;
+
+        if (!newSize) {
+            alert("اختر المقاس الجديد لكل منتج");
+            const picker = select.closest(".size-picker");
+            picker?.scrollIntoView({ behavior: "smooth", block: "center" });
+            return;
+        }
+
+        const item = order.exchange_details.items[idx];
+
+        newItems.push({
+            product_id: item.product_id,
+            product_name: item.product_name,
+            image: item.image,
+            old_size: item.old_size,
+            new_size: newSize,
+            quantity: item.quantity,
+            reason: item.reason
+        });
+    }
+
+    const btn = document.getElementById("saveExchangeReceivedBtn");
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> جاري الحفظ...';
+
+    try {
+        const { data, error } = await client.rpc("process_exchange_received", {
+            p_order_id: order.id,
+            p_new_items: newItems
+        });
+
+        if (error) throw error;
+        if (!data?.success) throw new Error("فشل الاستلام");
+
+        const historyEntry = {
+            status: "exchange_received",
+            reason: "تم استلام المنتج وتحديد المقاس الجديد",
+            notes: null,
+            by: currentAdmin?.username || currentAdmin?.email || "admin",
+            at: new Date().toISOString()
+        };
+
+        const currentHistory = Array.isArray(order.status_history)
+            ? order.status_history
+            : [];
+        const newHistory = [...currentHistory, historyEntry];
+
+        const updatedDetails = {
+            ...order.exchange_details,
+            items: newItems,
+            received_at: new Date().toISOString()
+        };
+
+        const { error: updateError } = await client
+            .from("orders")
+            .update({
+                status: "exchange_received",
+                exchange_details: updatedDetails,
+                status_history: newHistory,
+                updated_at: new Date().toISOString()
+            })
+            .eq("id", order.id);
+
+        if (updateError) throw updateError;
+
+        order.status = "exchange_received";
+        order.exchange_details = updatedDetails;
+        order.status_history = newHistory;
+
+        showToast("تم استلام المنتج بنجاح ✅");
+        closeExchangeReceivedModalFn();
+
+        renderAdminOrders();
+        updateDashboard();
+        await loadAdminProducts();
+    } catch (error) {
+        console.error("Exchange Received Error:", error);
+        alert("فشل الاستلام:\n\n" + error.message);
+    } finally {
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fa-solid fa-check"></i> تأكيد الاستلام';
+    }
+}
+
+document.getElementById("closeExchangeReceivedModal")?.addEventListener(
+    "click", closeExchangeReceivedModalFn
+);
+document.getElementById("cancelExchangeReceivedBtn")?.addEventListener(
+    "click", closeExchangeReceivedModalFn
+);
+document.getElementById("saveExchangeReceivedBtn")?.addEventListener(
+    "click", saveExchangeReceived
+);
+document.getElementById("exchangeReceivedModal")?.addEventListener("click", (e) => {
+    if (e.target.id === "exchangeReceivedModal") {
+        closeExchangeReceivedModalFn();
+    }
+});
+
+// ========================================
+// 53. NOTIFICATION FILTER HELPERS
+// ========================================
+
+function showLowStockProducts() {
+    closeNotificationsDropdown();
+    switchTab('inventory');
+
+    setTimeout(() => {
+        const lowBtn = document.querySelector('.inv-filter-chip[data-filter="low"]');
+        if (lowBtn) {
+            document.querySelectorAll('.inv-filter-chip').forEach(b => b.classList.remove('active'));
+            lowBtn.classList.add('active');
+            currentInventoryFilter = 'low';
+            renderInventoryList();
+        }
+    }, 100);
+}
+
+function showUrgentOrders() {
+    closeNotificationsDropdown();
+    switchTab('orders');
+
+    setTimeout(() => {
+        customOrderStatuses = ["pending"];
+        const pendingBtn = document.querySelector('.filter-chip[onclick*="pending"]');
+        if (pendingBtn) {
+            document.querySelectorAll('.filter-chip').forEach(b => b.classList.remove('active'));
+            pendingBtn.classList.add('active');
+        }
+        renderAdminOrders();
+    }, 100);
+}
+
+function showActiveOrders() {
+    closeNotificationsDropdown();
+    switchTab('orders');
+
+    setTimeout(() => {
+        customOrderStatuses = [
+            "pending", "preparing", "shipped",
+            "return_requested", "return_received",
+            "exchange_requested", "exchange_received", "exchange_shipped"
+        ];
+
+        document.querySelectorAll('.filter-chip').forEach(b => b.classList.remove('active'));
+        renderAdminOrders();
+    }, 100);
+}
+
+function showFollowUpOrders() {
+    closeNotificationsDropdown();
+    switchTab('orders');
+
+    setTimeout(() => {
+        customOrderStatuses = ["exchange_requested", "return_requested"];
+        document.querySelectorAll('.filter-chip').forEach(b => b.classList.remove('active'));
+        renderAdminOrders();
+    }, 100);
+}
+
+function showExchangeOrders() {
+    closeNotificationsDropdown();
+    switchTab('orders');
+
+    setTimeout(() => {
+        customOrderStatuses = ["exchange_requested", "return_requested"];
+        document.querySelectorAll('.filter-chip').forEach(b => b.classList.remove('active'));
+        renderAdminOrders();
+    }, 100);
+}
+
+// ========================================
+// 54. SMART ALERTS
+// ========================================
+
+function renderSmartAlerts(lowStockCount) {
+    const listEl = document.getElementById("notificationsList");
+    const badgeEl = document.getElementById("notificationsBadge");
+    const countEl = document.getElementById("notificationsCount");
+
+    if (!listEl || !badgeEl) return;
+
+    const alerts = [];
+
+    // ⚠️ منتجات قاربت على النفاد
+    if (lowStockCount > 0) {
+        alerts.push({
+            type: "warning",
+            icon: "fa-triangle-exclamation",
+            text: `${lowStockCount} ${lowStockCount === 1 ? "منتج قارب" : "منتجات قاربت"} على النفاد`,
+            action: "showLowStockProducts()",
+            actionText: "مراجعة"
+        });
+    }
+
+    // ⏰ طلبات قربت تنتهي
+    const urgentOrders = adminOrders.filter(o => {
+        if (o.status !== "pending") return false;
+        const rem = getOrderTimeRemaining(o);
+        if (!rem || rem.expired) return false;
+        const created = new Date(o.created_at);
+        const diffHr = (new Date() - created) / 3600000;
+        return diffHr > 20;
+    });
+
+    if (urgentOrders.length > 0) {
+        alerts.push({
+            type: "danger",
+            icon: "fa-clock",
+            text: `${urgentOrders.length} ${urgentOrders.length === 1 ? "طلب قارب" : "طلبات قاربت"} على انتهاء الوقت`,
+            action: "showUrgentOrders()",
+            actionText: "عرض"
+        });
+    }
+
+    // 🔄 طلبات استبدال/استرجاع محتاجة متابعة
+    const pendingExchange = adminOrders.filter(o =>
+        ["exchange_requested", "return_requested"].includes(o.status)
+    ).length;
+
+    if (pendingExchange > 0) {
+        alerts.push({
+            type: "info",
+            icon: "fa-arrows-rotate",
+            text: `${pendingExchange} ${pendingExchange === 1 ? "طلب" : "طلبات"} استبدال/استرجاع محتاجة متابعة`,
+            action: "showExchangeOrders()",
+            actionText: "عرض"
+        });
+    }
+
+    // ✅ طلبات موافقة
+    const pendingApprovals = adminApprovalRequests.filter(r => r.status === "pending").length;
+    if (pendingApprovals > 0) {
+        alerts.push({
+            type: "warning",
+            icon: "fa-user-check",
+            text: `${pendingApprovals} ${pendingApprovals === 1 ? "طلب موافقة" : "طلبات موافقة"} من الموظفين`,
+            action: "switchTab('approvals')",
+            actionText: "مراجعة"
+        });
+    }
+
+    if (alerts.length > 0) {
+        badgeEl.textContent = alerts.length;
+        badgeEl.style.display = "flex";
+        if (countEl) countEl.textContent = alerts.length;
+    } else {
+        badgeEl.style.display = "none";
+        if (countEl) countEl.textContent = 0;
+    }
+
+    if (!alerts.length) {
+        listEl.innerHTML = `
+            <div class="notifications-empty">
+                <i class="fa-solid fa-check-circle"></i>
+                <p>لا توجد تنبيهات</p>
+            </div>
+        `;
+        return;
+    }
+
+    listEl.innerHTML = alerts.map(a => `
+        <div class="notification-item notification-${a.type}">
+            <div class="notification-icon">
+                <i class="fa-solid ${a.icon}"></i>
+            </div>
+            <div class="notification-text">${a.text}</div>
+            <button type="button" class="notification-action" onclick="${a.action}">
+                ${a.actionText}
+                <i class="fa-solid fa-arrow-left"></i>
+            </button>
+        </div>
+    `).join("");
+}
+
+// ========================================
+// 55. DASHBOARD RENDERING
 // ========================================
 
 function renderDashboardOrders() {
     if (!dashRecentOrdersList) return;
 
     const recent = adminOrders.slice(0, 5);
-    const newOrders = adminOrders.filter(
-        order => order.status === "pending"
+
+    const activeOrders = adminOrders.filter(o =>
+        !["delivered", "cancelled", "refunded", "exchanged", "returned"].includes(o.status)
     );
 
-    if (dashStatNewOrders) dashStatNewOrders.textContent = newOrders.length;
-    if (sidebarNewOrdersBadge) sidebarNewOrdersBadge.textContent = newOrders.length;
+    if (dashStatNewOrders) dashStatNewOrders.textContent = activeOrders.length;
+
+    if (sidebarNewOrdersBadge) {
+        if (activeOrders.length > 0) {
+            sidebarNewOrdersBadge.textContent = activeOrders.length;
+            sidebarNewOrdersBadge.style.display = "inline-block";
+        } else {
+            sidebarNewOrdersBadge.style.display = "none";
+        }
+    }
 
     if (!recent.length) {
         dashRecentOrdersList.innerHTML = `
             <tr>
                 <td colspan="5" style="text-align:center;color:#64748b;">
-                    لا توجد طلبات حديثة حالياً
+                    لا توجد طلبات حديثة
                 </td>
             </tr>
         `;
@@ -1934,52 +4400,249 @@ function renderDashboardOrders() {
     }
 
     dashRecentOrdersList.innerHTML = recent.map(order => {
-        const governorate = order.governorate ||
-            order.customer_governorate ||
-            order.city || "-";
-
+        const governorate = order.governorate || order.customer_governorate || order.city || "-";
         return `
             <tr>
                 <td>#${escapeAdminHTML(order.id)}</td>
                 <td>${escapeAdminHTML(order.customer_name || "عميل")}</td>
                 <td>${escapeAdminHTML(governorate)}</td>
-                <td>${Number(order.total_amount || 0).toLocaleString("ar-EG")} جنيه</td>
+                <td>${Number(order.total_amount || 0).toLocaleString("en-US")} جنيه</td>
                 <td>${getStatusBadge(order.status)}</td>
             </tr>
         `;
     }).join("");
 }
 
-function updateDashboard() {
-    if (dashStatProducts) {
-        dashStatProducts.textContent = adminProducts.length;
+async function loadCustomersCount() {
+    const client = getSupabaseClient();
+    if (!client) return;
+
+    try {
+        const { data, error } = await client.rpc("get_customers_count");
+        if (error) throw error;
+
+        if (dashStatCustomers) {
+            dashStatCustomers.textContent = data || 0;
+        }
+    } catch (err) {
+        console.warn("Load customers count failed:", err);
     }
+}
 
-    const deliveredOrders = adminOrders.filter(
-        order => order.status === "delivered"
-    );
+function openSalesPage() {
+    switchTab('reports');
+}
 
-    const totalRevenue = deliveredOrders.reduce(
-        (sum, order) => sum + Number(order.total_amount || 0),
-        0
+function updateDashboard() {
+    // ===== المبيعات =====
+    const soldOrders = adminOrders.filter(o => SOLD_STATUSES.includes(o.status));
+
+    const totalRevenue = soldOrders.reduce(
+        (sum, o) => sum + Number(o.total_amount || 0), 0
     );
 
     if (dashStatRevenue) {
-        dashStatRevenue.textContent =
-            `${totalRevenue.toLocaleString("ar-EG")} ج.م`;
+        dashStatRevenue.textContent = `${totalRevenue.toLocaleString("en-US")} ج.م`;
     }
 
+    // مبيعات اليوم
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const todaySales = soldOrders
+        .filter(o => new Date(o.created_at) >= today)
+        .reduce((sum, o) => sum + Number(o.total_amount || 0), 0);
+
+    if (dashStatTodaySales) {
+        dashStatTodaySales.textContent = `${todaySales.toLocaleString("en-US")} ج.م`;
+    }
+
+    // ✅ مبيعات الشهر
+    const monthStart = new Date();
+    monthStart.setDate(1);
+    monthStart.setHours(0, 0, 0, 0);
+    const monthSales = soldOrders
+        .filter(o => new Date(o.created_at) >= monthStart)
+        .reduce((sum, o) => sum + Number(o.total_amount || 0), 0);
+
+    if (dashStatMonthSales) {
+        dashStatMonthSales.textContent = `${monthSales.toLocaleString("en-US")} ج.م`;
+    }
+
+    // ✅ متوسط قيمة الطلب (AOV)
+    const aov = soldOrders.length > 0 ? totalRevenue / soldOrders.length : 0;
+    if (dashStatAOV) {
+        dashStatAOV.textContent = `${Math.round(aov).toLocaleString("en-US")} ج.م`;
+    }
+
+    // ===== منتجات قاربت على النفاد =====
+    const lowStockCount = adminProducts.filter(p => {
+        const status = getStockStatus(p);
+        return status === "low" || status === "out";
+    }).length;
+
+    if (dashStatLowStock) {
+        dashStatLowStock.textContent = lowStockCount;
+    }
+
+    // ===== طلبات محتاجة متابعة (استبدال / استرجاع) =====
+    const followUpCount = adminOrders.filter(o =>
+        ["exchange_requested", "return_requested"].includes(o.status)
+    ).length;
+
+    if (dashStatFollowUp) {
+        dashStatFollowUp.textContent = followUpCount;
+    }
+
+    // ===== أعلى عميل شراءً =====
+    computeTopCustomer();
+
+    // ===== التنبيهات =====
+    updateLowStockBadge();
+    renderSmartAlerts(lowStockCount);
+
+    // ===== باقي الويدجت =====
     renderDashboardOrders();
     renderTopSelling();
+    loadCustomersCount();
+
+    // ✅ رسم الـ Sparkline
+    renderSparkline();
+}
+
+// ========================================
+// TOP CUSTOMER + SPARKLINE
+// ========================================
+
+function computeTopCustomer() {
+    const el = document.getElementById("dashStatTopCustomer");
+    const labelEl = document.getElementById("dashStatTopCustomerLabel");
+    if (!el) return;
+
+    const map = {};
+    adminOrders.forEach(o => {
+        const key = o.customer_id
+            ? `id:${o.customer_id}`
+            : `phone:${o.customer_phone || "unknown"}`;
+
+        if (!map[key]) {
+            map[key] = {
+                name: o.customer_name || "عميل",
+                phone: o.customer_phone || "-",
+                total: 0
+            };
+        }
+        map[key].total += Number(o.total_amount || 0);
+    });
+
+    const sorted = Object.values(map).sort((a, b) => b.total - a.total);
+
+    if (!sorted.length) {
+        el.textContent = "-";
+        if (labelEl) labelEl.textContent = "أعلى عميل";
+        return;
+    }
+
+    const top = sorted[0];
+    el.textContent = top.name;
+    el.title = `${top.name} — ${top.total.toLocaleString("en-US")} ج.م`;
+
+    if (labelEl) {
+        labelEl.textContent = `أعلى عميل · ${Math.round(top.total).toLocaleString("en-US")} ج.م`;
+    }
+}
+
+function renderSparkline() {
+    const canvas = document.getElementById("dashSparkline");
+    if (!canvas) return;
+
+    // آخر 7 أيام
+    const days = [];
+    const now = new Date();
+    for (let i = 6; i >= 0; i--) {
+        const d = new Date(now);
+        d.setDate(d.getDate() - i);
+        d.setHours(0, 0, 0, 0);
+        days.push(d);
+    }
+
+    const soldOrders = adminOrders.filter(o => SOLD_STATUSES.includes(o.status));
+
+    const values = days.map(day => {
+        const next = new Date(day);
+        next.setDate(next.getDate() + 1);
+        return soldOrders
+            .filter(o => {
+                const d = new Date(o.created_at);
+                return d >= day && d < next;
+            })
+            .reduce((sum, o) => sum + Number(o.total_amount || 0), 0);
+    });
+
+    // إعداد الـ canvas
+    const dpr = window.devicePixelRatio || 1;
+    const w = 90;
+    const h = 46;
+    canvas.width = w * dpr;
+    canvas.height = h * dpr;
+    canvas.style.width = w + "px";
+    canvas.style.height = h + "px";
+
+    const ctx = canvas.getContext("2d");
+    ctx.scale(dpr, dpr);
+    ctx.clearRect(0, 0, w, h);
+
+    const max = Math.max(...values, 1);
+    const stepX = w / (values.length - 1 || 1);
+
+    // نقاط الرسم
+    const points = values.map((v, i) => ({
+        x: i * stepX,
+        y: h - (v / max) * (h - 6) - 3
+    }));
+
+    // gradient تحت الخط
+    const grad = ctx.createLinearGradient(0, 0, 0, h);
+    grad.addColorStop(0, "rgba(22, 163, 74, 0.35)");
+    grad.addColorStop(1, "rgba(22, 163, 74, 0)");
+
+    // المسار المملوء
+    ctx.beginPath();
+    ctx.moveTo(points[0].x, h);
+    points.forEach(p => ctx.lineTo(p.x, p.y));
+    ctx.lineTo(points[points.length - 1].x, h);
+    ctx.closePath();
+    ctx.fillStyle = grad;
+    ctx.fill();
+
+    // الخط
+    ctx.beginPath();
+    ctx.moveTo(points[0].x, points[0].y);
+    points.forEach((p, i) => {
+        if (i === 0) return;
+        ctx.lineTo(p.x, p.y);
+    });
+    ctx.strokeStyle = "#16a34a";
+    ctx.lineWidth = 2;
+    ctx.lineJoin = "round";
+    ctx.lineCap = "round";
+    ctx.stroke();
+
+    // النقطة الأخيرة
+    const last = points[points.length - 1];
+    ctx.beginPath();
+    ctx.arc(last.x - 1, last.y, 3, 0, Math.PI * 2);
+    ctx.fillStyle = "#16a34a";
+    ctx.fill();
+    ctx.strokeStyle = "#fff";
+    ctx.lineWidth = 1.5;
+    ctx.stroke();
 }
 
 function renderTopSelling() {
     if (!dashTopSellingList) return;
 
     const productSales = {};
-    const validOrders = adminOrders.filter(
-        order => order.status === "delivered"
-    );
+    const validOrders = adminOrders.filter(o => SOLD_STATUSES.includes(o.status));
 
     validOrders.forEach(order => {
         const items = Array.isArray(order.items) ? order.items : [];
@@ -2041,11 +4704,11 @@ function renderTopSelling() {
                     `}
                     <div>
                         <div class="top-item-name">${escapeAdminHTML(product.name)}</div>
-                        <div class="top-item-sales">${product.quantity} قطعة مباعة</div>
+                        <div class="top-item-sales">${product.quantity} قطعة</div>
                     </div>
                 </div>
                 <div class="top-item-revenue">
-                    ${product.revenue.toLocaleString("ar-EG")} ج.م
+                    ${product.revenue.toLocaleString("en-US")} ج.م
                 </div>
             </div>
         `;
@@ -2053,144 +4716,16 @@ function renderTopSelling() {
 }
 
 // ========================================
-// STATUS REASON MODAL
-// ========================================
-
-const REASON_OPTIONS = {
-    return_requested: [
-        "المقاس غير مناسب",
-        "اللون مختلف عن الصورة",
-        "المنتج به عيب",
-        "المنتج مختلف عن الوصف",
-        "العميل غير رأيه",
-        "سبب آخر"
-    ],
-    exchange_requested: [
-        "المقاس غير مناسب",
-        "اللون مختلف",
-        "العميل عايز موديل تاني",
-        "المنتج به عيب",
-        "سبب آخر"
-    ],
-    cancelled: [
-        "العميل غيّر رأيه",
-        "العميل مش بيرد",
-        "العنوان غلط",
-        "المنتج مش متوفر",
-        "سبب آخر"
-    ]
-};
-
-function openStatusReasonModal(order, newStatus) {
-    const modal = document.getElementById("statusReasonModal");
-    if (!modal) return;
-
-    document.getElementById("statusReasonOrderId").value = order.id;
-    document.getElementById("statusReasonNewStatus").value = newStatus;
-
-    const title = document.getElementById("statusReasonTitle");
-    const reasonTypeLabel = document.getElementById("reasonTypeLabel");
-
-    const titles = {
-        return_requested: "طلب استرجاع",
-        exchange_requested: "طلب استبدال",
-        cancelled: "إلغاء الطلب"
-    };
-
-    title.textContent = `${titles[newStatus]} - الطلب #${order.id}`;
-    reasonTypeLabel.textContent = titles[newStatus];
-
-    const select = document.getElementById("statusReasonSelect");
-    const options = REASON_OPTIONS[newStatus] || [];
-
-    select.innerHTML = '<option value="">اختر السبب</option>' +
-        options.map(o =>
-            `<option value="${escapeAdminHTML(o)}">${escapeAdminHTML(o)}</option>`
-        ).join("");
-
-    document.getElementById("statusReasonCustom").value = "";
-    document.getElementById("statusReasonNotes").value = "";
-    document.getElementById("reasonCustomGroup").style.display = "none";
-    document.getElementById("statusReasonCustom").required = false;
-
-    modal.classList.add("open");
-    renderAdminOrders();
-}
-
-function closeStatusReasonModal() {
-    document.getElementById("statusReasonModal")?.classList.remove("open");
-}
-
-document.getElementById("statusReasonSelect")?.addEventListener("change", function () {
-    const customGroup = document.getElementById("reasonCustomGroup");
-    const customInput = document.getElementById("statusReasonCustom");
-
-    if (this.value === "سبب آخر") {
-        customGroup.style.display = "block";
-        customInput.required = true;
-        customInput.focus();
-    } else {
-        customGroup.style.display = "none";
-        customInput.required = false;
-    }
-});
-
-document.getElementById("closeStatusReasonModal")?.addEventListener(
-    "click",
-    closeStatusReasonModal
-);
-
-document.getElementById("cancelStatusReasonBtn")?.addEventListener(
-    "click",
-    closeStatusReasonModal
-);
-
-document.getElementById("statusReasonForm")?.addEventListener("submit", async function (e) {
-    e.preventDefault();
-
-    const orderId = Number(
-        document.getElementById("statusReasonOrderId").value
-    );
-    const newStatus = document.getElementById("statusReasonNewStatus").value;
-    const selectedReason = document.getElementById("statusReasonSelect").value;
-    const customReason = document.getElementById("statusReasonCustom").value.trim();
-    const notes = document.getElementById("statusReasonNotes").value.trim();
-
-    let finalReason = selectedReason;
-
-    if (selectedReason === "سبب آخر") {
-        if (!customReason) {
-            alert("اكتب السبب");
-            return;
-        }
-        finalReason = customReason;
-    }
-
-    if (!finalReason) {
-        alert("اختر السبب");
-        return;
-    }
-
-    const btn = document.getElementById("saveStatusReasonBtn");
-    btn.disabled = true;
-    btn.textContent = "جاري الحفظ...";
-
-    await applyStatusChange(orderId, newStatus, finalReason, notes);
-
-    btn.disabled = false;
-    btn.textContent = "تأكيد التغيير";
-
-    closeStatusReasonModal();
-});
-
-// ========================================
-// 39. LOGOUT
+// 56. LOGOUT
 // ========================================
 
 if (logoutButton) {
     logoutButton.addEventListener("click", async function () {
         const confirmed = confirm("هل أنت متأكد من تسجيل الخروج؟");
         if (!confirmed) return;
+
+        stopHeartbeat();
+        await endAdminSession("logout");
 
         const client = getSupabaseClient();
         if (client) await client.auth.signOut();
@@ -2200,20 +4735,24 @@ if (logoutButton) {
 }
 
 // ========================================
-// 40. CLOSE MODALS ON OUTSIDE CLICK
+// 57. CLOSE MODALS ON OUTSIDE CLICK
 // ========================================
 
 window.addEventListener("click", function (event) {
     if (event.target === editModal) closeEditProductModal();
     if (event.target === orderModal) orderModal.classList.remove("open");
     if (event.target === approvalModal) closeApprovalRequestModal();
+    if (event.target === adjustStockModal) closeAdjustStockModalFn();
+    if (event.target === addProductModal) {
+        addProductModal.classList.remove("open");
+    }
     if (event.target === document.getElementById("statusReasonModal")) {
         closeStatusReasonModal();
     }
 });
 
 // ========================================
-// 41. START
+// 58. START
 // ========================================
 
 document.addEventListener("DOMContentLoaded", async function () {
@@ -2222,7 +4761,7 @@ document.addEventListener("DOMContentLoaded", async function () {
 });
 
 // ========================================
-// 42. SESSION PROTECTION
+// 59. SESSION PROTECTION
 // ========================================
 
 window.addEventListener("pageshow", async function () {
@@ -2231,8 +4770,26 @@ window.addEventListener("pageshow", async function () {
     }
 });
 
+// ✅ فحص الجلسة كل دقيقة — لو اتنهت من السوبر أدمن → يخرج فورًا
+setInterval(async () => {
+    if (isAdminDashboard() && currentAdmin && currentSessionToken) {
+        const ok = await verifyCurrentSession();
+        if (!ok) {
+            stopHeartbeat();
+            const client = getSupabaseClient();
+            if (client) await client.auth.signOut();
+            localStorage.removeItem("adminSessionToken");
+            alert("تم إنهاء جلستك من قبل المدير. جاري تسجيل الخروج...");
+            window.location.replace("admin-login.html");
+        }
+    }
+}, 60 * 1000);
+
+// ✅ إغلاق التاب مش بيلغي الجلسة (عشان لو رجع يكمل)
+// الجلسة بتلغي تلقائيًا بعد 30 دقيقة عدم نشاط
+
 // ========================================
-// 43. GLOBAL FUNCTIONS
+// 60. GLOBAL FUNCTIONS
 // ========================================
 
 window.switchTab = switchTab;
@@ -2241,6 +4798,9 @@ window.filterApprovalRequests = filterApprovalRequests;
 window.loadAdminProducts = loadAdminProducts;
 window.loadAdminOrders = loadAdminOrders;
 window.loadApprovalRequests = loadApprovalRequests;
+window.loadInventory = loadInventory;
+window.loadMovements = loadMovements;
+window.filterInventory = filterInventory;
 window.updateOrderStatus = updateOrderStatus;
 window.sendWhatsAppStatusUpdate = sendWhatsAppStatusUpdate;
 window.viewOrderDetails = viewOrderDetails;
@@ -2253,3 +4813,1019 @@ window.closeEditProductModal = closeEditProductModal;
 window.closeApprovalRequestModal = closeApprovalRequestModal;
 window.openStatusReasonModal = openStatusReasonModal;
 window.closeStatusReasonModal = closeStatusReasonModal;
+window.copyTrackingLink = copyTrackingLink;
+window.openAdjustStockModal = openAdjustStockModal;
+window.selectMovementType = selectMovementType;
+window.releaseOrderReservation = releaseOrderReservation;
+window.toggleSizeQuantity = toggleSizeQuantity;
+window.updateTotalPreview = updateTotalPreview;
+window.openExchangeRequestModal = openExchangeRequestModal;
+window.closeExchangeRequestModal = closeExchangeRequestModalFn;
+window.openExchangeReceivedModal = openExchangeReceivedModal;
+window.closeExchangeReceivedModal = closeExchangeReceivedModalFn;
+window.selectExchangeSize = selectExchangeSize;
+window.showLowStockProducts = showLowStockProducts;
+window.showUrgentOrders = showUrgentOrders;
+window.showExchangeOrders = showExchangeOrders;
+window.openSalesPage = openSalesPage;
+window.showActiveOrders = showActiveOrders;
+window.showFollowUpOrders = showFollowUpOrders;
+// ========================================
+// 61. REPORTS — MAIN
+// ========================================
+
+let currentReportKey = null;
+
+let salesReportOrders = [];
+let salesReportFilters = { from: null, to: null, preset: "month" };
+
+let customersReportRaw = [];
+let customersReportFilters = { sort: "spent_desc", type: "all", search: "" };
+
+let dailyReportFilters = { from: null, to: null, preset: "month" };
+let govReportFilters = { from: null, to: null, preset: "month" };
+let prodReportFilters = { from: null, to: null, preset: "month" };
+let statusReportFilters = { from: null, to: null, preset: "month" };
+let exchangeReportFilters = { from: null, to: null, preset: "month" };
+
+let productsReportData = [];
+let inventoryReportData = [];
+let exchangeReportData = [];
+
+const PAYMENT_METHODS_META = {
+    cash: { text: "كاش عند الاستلام", icon: "fa-money-bill-wave" },
+    instapay: { text: "InstaPay", icon: "fa-mobile-screen" },
+    unknown: { text: "غير محدد", icon: "fa-circle-question" }
+};
+
+// ========================================
+// 62. NAVIGATION
+// ========================================
+
+function openReport(key) {
+    // 1) نروح لتاب التقارير الأول
+    document.querySelectorAll(".tab-content").forEach(tab => tab.classList.remove("active"));
+    document.querySelectorAll(".nav-item").forEach(item => item.classList.remove("active"));
+
+    document.getElementById("viewReports")?.classList.add("active");
+    document.getElementById("tabNavReports")?.classList.add("active");
+
+    const title = document.getElementById("pageTitle");
+    const subtitle = document.getElementById("pageSubtitle");
+    if (title) title.textContent = "التقارير والتحليلات";
+
+    // قفل السايدبار في الموبايل
+    document.getElementById("sidebar")?.classList.remove("open");
+    document.getElementById("mobileOverlay")?.classList.remove("show");
+
+    // 2) نخفي الـ home ونظهر التقرير المطلوب
+    currentReportKey = key;
+
+    const home = document.getElementById('reportsHome');
+    if (home) home.style.display = 'none';
+
+    document.querySelectorAll('.report-panel').forEach(p => p.classList.remove('active'));
+
+    const panelMap = {
+        sales: 'reportSales',
+        daily: 'reportDaily',
+        governorate: 'reportGovernorate',
+        customers: 'reportCustomers',
+        products: 'reportProducts',
+        inventory: 'reportInventory',
+        status: 'reportStatus',
+        exchange: 'reportExchange'
+    };
+
+    const panelId = panelMap[key];
+    if (panelId) {
+        document.getElementById(panelId)?.classList.add('active');
+    }
+
+    const titles = {
+        sales: 'المبيعات التفصيلية',
+        daily: 'المبيعات اليومية',
+        governorate: 'المبيعات حسب المحافظة',
+        customers: 'تقرير العملاء',
+        products: 'أداء المنتجات',
+        inventory: 'حركة المخزون',
+        status: 'حالات الطلبات',
+        exchange: 'الاستبدال والاسترجاع'
+    };
+
+    if (subtitle) subtitle.textContent = titles[key] || '';
+
+    // 3) نحمّل بيانات التقرير
+    loadReportByKey(key);
+}
+
+function backToReportsHome() {
+    currentReportKey = null;
+
+    document.querySelectorAll('.report-panel').forEach(p => p.classList.remove('active'));
+    const home = document.getElementById('reportsHome');
+    if (home) home.style.display = 'block';
+
+    const subtitle = document.getElementById('pageSubtitle');
+    if (subtitle) subtitle.textContent = 'مركز التقارير الشامل';
+}
+
+function loadReportByKey(key) {
+    if (key === 'sales') loadSalesReport();
+    else if (key === 'daily') loadDailyReport();
+    else if (key === 'governorate') loadGovernorateReport();
+    else if (key === 'customers') loadCustomersReport();
+    else if (key === 'products') loadProductsReport();
+    else if (key === 'inventory') loadInventoryReport();
+    else if (key === 'status') loadStatusReport();
+    else if (key === 'exchange') loadExchangeReport();
+}
+
+// ========================================
+// 63. PRESETS HELPERS
+// ========================================
+
+function _getPresetRange(preset) {
+    const now = new Date();
+    const sod = d => { const x = new Date(d); x.setHours(0, 0, 0, 0); return x; };
+    const eod = d => { const x = new Date(d); x.setHours(23, 59, 59, 999); return x; };
+
+    if (preset === "today") return { from: sod(now), to: eod(now) };
+    if (preset === "week") {
+        const f = new Date(now); f.setDate(f.getDate() - 6);
+        return { from: sod(f), to: eod(now) };
+    }
+    if (preset === "month") {
+        const f = new Date(now.getFullYear(), now.getMonth(), 1);
+        return { from: sod(f), to: eod(now) };
+    }
+    return { from: null, to: null };
+}
+
+function _applyPresetToFilters(preset, filters, fromId, toId) {
+    filters.preset = preset;
+    const r = _getPresetRange(preset);
+    filters.from = r.from;
+    filters.to = r.to;
+
+    const fEl = document.getElementById(fromId);
+    const tEl = document.getElementById(toId);
+    if (fEl) fEl.value = r.from ? r.from.toISOString().slice(0, 10) : '';
+    if (tEl) tEl.value = r.to ? r.to.toISOString().slice(0, 10) : '';
+}
+
+function _applyManualFilters(filters, fromId, toId) {
+    const fv = document.getElementById(fromId)?.value || '';
+    const tv = document.getElementById(toId)?.value || '';
+    filters.from = fv ? new Date(fv + 'T00:00:00') : null;
+    filters.to = tv ? new Date(tv + 'T23:59:59') : null;
+    filters.preset = 'custom';
+}
+
+// ========================================
+// 64. SALES PRESETS
+// ========================================
+
+function setSalesPreset(preset, btnEl) {
+    document.querySelectorAll("#reportSales .preset-chip").forEach(b => b.classList.remove('active'));
+    btnEl?.classList.add('active');
+    _applyPresetToFilters(preset, salesReportFilters, 'salesDateFrom', 'salesDateTo');
+    loadSalesReport();
+}
+
+function applySalesFilters() {
+    _applyManualFilters(salesReportFilters, 'salesDateFrom', 'salesDateTo');
+    document.querySelectorAll("#reportSales .preset-chip").forEach(b => b.classList.remove('active'));
+    loadSalesReport();
+}
+
+function setDailyPreset(preset, btnEl) {
+    document.querySelectorAll("#reportDaily .preset-chip").forEach(b => b.classList.remove('active'));
+    btnEl?.classList.add('active');
+    _applyPresetToFilters(preset, dailyReportFilters, 'dailyDateFrom', 'dailyDateTo');
+    loadDailyReport();
+}
+
+function setGovPreset(preset, btnEl) {
+    document.querySelectorAll("#reportGovernorate .preset-chip").forEach(b => b.classList.remove('active'));
+    btnEl?.classList.add('active');
+    _applyPresetToFilters(preset, govReportFilters, 'govDateFrom', 'govDateTo');
+    loadGovernorateReport();
+}
+
+function setProdPreset(preset, btnEl) {
+    document.querySelectorAll("#reportProducts .preset-chip").forEach(b => b.classList.remove('active'));
+    btnEl?.classList.add('active');
+    _applyPresetToFilters(preset, prodReportFilters, 'prodDateFrom', 'prodDateTo');
+    loadProductsReport();
+}
+
+function setStatusPreset(preset, btnEl) {
+    document.querySelectorAll("#reportStatus .preset-chip").forEach(b => b.classList.remove('active'));
+    btnEl?.classList.add('active');
+    _applyPresetToFilters(preset, statusReportFilters, null, null);
+    loadStatusReport();
+}
+
+function setExchangePreset(preset, btnEl) {
+    document.querySelectorAll("#reportExchange .preset-chip").forEach(b => b.classList.remove('active'));
+    btnEl?.classList.add('active');
+    _applyPresetToFilters(preset, exchangeReportFilters, null, null);
+    loadExchangeReport();
+}
+
+// ========================================
+// 65. FETCH ORDERS IN RANGE (helper)
+// ========================================
+
+async function _fetchOrdersInRange(filters) {
+    const client = getSupabaseClient();
+    if (!client) return [];
+
+    let q = client.from("orders").select("*").order("created_at", { ascending: false });
+    if (filters?.from) q = q.gte("created_at", filters.from.toISOString());
+    if (filters?.to) q = q.lte("created_at", filters.to.toISOString());
+
+    const { data, error } = await q;
+    if (error) throw error;
+    return data || [];
+}
+
+// ========================================
+// 66. SALES REPORT
+// ========================================
+
+async function loadSalesReport() {
+    const listEl = document.getElementById("salesOrdersList");
+    if (listEl) listEl.innerHTML = `<tr><td colspan="8" style="text-align:center;padding:30px;color:#94a3b8;">جاري التحميل...</td></tr>`;
+
+    try {
+        salesReportOrders = await _fetchOrdersInRange(salesReportFilters);
+        renderSalesKPIs();
+        renderPaymentBreakdown();
+        renderStatusBreakdown();
+        renderSalesTopProducts();
+        renderSalesOrdersTable();
+    } catch (err) {
+        console.error("Sales Report Error:", err);
+        if (listEl) listEl.innerHTML = `<tr><td colspan="8" style="text-align:center;padding:30px;color:#dc2626;font-weight:700;">حدث خطأ: ${escapeAdminHTML(err.message)}</td></tr>`;
+    }
+}
+
+function renderSalesKPIs() {
+    const orders = salesReportOrders;
+    const revenue = orders.reduce((s, o) => s + Number(o.total_amount || 0), 0);
+    const ordersCount = orders.length;
+    const aov = ordersCount > 0 ? revenue / ordersCount : 0;
+    let itemsSold = 0;
+    orders.forEach(o => (Array.isArray(o.items) ? o.items : []).forEach(i => itemsSold += Number(i.quantity || 0)));
+
+    const set = (id, v) => { const e = document.getElementById(id); if (e) e.textContent = v; };
+    set("salesKpiRevenue", revenue.toLocaleString("en-US"));
+    set("salesKpiOrders", ordersCount.toLocaleString("en-US"));
+    set("salesKpiAOV", Math.round(aov).toLocaleString("en-US"));
+    set("salesKpiItems", itemsSold.toLocaleString("en-US"));
+}
+
+function renderPaymentBreakdown() {
+    const el = document.getElementById("paymentBreakdown");
+    if (!el) return;
+    const map = {};
+    let total = 0;
+    salesReportOrders.forEach(o => {
+        const k = (o.payment_method || "unknown").toLowerCase();
+        if (!map[k]) map[k] = { count: 0, revenue: 0 };
+        map[k].count++;
+        map[k].revenue += Number(o.total_amount || 0);
+        total += Number(o.total_amount || 0);
+    });
+    const entries = Object.entries(map);
+    if (!entries.length) { el.innerHTML = `<div class="empty-state"><p>لا توجد بيانات</p></div>`; return; }
+    entries.sort((a, b) => b[1].revenue - a[1].revenue);
+    el.innerHTML = entries.map(([k, d]) => {
+        const m = PAYMENT_METHODS_META[k] || PAYMENT_METHODS_META.unknown;
+        const pct = total > 0 ? Math.round((d.revenue / total) * 100) : 0;
+        const c = { cash: { bg: "#dcfce7", color: "#16a34a" }, instapay: { bg: "#dbeafe", color: "#2563eb" }, unknown: { bg: "#f1f5f9", color: "#64748b" } }[k] || { bg: "#f1f5f9", color: "#64748b" };
+        return `<div class="breakdown-item"><div class="breakdown-item-left"><div class="breakdown-icon" style="background:${c.bg};color:${c.color};"><i class="fa-solid ${m.icon}"></i></div><div class="breakdown-label"><strong>${escapeAdminHTML(m.text)}</strong><small>${d.count} طلب · ${pct}%</small></div></div><div class="breakdown-value">${d.revenue.toLocaleString("en-US")} ج</div></div>`;
+    }).join("");
+}
+
+function renderStatusBreakdown() {
+    const el = document.getElementById("statusBreakdown");
+    if (!el) return;
+    const map = {};
+    salesReportOrders.forEach(o => { const s = o.status || "unknown"; map[s] = (map[s] || 0) + 1; });
+    const entries = Object.entries(map).sort((a, b) => b[1] - a[1]);
+    if (!entries.length) { el.innerHTML = `<div class="empty-state"><p>لا توجد بيانات</p></div>`; return; }
+    el.innerHTML = entries.map(([s, c]) => `<div class="breakdown-item"><div>${getStatusBadge(s)}</div><div class="breakdown-value">${c} طلب</div></div>`).join("");
+}
+
+function renderSalesTopProducts() {
+    const el = document.getElementById("salesTopProductsList");
+    if (!el) return;
+    const ps = {};
+    salesReportOrders.forEach(o => (Array.isArray(o.items) ? o.items : []).forEach(item => {
+        const k = String(item.id ?? item.name ?? "unknown");
+        if (!ps[k]) ps[k] = { id: item.id, name: item.name || "منتج", image: item.image || "", quantity: 0, revenue: 0 };
+        ps[k].quantity += Number(item.quantity || 1);
+        ps[k].revenue += Number(item.quantity || 1) * Number(item.price || 0);
+    }));
+    const top = Object.values(ps).sort((a, b) => b.quantity - a.quantity).slice(0, 8);
+    if (!top.length) { el.innerHTML = `<div class="empty-state"><i class="fa-solid fa-chart-line"></i><p>لا توجد مبيعات</p></div>`; return; }
+    el.innerHTML = top.map((p, i) => {
+        const rc = i === 0 ? "gold" : i === 1 ? "silver" : i === 2 ? "bronze" : "gray";
+        const rt = i < 3 ? ["🥇","🥈","🥉"][i] : `#${i+1}`;
+        return `<div class="top-item"><div class="top-item-info"><div class="rank-circle ${rc}">${rt}</div>${p.image ? `<img src="${escapeAdminHTML(p.image)}" class="top-item-img" onerror="this.style.display='none'">` : `<div class="top-item-img" style="display:flex;align-items:center;justify-content:center;color:#94a3b8;"><i class="fa-solid fa-image"></i></div>`}<div><div class="top-item-name">${escapeAdminHTML(p.name)}</div><div class="top-item-sales">${p.quantity} قطعة</div></div></div><div class="top-item-revenue">${p.revenue.toLocaleString("en-US")} ج.م</div></div>`;
+    }).join("");
+}
+
+function renderSalesOrdersTable() {
+    const listEl = document.getElementById("salesOrdersList");
+    const countEl = document.getElementById("salesOrdersCount");
+    if (!listEl) return;
+    if (countEl) countEl.textContent = `${salesReportOrders.length} طلب`;
+    if (!salesReportOrders.length) { listEl.innerHTML = `<tr><td colspan="8" style="text-align:center;padding:35px;color:#64748b;">لا توجد طلبات</td></tr>`; return; }
+    listEl.innerHTML = salesReportOrders.map(o => {
+        const pm = (o.payment_method || "unknown").toLowerCase();
+        const m = PAYMENT_METHODS_META[pm] || PAYMENT_METHODS_META.unknown;
+        const cls = pm === "cash" ? "cash" : pm === "instapay" ? "instapay" : "unknown";
+        return `<tr><td class="order-id-cell"><span>#</span>${escapeAdminHTML(o.id)}</td><td class="customer-cell"><strong>${escapeAdminHTML(o.customer_name || "عميل")}</strong></td><td class="phone-cell"><div class="phone" style="direction:ltr;justify-content:flex-end;">${escapeAdminHTML(o.customer_phone || "-")}</div></td><td class="date-cell">${formatDate(o.created_at)}</td><td><span class="payment-badge ${cls}"><i class="fa-solid ${m.icon}"></i> ${escapeAdminHTML(m.text)}</span></td><td>${getStatusBadge(o.status)}</td><td class="amount-cell">${Number(o.total_amount || 0).toLocaleString("en-US")} <span class="currency">ج.م</span></td><td><button type="button" class="action-icon-btn preview" onclick="viewOrderDetails(${Number(o.id)})"><i class="fa-solid fa-eye"></i></button></td></tr>`;
+    }).join("");
+}
+
+function exportSalesCSV() {
+    if (!salesReportOrders.length) {
+        alert("لا توجد بيانات");
+        return;
+    }
+
+    const headers = [
+        "Order ID",
+        "Date",
+        "Customer",
+        "Phone",
+        "Governorate",
+        "City",
+        "Address",
+        "Payment",
+        "Status",
+        "Items",
+        "Subtotal",
+        "Shipping",
+        "Total"
+    ];
+
+    const rows = salesReportOrders.map(o => {
+        const items = Array.isArray(o.items) ? o.items : [];
+        const itemsCount = items.reduce((s, i) => s + Number(i.quantity || 0), 0);
+
+        // ✅ الإجمالي بيتحسب صح حتى للطلبات القديمة
+        const total = Number(o.total_amount || 0);
+        const shipping = Number(o.shipping_cost || 0);
+        const subtotal = Number(o.subtotal || 0) || (total - shipping);
+
+        return [
+            o.id,
+            formatDateForCSV(o.created_at),
+            o.customer_name || "",
+            o.customer_phone || "",
+            o.governorate || "",
+            o.city || "",
+            (o.customer_address || "").replace(/\n/g, " ").replace(/\r/g, ""),
+            o.payment_method === "instapay" ? "InstaPay" : "كاش",
+            getStatusLabelArabic(o.status),
+            itemsCount,
+            subtotal,
+            shipping,
+            total
+        ];
+    });
+
+    downloadCSV([headers, ...rows], `step-sales-${Date.now()}.csv`);
+}
+
+// ========================================
+// 67. DAILY REPORT
+// ========================================
+
+async function loadDailyReport() {
+    const el = document.getElementById("dailyList");
+    if (el) el.innerHTML = `<div class="empty-state"><i class="fa-solid fa-spinner fa-spin"></i><p>جاري التحميل...</p></div>`;
+
+    try {
+        const orders = await _fetchOrdersInRange(dailyReportFilters);
+        const map = {};
+        orders.forEach(o => {
+            const d = new Date(o.created_at);
+            const key = d.toISOString().slice(0, 10);
+            if (!map[key]) map[key] = { date: key, orders: 0, revenue: 0, items: 0 };
+            map[key].orders++;
+            map[key].revenue += Number(o.total_amount || 0);
+            (Array.isArray(o.items) ? o.items : []).forEach(i => map[key].items += Number(i.quantity || 0));
+        });
+        const list = Object.values(map).sort((a, b) => b.date.localeCompare(a.date));
+
+        const totalRevenue = list.reduce((s, d) => s + d.revenue, 0);
+        const days = list.length;
+        const avg = days > 0 ? totalRevenue / days : 0;
+        const best = list.reduce((a, b) => a.revenue > b.revenue ? a : b, { revenue: 0, date: "-" });
+
+        const set = (id, v) => { const e = document.getElementById(id); if (e) e.textContent = v; };
+        set("dailyKpiTotal", totalRevenue.toLocaleString("en-US"));
+        set("dailyKpiDays", days);
+        set("dailyKpiAvg", Math.round(avg).toLocaleString("en-US"));
+        set("dailyKpiBest", best.date === "-" ? "-" : best.date);
+
+        if (!list.length) { el.innerHTML = `<div class="empty-state"><p>لا توجد بيانات</p></div>`; return; }
+
+        const maxRev = Math.max(...list.map(d => d.revenue), 1);
+        el.innerHTML = list.map(d => {
+            const pct = Math.round((d.revenue / maxRev) * 100);
+            const dateObj = new Date(d.date);
+            const dateStr = dateObj.toLocaleDateString("ar-EG", { weekday: "long", day: "numeric", month: "short" });
+            return `<div class="daily-item"><div class="daily-item-date"><strong>${escapeAdminHTML(dateStr)}</strong><small>${d.date}</small></div><div class="daily-item-bar"><div class="daily-item-bar-fill" style="width:${pct}%"></div></div><div class="daily-item-stats"><div class="daily-item-stat"><strong>${d.revenue.toLocaleString("en-US")}</strong><span>ج.م</span></div><div class="daily-item-stat"><strong>${d.orders}</strong><span>طلب</span></div><div class="daily-item-stat"><strong>${d.items}</strong><span>قطعة</span></div></div></div>`;
+        }).join("");
+    } catch (err) {
+        console.error("Daily Report Error:", err);
+        if (el) el.innerHTML = `<div class="empty-state" style="color:#dc2626;"><p>حدث خطأ: ${escapeAdminHTML(err.message)}</p></div>`;
+    }
+}
+
+// ========================================
+// 68. GOVERNORATE REPORT
+// ========================================
+
+async function loadGovernorateReport() {
+    const el = document.getElementById("govList");
+    if (el) el.innerHTML = `<tr><td colspan="7" style="text-align:center;padding:30px;color:#94a3b8;">جاري التحميل...</td></tr>`;
+
+    try {
+        const orders = await _fetchOrdersInRange(govReportFilters);
+        const map = {};
+        orders.forEach(o => {
+            const g = o.governorate || "غير محدد";
+            if (!map[g]) map[g] = { gov: g, orders: 0, items: 0, revenue: 0 };
+            map[g].orders++;
+            map[g].revenue += Number(o.total_amount || 0);
+            (Array.isArray(o.items) ? o.items : []).forEach(i => map[g].items += Number(i.quantity || 0));
+        });
+        const list = Object.values(map).sort((a, b) => b.revenue - a.revenue);
+        const totalRev = list.reduce((s, x) => s + x.revenue, 0);
+
+        const set = (id, v) => { const e = document.getElementById(id); if (e) e.textContent = v; };
+        set("govKpiCount", list.length);
+        set("govKpiTop", list[0]?.gov || "-");
+        set("govKpiRevenue", totalRev.toLocaleString("en-US"));
+
+        if (!list.length) { el.innerHTML = `<tr><td colspan="7" style="text-align:center;padding:35px;color:#64748b;">لا توجد بيانات</td></tr>`; return; }
+
+        el.innerHTML = list.map((g, i) => {
+            const pct = totalRev > 0 ? Math.round((g.revenue / totalRev) * 100) : 0;
+            return `<tr><td style="font-weight:800;color:#94a3b8;">${i+1}</td><td><strong>${escapeAdminHTML(g.gov)}</strong></td><td style="text-align:center;font-weight:800;">${g.orders}</td><td style="text-align:center;font-weight:800;">${g.items}</td><td class="amount-cell">${g.revenue.toLocaleString("en-US")} <span class="currency">ج.م</span></td><td class="amount-cell" style="font-size:13px;color:#64748b;">${Math.round(g.revenue / g.orders).toLocaleString("en-US")} ج.م</td><td><div class="gov-bar"><div class="gov-bar-fill" style="width:${pct}%"></div></div><div style="font-size:11px;color:#64748b;margin-top:4px;font-weight:700;">${pct}%</div></td></tr>`;
+        }).join("");
+    } catch (err) {
+        if (el) el.innerHTML = `<tr><td colspan="7" style="text-align:center;padding:30px;color:#dc2626;font-weight:700;">حدث خطأ: ${escapeAdminHTML(err.message)}</td></tr>`;
+    }
+}
+
+function exportGovernorateCSV() {
+    const rows = Array.from(document.querySelectorAll("#govList tr")).map(tr =>
+        Array.from(tr.querySelectorAll("td")).map(td => td.innerText.trim())
+    );
+    if (!rows.length) { alert("لا توجد بيانات"); return; }
+    downloadCSV([["#","Governorate","Orders","Items","Revenue","AOV","Percent"], ...rows], `step-governorate-${Date.now()}.csv`);
+}
+
+// ========================================
+// 69. CUSTOMERS REPORT
+// ========================================
+
+async function loadCustomersReport() {
+    const listEl = document.getElementById("customersList");
+    if (listEl) listEl.innerHTML = `<tr><td colspan="9" style="text-align:center;padding:30px;color:#94a3b8;">جاري التحميل...</td></tr>`;
+
+    const client = getSupabaseClient();
+    if (!client) return;
+
+    try {
+        const [ordersRes, profilesRes] = await Promise.all([
+            client.from("orders").select("*").order("created_at", { ascending: false }),
+            client.from("customer_profiles").select("id, full_name, phone")
+        ]);
+        if (ordersRes.error) throw ordersRes.error;
+
+        const orders = ordersRes.data || [];
+        const profiles = profilesRes.data || [];
+
+        const byPhone = {}, byId = {};
+        profiles.forEach(p => { if (p.phone) byPhone[String(p.phone)] = p; if (p.id) byId[String(p.id)] = p; });
+
+        const map = new Map();
+        orders.forEach(o => {
+            const k = o.customer_id ? `id:${o.customer_id}` : `phone:${o.customer_phone || "unknown"}`;
+            if (!map.has(k)) {
+                const p = o.customer_id ? byId[String(o.customer_id)] : byPhone[String(o.customer_phone)];
+                map.set(k, { key: k, name: p?.full_name || o.customer_name || "عميل", phone: p?.phone || o.customer_phone || "-", ordersCount: 0, totalSpent: 0, firstOrderAt: o.created_at, lastOrderAt: o.created_at, orders: [] });
+            }
+            const c = map.get(k);
+            c.ordersCount++;
+            c.totalSpent += Number(o.total_amount || 0);
+            c.orders.push(o);
+            if (new Date(o.created_at) < new Date(c.firstOrderAt)) c.firstOrderAt = o.created_at;
+            if (new Date(o.created_at) > new Date(c.lastOrderAt)) c.lastOrderAt = o.created_at;
+        });
+
+        customersReportRaw = Array.from(map.values());
+
+        const sorted = [...customersReportRaw].sort((a, b) => b.totalSpent - a.totalSpent);
+        const vipCount = Math.max(1, Math.ceil(sorted.length * 0.2));
+        const vipKeys = new Set(sorted.slice(0, vipCount).filter(c => c.ordersCount >= 2).map(c => c.key));
+        customersReportRaw.forEach(c => {
+            c.isVIP = vipKeys.has(c.key);
+            c.type = c.ordersCount === 1 ? "new" : "repeat";
+        });
+
+        renderCustomersKPIs();
+        renderCustomersTable();
+    } catch (err) {
+        console.error(err);
+        if (listEl) listEl.innerHTML = `<tr><td colspan="9" style="text-align:center;padding:30px;color:#dc2626;font-weight:700;">حدث خطأ: ${escapeAdminHTML(err.message)}</td></tr>`;
+    }
+}
+
+function renderCustomersKPIs() {
+    const c = customersReportRaw;
+    const total = c.length;
+    const totalSpent = c.reduce((s, x) => s + x.totalSpent, 0);
+    const ltv = total > 0 ? totalSpent / total : 0;
+    const newCount = c.filter(x => x.type === "new").length;
+    const repeat = c.filter(x => x.type === "repeat").length;
+    const rr = total > 0 ? Math.round((repeat / total) * 100) : 0;
+    const set = (id, v) => { const e = document.getElementById(id); if (e) e.textContent = v; };
+    set("customersKpiTotal", total.toLocaleString("en-US"));
+    set("customersKpiLTV", Math.round(ltv).toLocaleString("en-US"));
+    set("customersKpiNew", newCount.toLocaleString("en-US"));
+    set("customersKpiRepeatRate", `${rr}%`);
+}
+
+function setCustomerType(type, btnEl) {
+    customersReportFilters.type = type;
+    document.querySelectorAll(".customer-type-chips .preset-chip").forEach(b => b.classList.toggle("active", b.dataset.type === type));
+    renderCustomersTable();
+}
+
+function renderCustomersTable() {
+    const listEl = document.getElementById("customersList");
+    const countEl = document.getElementById("customersCount");
+    if (!listEl) return;
+
+    let list = [...customersReportRaw];
+    const t = customersReportFilters.type;
+    if (t === "vip") list = list.filter(c => c.isVIP);
+    else if (t === "new") list = list.filter(c => c.type === "new");
+    else if (t === "repeat") list = list.filter(c => c.type === "repeat");
+
+    const s = (customersReportFilters.search || "").trim().toLowerCase();
+    if (s) list = list.filter(c => String(c.name).toLowerCase().includes(s) || String(c.phone).toLowerCase().includes(s));
+
+    const sort = customersReportFilters.sort;
+    list.sort((a, b) => {
+        if (sort === "spent_desc") return b.totalSpent - a.totalSpent;
+        if (sort === "orders_desc") return b.ordersCount - a.ordersCount;
+        if (sort === "recent") return new Date(b.lastOrderAt) - new Date(a.lastOrderAt);
+        if (sort === "name") return String(a.name).localeCompare(String(b.name), "ar");
+        return 0;
+    });
+
+    if (countEl) countEl.textContent = `${list.length} عميل`;
+    if (!list.length) { listEl.innerHTML = `<tr><td colspan="9" style="text-align:center;padding:35px;color:#64748b;">لا يوجد عملاء مطابقين</td></tr>`; return; }
+
+    listEl.innerHTML = list.map((c, i) => {
+        const aov = c.ordersCount > 0 ? c.totalSpent / c.ordersCount : 0;
+        const tb = c.type === "new" ? `<span class="type-badge new"><i class="fa-solid fa-user-plus"></i> جديد</span>` : `<span class="type-badge repeat"><i class="fa-solid fa-repeat"></i> متكرر</span>`;
+        const vb = c.isVIP ? `<span class="vip-badge"><i class="fa-solid fa-crown"></i> VIP</span>` : "";
+        return `<tr><td style="font-weight:800;color:#94a3b8;">${i+1}</td><td><div class="customer-cell-modern"><strong>${escapeAdminHTML(c.name)}</strong><small>${c.ordersCount} طلب</small>${vb}</div></td><td class="phone-cell"><div class="phone" style="direction:ltr;justify-content:flex-end;">${escapeAdminHTML(c.phone)}</div></td><td style="text-align:center;font-weight:800;font-size:15px;">${c.ordersCount}</td><td class="amount-cell">${c.totalSpent.toLocaleString("en-US")} <span class="currency">ج.م</span></td><td class="amount-cell" style="font-size:13px;color:#64748b;">${Math.round(aov).toLocaleString("en-US")} ج.م</td><td class="date-cell">${formatDate(c.lastOrderAt)}</td><td>${tb}</td><td><button type="button" class="action-icon-btn preview" onclick="showCustomerDetails('${escapeAdminHTML(c.key)}')"><i class="fa-solid fa-eye"></i></button></td></tr>`;
+    }).join("");
+}
+
+function showCustomerDetails(key) {
+    const c = customersReportRaw.find(x => x.key === key);
+    if (!c || !orderModal || !orderModalDetails) return;
+
+    const ordersHTML = c.orders.sort((a, b) => new Date(b.created_at) - new Date(a.created_at)).map(o => {
+        const pm = (o.payment_method || "unknown").toLowerCase();
+        const m = PAYMENT_METHODS_META[pm] || PAYMENT_METHODS_META.unknown;
+        const cls = pm === "cash" ? "cash" : pm === "instapay" ? "instapay" : "unknown";
+        return `<div class="order-detail-item" style="cursor:pointer;" onclick="viewOrderDetails(${Number(o.id)})"><div class="order-detail-info"><h4>طلب #${escapeAdminHTML(o.id)}</h4><div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:6px;">${getStatusBadge(o.status)}<span class="payment-badge ${cls}"><i class="fa-solid ${m.icon}"></i> ${escapeAdminHTML(m.text)}</span></div><div style="font-size:12px;color:#64748b;margin-top:8px;">${formatDate(o.created_at)}</div></div><div class="order-detail-price">${Number(o.total_amount || 0).toLocaleString("en-US")} ج</div></div>`;
+    }).join("");
+
+    const aov = c.ordersCount > 0 ? c.totalSpent / c.ordersCount : 0;
+    orderModalDetails.innerHTML = `<h3 style="margin-bottom:14px;"><i class="fa-solid fa-user"></i> ملف العميل</h3><div style="background:#f8fafc;padding:16px;border-radius:12px;margin-bottom:18px;line-height:1.9;"><div><strong>الاسم:</strong> ${escapeAdminHTML(c.name)}</div><div><strong>الهاتف:</strong> <span style="direction:ltr;display:inline-block;">${escapeAdminHTML(c.phone)}</span></div><div><strong>عدد الطلبات:</strong> ${c.ordersCount}</div><div><strong>إجمالي الشراء:</strong> <span style="color:#16a34a;font-weight:800;">${c.totalSpent.toLocaleString("en-US")} ج.م</span></div><div><strong>متوسط الطلب:</strong> ${Math.round(aov).toLocaleString("en-US")} ج.م</div><div><strong>أول طلب:</strong> ${formatDate(c.firstOrderAt)}</div><div><strong>آخر طلب:</strong> ${formatDate(c.lastOrderAt)}</div>${c.isVIP ? `<div style="margin-top:8px;"><span class="vip-badge"><i class="fa-solid fa-crown"></i> عميل VIP</span></div>` : ""}</div><h4 style="margin-bottom:10px;"><i class="fa-solid fa-box"></i> سجل الطلبات (${c.ordersCount})</h4>${ordersHTML}`;
+    orderModal.classList.add("open");
+}
+
+function exportCustomersCSV() {
+    if (!customersReportRaw.length) { alert("لا توجد بيانات"); return; }
+    let list = [...customersReportRaw];
+    const t = customersReportFilters.type;
+    if (t === "vip") list = list.filter(c => c.isVIP);
+    else if (t === "new") list = list.filter(c => c.type === "new");
+    else if (t === "repeat") list = list.filter(c => c.type === "repeat");
+    const s = (customersReportFilters.search || "").trim().toLowerCase();
+    if (s) list = list.filter(c => String(c.name).toLowerCase().includes(s) || String(c.phone).toLowerCase().includes(s));
+    const headers = [
+        "Customer Name",
+        "Phone",
+        "Orders Count",
+        "Total Spent",
+        "AOV",
+        "First Order",
+        "Last Order",
+        "Type",
+        "VIP"
+    ];
+
+    const rows = list.map(c => {
+        const aov = c.ordersCount > 0 ? c.totalSpent / c.ordersCount : 0;
+        return [
+            c.name || "",
+            c.phone || "",
+            c.ordersCount,
+            c.totalSpent,
+            Math.round(aov),
+            formatDateForCSV(c.firstOrderAt),
+            formatDateForCSV(c.lastOrderAt),
+            c.type === "new" ? "جديد" : "متكرر",
+            c.isVIP ? "نعم" : "لا"
+        ];
+    });
+
+    downloadCSV([headers, ...rows], `step-customers-${Date.now()}.csv`);
+}
+
+// ========================================
+// 70. PRODUCTS PERFORMANCE
+// ========================================
+
+async function loadProductsReport() {
+    const listEl = document.getElementById("productsReportList");
+    if (listEl) listEl.innerHTML = `<tr><td colspan="7" style="text-align:center;padding:30px;color:#94a3b8;">جاري التحميل...</td></tr>`;
+
+    try {
+        const orders = await _fetchOrdersInRange(prodReportFilters);
+        const map = {};
+        orders.forEach(o => (Array.isArray(o.items) ? o.items : []).forEach(item => {
+            const k = String(item.id ?? item.name);
+            if (!map[k]) {
+                const product = adminProducts.find(p => Number(p.id) === Number(item.id));
+                map[k] = {
+                    id: item.id, name: item.name || "منتج", image: item.image || "",
+                    quantity: 0, revenue: 0,
+                    stock: product ? getAvailableStock(product) : null
+                };
+            }
+            map[k].quantity += Number(item.quantity || 1);
+            map[k].revenue += Number(item.quantity || 1) * Number(item.price || 0);
+        }));
+
+        const list = Object.values(map).sort((a, b) => b.revenue - a.revenue);
+        productsReportData = list;
+
+        const totalItems = list.reduce((s, p) => s + p.quantity, 0);
+        const totalRev = list.reduce((s, p) => s + p.revenue, 0);
+
+        const set = (id, v) => { const e = document.getElementById(id); if (e) e.textContent = v; };
+        set("prodKpiTotal", list.length);
+        set("prodKpiItems", totalItems.toLocaleString("en-US"));
+        set("prodKpiRevenue", totalRev.toLocaleString("en-US"));
+        set("prodKpiTop", list[0]?.name || "-");
+
+        if (!list.length) { listEl.innerHTML = `<tr><td colspan="7" style="text-align:center;padding:35px;color:#64748b;">لا توجد مبيعات</td></tr>`; return; }
+
+        listEl.innerHTML = list.map((p, i) => {
+            let stockBadge = "-";
+            if (p.stock !== null) {
+                const cls = p.stock === 0 ? "out" : p.stock <= 5 ? "low" : "good";
+                stockBadge = `<span class="stock-pill ${cls}">${p.stock}</span>`;
+            }
+            return `<tr><td style="font-weight:800;color:#94a3b8;">${i+1}</td><td>${p.image ? `<img src="${escapeAdminHTML(p.image)}" style="width:45px;height:45px;border-radius:10px;object-fit:cover;">` : `<div style="width:45px;height:45px;border-radius:10px;background:#f1f5f9;display:flex;align-items:center;justify-content:center;color:#94a3b8;"><i class="fa-solid fa-image"></i></div>`}</td><td><strong>${escapeAdminHTML(p.name)}</strong></td><td style="text-align:center;font-weight:800;color:#8b5cf6;font-size:15px;">${p.quantity}</td><td class="amount-cell">${p.revenue.toLocaleString("en-US")} <span class="currency">ج.م</span></td><td style="text-align:center;">${stockBadge}</td><td><span style="font-size:12px;color:#16a34a;font-weight:800;">مبيع</span></td></tr>`;
+        }).join("");
+    } catch (err) {
+        if (listEl) listEl.innerHTML = `<tr><td colspan="7" style="text-align:center;padding:30px;color:#dc2626;font-weight:700;">حدث خطأ: ${escapeAdminHTML(err.message)}</td></tr>`;
+    }
+}
+
+function exportProductsCSV() {
+    if (!productsReportData.length) { alert("لا توجد بيانات"); return; }
+    const headers = ["#","Product","Qty Sold","Revenue","Stock"];
+    const rows = productsReportData.map((p, i) => [
+        i + 1,
+        p.name || "",
+        p.quantity,
+        p.revenue,
+        p.stock ?? "-"
+    ]);
+    downloadCSV([headers, ...rows], `step-products-${Date.now()}.csv`);
+}
+
+// ========================================
+// 71. INVENTORY MOVEMENTS REPORT
+// ========================================
+
+async function loadInventoryReport() {
+    const listEl = document.getElementById("inventoryReportList");
+    if (listEl) listEl.innerHTML = `<tr><td colspan="7" style="text-align:center;padding:30px;color:#94a3b8;">جاري التحميل...</td></tr>`;
+
+    const client = getSupabaseClient();
+    if (!client) return;
+
+    try {
+        const { data, error } = await client.from("inventory_movements").select("*").order("created_at", { ascending: false }).limit(500);
+        if (error) throw error;
+        inventoryReportData = data || [];
+        renderInventoryReport();
+    } catch (err) {
+        if (listEl) listEl.innerHTML = `<tr><td colspan="7" style="text-align:center;padding:30px;color:#dc2626;font-weight:700;">حدث خطأ: ${escapeAdminHTML(err.message)}</td></tr>`;
+    }
+}
+
+function renderInventoryReport() {
+    const listEl = document.getElementById("inventoryReportList");
+    if (!listEl) return;
+
+    let list = [...inventoryReportData];
+    const s = (document.getElementById("invReportSearch")?.value || "").trim().toLowerCase();
+    const t = document.getElementById("invReportType")?.value || "all";
+
+    if (t !== "all") list = list.filter(m => m.movement_type === t);
+    if (s) {
+        list = list.filter(m => {
+            const p = adminProducts.find(x => Number(x.id) === Number(m.product_id));
+            return String(p?.name || "").toLowerCase().includes(s) || String(m.reason || "").toLowerCase().includes(s);
+        });
+    }
+
+    const totalIn = list.filter(m => Number(m.quantity) > 0).reduce((s, m) => s + Number(m.quantity), 0);
+    const totalOut = list.filter(m => Number(m.quantity) < 0).reduce((s, m) => s + Math.abs(Number(m.quantity)), 0);
+
+    const set = (id, v) => { const e = document.getElementById(id); if (e) e.textContent = v; };
+    set("invReportKpiTotal", list.length.toLocaleString("en-US"));
+    set("invReportKpiIn", totalIn.toLocaleString("en-US"));
+    set("invReportKpiOut", totalOut.toLocaleString("en-US"));
+
+    if (!list.length) { listEl.innerHTML = `<tr><td colspan="7" style="text-align:center;padding:35px;color:#64748b;">لا توجد حركات</td></tr>`; return; }
+
+    const typeLabels = { purchase: "شراء", sale: "بيع", damage: "تلف", adjustment: "تسوية", initial: "رصيد افتتاحي", return: "مرتجع" };
+    const typeColors = {
+        purchase: { bg: "#dcfce7", color: "#16a34a" },
+        sale: { bg: "#dbeafe", color: "#2563eb" },
+        damage: { bg: "#fee2e2", color: "#dc2626" },
+        adjustment: { bg: "#fef3c7", color: "#d97706" },
+        initial: { bg: "#f3e8ff", color: "#8b5cf6" },
+        return: { bg: "#fed7aa", color: "#c2410c" }
+    };
+
+    listEl.innerHTML = list.map(m => {
+        const p = adminProducts.find(x => Number(x.id) === Number(m.product_id));
+        const c = typeColors[m.movement_type] || { bg: "#f1f5f9", color: "#64748b" };
+        const qty = Number(m.quantity);
+        const sign = qty > 0 ? "+" : "";
+        const qtyColor = qty > 0 ? "#16a34a" : "#dc2626";
+        return `<tr><td class="date-cell">${formatDate(m.created_at)}</td><td><strong>${escapeAdminHTML(p?.name || "منتج محذوف")}</strong></td><td><span style="display:inline-block;padding:4px 10px;border-radius:8px;font-size:11px;font-weight:800;background:${c.bg};color:${c.color};">${escapeAdminHTML(typeLabels[m.movement_type] || m.movement_type)}</span></td><td style="font-weight:800;color:${qtyColor};font-size:15px;">${sign}${qty}</td><td style="font-weight:800;">${m.new_stock ?? "-"}</td><td style="font-size:12px;color:#475569;">${escapeAdminHTML(m.reason || "-")}</td><td style="font-size:12px;color:#94a3b8;">${escapeAdminHTML(m.performed_by_username || "system")}</td></tr>`;
+    }).join("");
+}
+
+function exportInventoryCSV() {
+    if (!inventoryReportData.length) {
+        alert("لا توجد بيانات");
+        return;
+    }
+
+    const typeLabels = {
+        purchase: "شراء",
+        sale: "بيع",
+        damage: "تلف",
+        adjustment: "تسوية",
+        initial: "رصيد افتتاحي",
+        return: "مرتجع"
+    };
+
+    const headers = [
+        "Date",
+        "Product",
+        "Type",
+        "Change",
+        "New Stock",
+        "Reason",
+        "By"
+    ];
+
+    const rows = inventoryReportData.map(m => {
+        const p = adminProducts.find(x => Number(x.id) === Number(m.product_id));
+        return [
+            formatDateForCSV(m.created_at),
+            p?.name || "منتج محذوف",
+            typeLabels[m.movement_type] || m.movement_type || "",
+            Number(m.quantity || 0),
+            Number(m.new_stock || 0),
+            m.reason || "",
+            m.performed_by_username || "system"
+        ];
+    });
+
+    downloadCSV([headers, ...rows], `step-inventory-${Date.now()}.csv`);
+}
+// ========================================
+// 72. STATUS REPORT
+// ========================================
+
+async function loadStatusReport() {
+    const el = document.getElementById("statusFullBreakdown");
+    if (el) el.innerHTML = `<div class="empty-state"><i class="fa-solid fa-spinner fa-spin"></i></div>`;
+
+    try {
+        const orders = await _fetchOrdersInRange(statusReportFilters);
+        const map = {};
+        orders.forEach(o => { const s = o.status || "unknown"; map[s] = (map[s] || 0) + 1; });
+
+        const total = orders.length;
+        const delivered = orders.filter(o => o.status === "delivered").length;
+        const cancelled = orders.filter(o => o.status === "cancelled").length;
+        const active = orders.filter(o => ["pending","preparing","shipped"].includes(o.status)).length;
+
+        const set = (id, v) => { const e = document.getElementById(id); if (e) e.textContent = v; };
+        set("statusKpiTotal", total);
+        set("statusKpiDelivered", delivered);
+        set("statusKpiActive", active);
+        set("statusKpiCancelled", cancelled);
+
+        const entries = Object.entries(map).sort((a, b) => b[1] - a[1]);
+        if (!entries.length) { el.innerHTML = `<div class="empty-state"><p>لا توجد بيانات</p></div>`; return; }
+
+        el.innerHTML = entries.map(([s, c]) => {
+            const pct = total > 0 ? Math.round((c / total) * 100) : 0;
+            return `<div class="breakdown-item"><div style="flex:1;display:flex;align-items:center;gap:12px;">${getStatusBadge(s)}<div style="font-size:12px;color:#64748b;font-weight:700;">${pct}%</div></div><div class="breakdown-value">${c} طلب</div></div>`;
+        }).join("");
+    } catch (err) {
+        if (el) el.innerHTML = `<div class="empty-state" style="color:#dc2626;"><p>حدث خطأ: ${escapeAdminHTML(err.message)}</p></div>`;
+    }
+}
+
+// ========================================
+// 73. EXCHANGE / RETURN REPORT
+// ========================================
+
+async function loadExchangeReport() {
+    const listEl = document.getElementById("exchangeList");
+    if (listEl) listEl.innerHTML = `<tr><td colspan="8" style="text-align:center;padding:30px;color:#94a3b8;">جاري التحميل...</td></tr>`;
+
+    try {
+        const orders = await _fetchOrdersInRange(exchangeReportFilters);
+        const relevant = orders.filter(o => ["return_requested","return_received","refunded","exchange_requested","exchange_received","exchange_shipped","exchanged"].includes(o.status));
+        exchangeReportData = relevant;
+
+        const returns = relevant.filter(o => o.status.startsWith("return")).length;
+        const exchanges = relevant.filter(o => o.status.startsWith("exchange")).length;
+        const completed = relevant.filter(o => ["refunded","exchanged"].includes(o.status)).length;
+        const value = relevant.reduce((s, o) => s + Number(o.total_amount || 0), 0);
+
+        const set = (id, v) => { const e = document.getElementById(id); if (e) e.textContent = v; };
+        set("exchKpiReturns", returns);
+        set("exchKpiExchanges", exchanges);
+        set("exchKpiCompleted", completed);
+        set("exchKpiValue", value.toLocaleString("en-US"));
+
+        if (!relevant.length) { listEl.innerHTML = `<tr><td colspan="8" style="text-align:center;padding:35px;color:#64748b;">لا توجد طلبات استبدال أو استرجاع</td></tr>`; return; }
+
+        listEl.innerHTML = relevant.map(o => {
+            const reason = o.return_reason || o.exchange_reason || "-";
+            return `<tr><td class="order-id-cell"><span>#</span>${escapeAdminHTML(o.id)}</td><td class="customer-cell"><strong>${escapeAdminHTML(o.customer_name || "عميل")}</strong></td><td class="phone-cell"><div class="phone" style="direction:ltr;justify-content:flex-end;">${escapeAdminHTML(o.customer_phone || "-")}</div></td><td class="date-cell">${formatDate(o.created_at)}</td><td>${getStatusBadge(o.status)}</td><td class="amount-cell">${Number(o.total_amount || 0).toLocaleString("en-US")} <span class="currency">ج.م</span></td><td style="font-size:12px;color:#475569;">${escapeAdminHTML(reason)}</td><td><button type="button" class="action-icon-btn preview" onclick="viewOrderDetails(${Number(o.id)})"><i class="fa-solid fa-eye"></i></button></td></tr>`;
+        }).join("");
+    } catch (err) {
+        if (listEl) listEl.innerHTML = `<tr><td colspan="8" style="text-align:center;padding:30px;color:#dc2626;font-weight:700;">حدث خطأ: ${escapeAdminHTML(err.message)}</td></tr>`;
+    }
+}
+
+// ========================================
+// 74. CSV HELPER
+// ========================================
+
+function formatDateForCSV(dateValue) {
+    if (!dateValue) return "";
+    const d = new Date(dateValue);
+    if (isNaN(d.getTime())) return "";
+    const pad = n => String(n).padStart(2, "0");
+    return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
+
+// ✅ خريطة تحويل حالات الطلبات للعربي
+function getStatusLabelArabic(status) {
+    const map = {
+        pending: "جديدة",
+        preparing: "قيد التحضير",
+        shipped: "تم الشحن",
+        delivered: "تم التوصيل",
+        return_requested: "طلب استرجاع",
+        return_received: "تم استلام المنتج للاسترجاع",
+        returned: "تم الاسترجاع",
+        refunded: "تم رد المبلغ",
+        exchange_requested: "طلب استبدال",
+        exchange_received: "تم استلام المنتج للاستبدال",
+        exchange_shipped: "تم شحن البديل",
+        exchanged: "تم الاستبدال",
+        cancelled: "ملغى"
+    };
+    return map[status] || status || "";
+}
+
+function downloadCSV(rows, filename) {
+    // ✅ Excel في المنطقة العربية بيستخدم ; كفاصل افتراضي
+    const SEP = ";";
+
+    const escapeCell = (cell, colIndex, headers) => {
+        if (cell == null) return "";
+        let v = String(cell);
+
+        // ✅ لو رقم موبايل → نستخدم صيغة ="" عشان Excel يخليه نص بدون Tab
+        if (/^0\d{9,}$/.test(v)) {
+            return `"=""${v}"""`;
+        }
+
+        if (
+            v.includes(SEP) ||
+            v.includes('"') ||
+            v.includes("\n") ||
+            v.includes("\r")
+        ) {
+            return `"${v.replace(/"/g, '""')}"`;
+        }
+        return v;
+    };
+
+    const headers = rows[0] || [];
+
+    const csv = rows
+        .map(row => row.map((cell, i) => escapeCell(cell, i, headers)).join(SEP))
+        .join("\r\n");
+
+    const blob = new Blob(["\uFEFF" + csv], {
+        type: "text/csv;charset=utf-8;"
+    });
+
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = filename;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+
+    showToast("تم تصدير الملف ✅");
+}
+
+// ========================================
+// 75. WIRE INPUTS
+// ========================================
+
+document.addEventListener("DOMContentLoaded", () => {
+    const s = document.getElementById("customersSearchInput");
+    if (s) {
+        let t;
+        s.addEventListener("input", e => { clearTimeout(t); t = setTimeout(() => { customersReportFilters.search = e.target.value; renderCustomersTable(); }, 250); });
+    }
+    const so = document.getElementById("customersSortSelect");
+    if (so) so.addEventListener("change", e => { customersReportFilters.sort = e.target.value; renderCustomersTable(); });
+
+    const is = document.getElementById("invReportSearch");
+    if (is) is.addEventListener("input", renderInventoryReport);
+    const it = document.getElementById("invReportType");
+    if (it) it.addEventListener("change", renderInventoryReport);
+});
+
+// ========================================
+// 76. GLOBAL EXPORTS
+// ========================================
+
+window.openReport = openReport;
+window.backToReportsHome = backToReportsHome;
+window.setSalesPreset = setSalesPreset;
+window.applySalesFilters = applySalesFilters;
+window.setDailyPreset = setDailyPreset;
+window.setGovPreset = setGovPreset;
+window.setProdPreset = setProdPreset;
+window.setStatusPreset = setStatusPreset;
+window.setExchangePreset = setExchangePreset;
+window.exportSalesCSV = exportSalesCSV;
+window.exportCustomersCSV = exportCustomersCSV;
+window.exportGovernorateCSV = exportGovernorateCSV;
+window.exportProductsCSV = exportProductsCSV;
+window.exportInventoryCSV = exportInventoryCSV;
+window.setCustomerType = setCustomerType;
+window.showCustomerDetails = showCustomerDetails;
+window.loadDailyReport = loadDailyReport;
+window.loadGovernorateReport = loadGovernorateReport;
+window.loadProductsReport = loadProductsReport;
+window.loadInventoryReport = loadInventoryReport;
+window.loadStatusReport = loadStatusReport;
+window.loadExchangeReport = loadExchangeReport;

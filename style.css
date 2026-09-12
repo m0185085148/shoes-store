@@ -534,3 +534,93 @@ img{max-width:100%;display:block}
   text-decoration:none;transition:all .2s
 }
 .success-account-prompt a:hover{background:#0369a1;transform:translateY(-1px)}
+/* =========================================
+   PAYMENT METHODS
+   ========================================= */
+
+.payment-methods {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+}
+
+.payment-option {
+    cursor: pointer;
+    position: relative;
+}
+
+.payment-option input[type="radio"] {
+    position: absolute;
+    opacity: 0;
+    pointer-events: none;
+}
+
+.payment-option-content {
+    padding: 14px;
+    border: 2px solid #e5e7eb;
+    border-radius: 12px;
+    background: #fff;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    transition: all 0.2s ease;
+}
+
+.payment-option-content i {
+    font-size: 20px;
+    color: #94a3b8;
+    flex-shrink: 0;
+    transition: color 0.2s ease;
+}
+
+.payment-option-content strong {
+    display: block;
+    font-size: 13px;
+    font-weight: 700;
+    color: #1f2937;
+    margin-bottom: 2px;
+}
+
+.payment-option-content small {
+    display: block;
+    font-size: 11px;
+    color: #94a3b8;
+}
+
+.payment-option:hover .payment-option-content {
+    border-color: #cbd5e1;
+    background: #fafbfc;
+}
+
+.payment-option input:checked + .payment-option-content {
+    border-color: #111;
+    background: #f9fafb;
+}
+
+.payment-option input:checked + .payment-option-content i {
+    color: #111;
+}
+
+.payment-option input:checked + .payment-option-content::after {
+    content: "\f00c";
+    font-family: "Font Awesome 6 Free";
+    font-weight: 900;
+    position: absolute;
+    top: 8px;
+    left: 8px;
+    width: 18px;
+    height: 18px;
+    background: #16a34a;
+    color: #fff;
+    border-radius: 50%;
+    font-size: 9px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+@media (max-width: 500px) {
+    .payment-methods {
+        grid-template-columns: 1fr;
+    }
+}

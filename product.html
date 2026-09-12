@@ -184,6 +184,33 @@
         <textarea id="orderNotes" rows="2" placeholder="أي تفاصيل تحب تضيفها (اختياري)"></textarea>
       </div>
 
+      <div class="form-group">
+        <label>طريقة الدفع *</label>
+        <div class="payment-methods">
+          <label class="payment-option">
+            <input type="radio" name="paymentMethod" value="cash" checked>
+            <div class="payment-option-content">
+              <i class="fa-solid fa-money-bill-wave"></i>
+              <div>
+                <strong>كاش عند الاستلام</strong>
+                <small>ادفع لما توصلك</small>
+              </div>
+            </div>
+          </label>
+
+          <label class="payment-option">
+            <input type="radio" name="paymentMethod" value="instapay">
+            <div class="payment-option-content">
+              <i class="fa-solid fa-mobile-screen"></i>
+              <div>
+                <strong>InstaPay</strong>
+                <small>تحويل فوري</small>
+              </div>
+            </div>
+          </label>
+        </div>
+      </div>
+
       <div id="shippingHint" style="
         display:none;
         padding:10px 14px;
