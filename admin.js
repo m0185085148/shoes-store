@@ -1663,7 +1663,7 @@ function sendWhatsAppStatusUpdate(orderId) {
     const totalAmount = Number(order.total_amount || 0).toLocaleString("en-US");
 
     const messages = {
-        payment_pending: `مرحباً ${customerName}\n\nتم استلام طلبك رقم #${order.id} من متجر STEP.\n\n==========\nلإتمام الدفع عبر إنستاباي\n==========\n\nرقم إنستاباي:\n01120915594\n\nاسم الحساب:\nSTEP Store\n\nالمبلغ المطلوب:\n${totalAmount} جنيه\n\n==========\n\nبعد التحويل، ابعتلنا صورة الإيصال هنا على واتساب عشان نأكد طلبك في أسرع وقت.\n\nلتتبع طلبك:\n${trackingUrl}`,
+        payment_pending: `مرحباً ${customerName}\n\nتم استلام طلبك رقم #${order.id} من متجر STEP.\n\n==========\nلإتمام الدفع عبر إنستاباي\n==========\n\nرقم إنستاباي:\n01120915594\n\nاسم الحساب:\nMohamed El Hanafy\n\nالمبلغ المطلوب:\n${totalAmount} جنيه\n\n==========\n\nبعد التحويل، ابعتلنا صورة الإيصال هنا على واتساب عشان نأكد طلبك في أسرع وقت.\n\nلتتبع طلبك:\n${trackingUrl}`,
         pending: `مرحباً ${customerName}\n\nتم استلام طلبك رقم #${order.id} من متجر STEP بنجاح.\n\nلتتبع طلبك:\n${trackingUrl}`,
         preparing: `مرحباً ${customerName}\n\nجاري تجهيز طلبك رقم #${order.id} من متجر STEP.\n\nلتتبع طلبك:\n${trackingUrl}`,
         shipped: `مرحباً ${customerName}\n\nبشرى سارة! تم شحن طلبك رقم #${order.id} وهو في طريقه إليك.\n\nلتتبع طلبك مباشرة:\n${trackingUrl}`,
