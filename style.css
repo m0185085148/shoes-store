@@ -1736,3 +1736,77 @@ img{max-width:100%;display:block}
     background: #1ebe5b;
     transform: translateY(-2px);
 }
+/* ===== INSTAPAY PENDING BANNER ===== */
+.instapay-pending-banner {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    left: 20px;
+    max-width: 480px;
+    margin: 0 auto;
+    background: linear-gradient(135deg, #2563eb, #1d4ed8);
+    color: #fff;
+    padding: 14px 18px;
+    border-radius: 14px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    box-shadow: 0 10px 30px rgba(37, 99, 235, 0.35);
+    cursor: pointer;
+    z-index: 4000;
+    animation: bannerSlideUp .4s ease;
+}
+
+@keyframes bannerSlideUp {
+    from { opacity: 0; transform: translateY(20px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+.instapay-pending-banner > i {
+    font-size: 24px;
+    flex-shrink: 0;
+}
+
+.instapay-pending-banner strong {
+    display: block;
+    font-size: 13px;
+    font-weight: 800;
+    margin-bottom: 3px;
+}
+
+.instapay-pending-banner small {
+    display: block;
+    font-size: 11px;
+    color: #bfdbfe;
+}
+
+.instapay-pending-close {
+    width: 30px;
+    height: 30px;
+    border-radius: 8px;
+    background: rgba(255, 255, 255, 0.15);
+    color: #fff;
+    border: 0;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 12px;
+    flex-shrink: 0;
+    transition: all .2s ease;
+}
+
+.instapay-pending-close:hover {
+    background: rgba(255, 255, 255, 0.3);
+}
+
+@media (max-width: 500px) {
+    .instapay-pending-banner {
+        right: 12px;
+        left: 12px;
+        bottom: 12px;
+        padding: 12px 14px;
+    }
+    .instapay-pending-banner strong { font-size: 12px; }
+    .instapay-pending-banner > i { font-size: 20px; }
+}

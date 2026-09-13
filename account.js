@@ -66,14 +66,14 @@ function escapeHTML(value) {
 }
 
 function formatPrice(n) {
-    return Number(n || 0).toLocaleString('ar-EG');
+    return Number(n || 0).toLocaleString('en-US');
 }
 
 function formatDate(dateValue) {
     if (!dateValue) return "-";
     const date = new Date(dateValue);
     if (isNaN(date.getTime())) return "-";
-    return date.toLocaleString("ar-EG", {
+    return date.toLocaleString("ar-EG-u-nu-latn", {
         year: "numeric",
         month: "short",
         day: "numeric",

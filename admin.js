@@ -254,9 +254,13 @@ function normalizeBadge(value) {
     return text;
 }
 
+// ✅ رابط الموقع اللايف (Vercel)
+// لو هتغيّر الدومين بعدين، عدّل السطر ده بس
+const SITE_BASE_URL = 'https://shoes-store-egypt.vercel.app';
+
 function getTrackingUrl(orderId, customerPhone) {
-    const baseUrl = window.location.origin;
-    return `${baseUrl}/track.html?id=${orderId}&phone=${encodeURIComponent(customerPhone)}`;
+    if (!SITE_BASE_URL) return null;
+    return `${SITE_BASE_URL}/track.html?id=${orderId}&phone=${encodeURIComponent(customerPhone)}`;
 }
 
 function getProductById(id) {
@@ -1152,6 +1156,9 @@ async function loadAdminOrders() {
         adminOrders = data || [];
         window.adminOrders = adminOrders;
 
+        // ✅ صفّر أي فلتر مخصص قبل ما نعرض "بانتظار الدفع" افتراضيًا
+        customOrderStatuses = null;
+
         // ✅ تطبيق فلتر "بانتظار الدفع" افتراضيًا
         const oldOrders = adminOrders;
         adminOrders = adminOrders.filter(o => o.status === "payment_pending");
@@ -1653,15 +1660,18 @@ function sendWhatsAppStatusUpdate(orderId) {
     const trackingUrl = getTrackingUrl(order.id, order.customer_phone);
     const customerName = order.customer_name || "عميل";
 
+    const totalAmount = Number(order.total_amount || 0).toLocaleString("en-US");
+
     const messages = {
-        pending: `مرحباً ${customerName} 👋\n\nتم استلام طلبك رقم #${order.id} من متجر STEP بنجاح ✅\n\n📍 لتتبع طلبك:\n${trackingUrl}`,
-        preparing: `مرحباً ${customerName} 👋\n\nجاري تجهيز طلبك رقم #${order.id} من متجر STEP 👟\n\n📍 لتتبع طلبك:\n${trackingUrl}`,
-        shipped: `مرحباً ${customerName} 🚚\n\nبشرى سارة! تم شحن طلبك رقم #${order.id} وهو في طريقه إليك 📦\n\n📍 لتتبع طلبك مباشرة:\n${trackingUrl}`,
-        delivered: `مرحباً ${customerName} ✅\n\nتم توصيل طلبك رقم #${order.id} بنجاح 🎉\n\nشكراً لتسوقك من STEP! 🛍️\n\n📍 لمتابعة طلباتك:\n${trackingUrl}`,
-        return_requested: `مرحباً ${customerName}\n\nتم تسجيل طلب الاسترجاع للطلب رقم #${order.id} 🔄\n\n📍 لمتابعة حالة الطلب:\n${trackingUrl}`,
-        refunded: `مرحباً ${customerName}\n\nتم رد مبلغ الطلب رقم #${order.id} بنجاح 💰\n\n📍 لمتابعة الطلب:\n${trackingUrl}`,
-        exchanged: `مرحباً ${customerName}\n\nتم استبدال الطلب رقم #${order.id} بنجاح ✅\n\n📍 لمتابعة الطلب:\n${trackingUrl}`,
-        cancelled: `مرحباً ${customerName}\n\nتم إلغاء طلبك رقم #${order.id} ❌\n\nلو محتاج مساعدة كلمنا في أي وقت.`
+        payment_pending: `مرحباً ${customerName}\n\nتم استلام طلبك رقم #${order.id} من متجر STEP.\n\n==========\nلإتمام الدفع عبر إنستاباي\n==========\n\nرقم إنستاباي:\n01120915594\n\nاسم الحساب:\nSTEP Store\n\nالمبلغ المطلوب:\n${totalAmount} جنيه\n\n==========\n\nبعد التحويل، ابعتلنا صورة الإيصال هنا على واتساب عشان نأكد طلبك في أسرع وقت.\n\nلتتبع طلبك:\n${trackingUrl}`,
+        pending: `مرحباً ${customerName}\n\nتم استلام طلبك رقم #${order.id} من متجر STEP بنجاح.\n\nلتتبع طلبك:\n${trackingUrl}`,
+        preparing: `مرحباً ${customerName}\n\nجاري تجهيز طلبك رقم #${order.id} من متجر STEP.\n\nلتتبع طلبك:\n${trackingUrl}`,
+        shipped: `مرحباً ${customerName}\n\nبشرى سارة! تم شحن طلبك رقم #${order.id} وهو في طريقه إليك.\n\nلتتبع طلبك مباشرة:\n${trackingUrl}`,
+        delivered: `مرحباً ${customerName}\n\nتم توصيل طلبك رقم #${order.id} بنجاح.\n\nشكراً لتسوقك من STEP!\n\nلمتابعة طلباتك:\n${trackingUrl}`,
+        return_requested: `مرحباً ${customerName}\n\nتم تسجيل طلب الاسترجاع للطلب رقم #${order.id}.\n\nلمتابعة حالة الطلب:\n${trackingUrl}`,
+        refunded: `مرحباً ${customerName}\n\nتم رد مبلغ الطلب رقم #${order.id} بنجاح.\n\nلمتابعة الطلب:\n${trackingUrl}`,
+        exchanged: `مرحباً ${customerName}\n\nتم استبدال الطلب رقم #${order.id} بنجاح.\n\nلمتابعة الطلب:\n${trackingUrl}`,
+        cancelled: `مرحباً ${customerName}\n\nتم إلغاء طلبك رقم #${order.id}.\n\nلو محتاج مساعدة كلمنا في أي وقت.`
     };
 
     const text = messages[order.status] ||

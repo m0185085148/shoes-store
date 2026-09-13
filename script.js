@@ -103,7 +103,7 @@ function showToast(message) {
 }
 
 function formatPrice(n) {
-    return Number(n || 0).toLocaleString('ar-EG');
+    return Number(n || 0).toLocaleString('en-US');
 }
 
 function normalizeProduct(item) {
@@ -1098,6 +1098,18 @@ async function submitOrder(event) {
         // ✅ امسح draft بعد النجاح
         clearOrderFormData();
 
+        // ✅ احفظ تعليمات إنستاباي للوصول السريع
+        if (paymentMethod === 'instapay') {
+            try {
+                localStorage.setItem('pendingInstapayOrder', JSON.stringify({
+                    orderId: data.id,
+                    total: total,
+                    phone: phone,
+                    savedAt: Date.now()
+                }));
+            } catch (e) {}
+        }
+
         orderForm.reset();
         orderModal?.classList.remove('open');
 
@@ -1408,6 +1420,9 @@ document.addEventListener('DOMContentLoaded', async () => {
         saveOrderFormData();
     });
 
+        // ✅ تنبيه إن في طلب إنستاباي معلق
+    checkPendingInstapay();
+
     // ✅ Auto-save لكل حقول الفورم
     ['customerName', 'customerPhone', 'city', 'customerAddress', 'orderNotes'].forEach(id => {
         $(id)?.addEventListener('input', saveOrderFormData);
@@ -1439,3 +1454,59 @@ function copyToClipboard(text, btnEl) {
 }
 
 window.copyToClipboard = copyToClipboard;
+// ========================================
+// PENDING INSTAPAY BANNER
+// ========================================
+
+function checkPendingInstapay() {
+    try {
+        const raw = localStorage.getItem('pendingInstapayOrder');
+        if (!raw) return;
+
+        const data = JSON.parse(raw);
+        if (!data || !data.orderId) return;
+
+        // نتجاهل الطلبات الأقدم من 24 ساعة
+        if (Date.now() - data.savedAt > 24 * 60 * 60 * 1000) {
+            localStorage.removeItem('pendingInstapayOrder');
+            return;
+        }
+
+        // نعرض بانر لطيف
+        showInstapayBanner(data);
+    } catch (e) {}
+}
+
+function showInstapayBanner(data) {
+    // شيل أي بانر قديم
+    document.getElementById('instapayPendingBanner')?.remove();
+
+    const banner = document.createElement('div');
+    banner.id = 'instapayPendingBanner';
+    banner.className = 'instapay-pending-banner';
+
+    banner.innerHTML = `
+        <i class="fa-solid fa-mobile-screen"></i>
+        <div style="flex:1;">
+            <strong>لسه محتاج تحوّل ${formatPrice(data.total)} ج للطلب #${data.orderId}</strong>
+            <small>اضغط هنا لتعليمات إنستاباي</small>
+        </div>
+        <button type="button" class="instapay-pending-close" onclick="hideInstapayBanner(event)">
+            <i class="fa-solid fa-xmark"></i>
+        </button>
+    `;
+
+    banner.addEventListener('click', (e) => {
+        if (e.target.closest('.instapay-pending-close')) return;
+        window.location.href = `track.html?id=${data.orderId}&phone=${encodeURIComponent(data.phone)}`;
+    });
+
+    document.body.appendChild(banner);
+}
+
+function hideInstapayBanner(e) {
+    e.stopPropagation();
+    document.getElementById('instapayPendingBanner')?.remove();
+}
+
+window.hideInstapayBanner = hideInstapayBanner;

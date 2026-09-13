@@ -9,13 +9,21 @@ const SUPABASE_KEY = 'sb_publishable_5cu-Flvr7CSvRPMT3hByMQ_CfO7mBIv';
 const supabaseClient =
     window.supabase?.createClient(SUPABASE_URL, SUPABASE_KEY) || null;
 
-const WHATSAPP_NUMBER = '201060722464';
+const WHATSAPP_NUMBER = '201120915594';
 
 // ========================================
 // STATUS CONFIG
 // ========================================
 
 const STATUS_CONFIG = {
+    payment_pending: {
+        text: "بانتظار الدفع",
+        icon: "fa-mobile-screen",
+        iconBg: "#dbeafe",
+        iconColor: "#2563eb",
+        badgeBg: "#dbeafe",
+        badgeColor: "#1e40af"
+    },
     pending: {
         text: "قيد المراجعة",
         icon: "fa-clock",
@@ -114,7 +122,7 @@ const STATUS_CONFIG = {
     }
 };
 
-const CANCELLABLE_STATUSES = ["pending", "preparing"];
+const CANCELLABLE_STATUSES = ["payment_pending", "pending", "preparing"];
 
 // ========================================
 // HELPERS
@@ -131,14 +139,14 @@ function escapeHTML(value) {
 }
 
 function formatPrice(n) {
-    return Number(n || 0).toLocaleString('ar-EG');
+    return Number(n || 0).toLocaleString('en-US');
 }
 
 function formatDate(dateValue) {
     if (!dateValue) return "-";
     const date = new Date(dateValue);
     if (isNaN(date.getTime())) return "-";
-    return date.toLocaleString("ar-EG", {
+    return date.toLocaleString("ar-EG-u-nu-latn", {
         year: "numeric",
         month: "short",
         day: "numeric",
@@ -379,6 +387,12 @@ function renderResult(order) {
 
     $("trackAddress").textContent = order.customer_address || "-";
 
+    // ===== INSTAPAY BOX =====
+    renderInstapayBox(order);
+
+    // ✅ نظّف بانر إنستاباي المعلق لو الطلب مش محتاج تحويل تاني
+    cleanupPendingInstapay(order);
+
     // ===== ACTIONS =====
     renderActions(order);
 
@@ -545,3 +559,87 @@ document.addEventListener("DOMContentLoaded", () => {
 // ========================================
 
 window.cancelMyOrder = cancelMyOrder;
+// ========================================
+// INSTAPAY HELPERS
+// ========================================
+
+function copyInstapayNumber(btnEl) {
+    const number = '01120915594';
+
+    navigator.clipboard.writeText(number).then(() => {
+        if (btnEl) {
+            const original = btnEl.innerHTML;
+            btnEl.innerHTML = '<i class="fa-solid fa-check"></i>';
+            btnEl.style.background = '#16a34a';
+            btnEl.style.color = '#fff';
+            setTimeout(() => {
+                btnEl.innerHTML = original;
+                btnEl.style.background = '';
+                btnEl.style.color = '';
+            }, 1500);
+        }
+        showToast('تم نسخ الرقم ✅');
+    }).catch(err => {
+        console.error('Copy failed:', err);
+        prompt('انسخ الرقم ده:', number);
+    });
+}
+
+function renderInstapayBox(order) {
+    const section = document.getElementById('trackInstapaySection');
+    if (!section) return;
+
+    // ✅ نعرضها فقط لو الطلب payment_pending
+    if (order.status !== 'payment_pending') {
+        section.style.display = 'none';
+        return;
+    }
+
+    section.style.display = 'block';
+
+    // المبلغ
+    const amountEl = document.getElementById('trackInstapayAmount');
+    if (amountEl) {
+        amountEl.textContent = `${formatPrice(order.total_amount)} ج`;
+    }
+
+    // رقم الطلب
+    const orderNumEl = document.getElementById('trackInstapayOrderNum');
+    if (orderNumEl) {
+        orderNumEl.textContent = `#${order.id}`;
+    }
+}
+
+// ========================================
+// CLEANUP PENDING INSTAPAY BANNER
+// ========================================
+
+function cleanupPendingInstapay(order) {
+    try {
+        const raw = localStorage.getItem('pendingInstapayOrder');
+        if (!raw) return;
+
+        const data = JSON.parse(raw);
+
+        // لو البيانات تالفة → امسحها
+        if (!data || !data.orderId) {
+            localStorage.removeItem('pendingInstapayOrder');
+            return;
+        }
+
+        // ✅ لو ده نفس الطلب اللي بيتتبع دلوقتي، وحالته مبقتش payment_pending
+        if (
+            Number(data.orderId) === Number(order.id) &&
+            order.status !== 'payment_pending'
+        ) {
+            localStorage.removeItem('pendingInstapayOrder');
+            console.log('✅ تم تنظيف بانر إنستاباي المعلق');
+        }
+    } catch (e) {
+        // أي خطأ → امسح البيانات التالفة
+        localStorage.removeItem('pendingInstapayOrder');
+    }
+}
+
+window.copyInstapayNumber = copyInstapayNumber;
+window.cleanupPendingInstapay = cleanupPendingInstapay;
