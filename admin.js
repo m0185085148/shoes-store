@@ -1654,7 +1654,7 @@ function sendWhatsAppStatusUpdate(orderId) {
         return;
     }
 
-        let phone = String(order.customer_phone).replace(/\D/g, "");
+    let phone = String(order.customer_phone).replace(/\D/g, "");
     if (phone.startsWith("0")) phone = "2" + phone;
 
     // ✅ حماية: تأكد إن الرقم في النطاق المعقول
@@ -1665,6 +1665,8 @@ function sendWhatsAppStatusUpdate(orderId) {
 
     const trackingUrl = getTrackingUrl(order.id, order.customer_phone);
     const customerName = order.customer_name || "عميل";
+    const totalAmount = Number(order.total_amount || 0).toLocaleString("en-US");
+
     // ✅ لو مفيش رابط (تطوير محلي)، منضيفوش في الرسالة
     const trackingLine = trackingUrl ? `\n\nلتتبع طلبك:\n${trackingUrl}` : '';
 
@@ -1685,6 +1687,7 @@ function sendWhatsAppStatusUpdate(orderId) {
 
     const text = messages[order.status] ||
         `${header}\n\nمرحباً ${customerName}، تحديث بخصوص طلبك.${trackingLine}`;
+
     const waUrl = `https://wa.me/${phone}?text=${encodeURIComponent(text)}`;
     const waWindow = window.open(waUrl, "_blank");
 
@@ -1693,7 +1696,6 @@ function sendWhatsAppStatusUpdate(orderId) {
         navigator.clipboard.writeText(text).then(() => {
             alert("⚠️ المتصفح منع فتح واتساب\n\nتم نسخ الرسالة — الصقها في واتساب يدويًا");
         }).catch(() => {
-            // fallback أخير: أظهر الرسالة في prompt
             prompt("انسخ الرسالة دي وأرسلها للعميل:", text);
         });
     }
