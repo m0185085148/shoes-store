@@ -474,7 +474,9 @@ function updateTotalPreview(mode = "add") {
 // ========================================
 
 function getOrderTimeRemaining(order) {
-    if (order.status !== "pending") return null;
+    if (order.status !== "pending" && order.status !== "payment_pending") {
+        return null;
+    }
 
     const created = new Date(order.created_at);
     const expiresAt = new Date(created.getTime() + 24 * 60 * 60 * 1000);
@@ -482,18 +484,22 @@ function getOrderTimeRemaining(order) {
     const diffMs = expiresAt - now;
 
     if (diffMs <= 0) {
-        return { expired: true, text: "منتهي" };
+        return { expired: true, text: "منتهي", color: "#991b1b" };
     }
 
     const hours = Math.floor(diffMs / 3600000);
     const minutes = Math.floor((diffMs % 3600000) / 60000);
 
+    // ✅ نص مختلف حسب الحالة
+    const isPaymentPending = order.status === "payment_pending";
+    const prefix = isPaymentPending ? "مهلة التحويل:" : "باقي";
+
     if (hours > 6) {
-        return { expired: false, text: `باقي ${hours}س`, color: "#16a34a" };
+        return { expired: false, text: `${prefix} ${hours}س`, color: "#16a34a" };
     } else if (hours > 2) {
-        return { expired: false, text: `باقي ${hours}س ${minutes}د`, color: "#d97706" };
+        return { expired: false, text: `${prefix} ${hours}س ${minutes}د`, color: "#d97706" };
     } else {
-        return { expired: false, text: `⚠️ باقي ${hours}س ${minutes}د`, color: "#dc2626" };
+        return { expired: false, text: `⚠️ ${prefix} ${hours}س ${minutes}د`, color: "#dc2626" };
     }
 }
 
@@ -3723,6 +3729,7 @@ const REASON_OPTIONS = {
         "العميل عايز موديل تاني", "المنتج به عيب", "سبب آخر"
     ],
     cancelled: [
+        "لم يتم التحويل خلال المدة المحددة",
         "العميل غيّر رأيه", "العميل مش بيرد",
         "العنوان غلط", "المنتج مش متوفر", "سبب آخر"
     ]
