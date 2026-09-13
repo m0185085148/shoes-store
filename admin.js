@@ -1270,15 +1270,23 @@ function renderStatusControl(order) {
 
     if (isLockedStatus(current)) return getStatusBadge(current);
 
-    // ✅ زرار خاص لتأكيد الدفع
+    // ✅ أزرار خاصة لـ "بانتظار الدفع"
     if (current === "payment_pending") {
         return `
-            <button type="button" 
-                onclick="confirmInstaPayPayment(${Number(order.id)})"
-                style="background:#2563eb;color:#fff;padding:8px 14px;border-radius:8px;font-size:12px;font-weight:800;border:0;cursor:pointer;font-family:inherit;display:inline-flex;align-items:center;gap:6px;width:100%;justify-content:center;">
-                <i class="fa-solid fa-check-circle"></i>
-                تأكيد استلام الدفع
-            </button>
+            <div style="display:flex;gap:6px;justify-content:center;flex-wrap:wrap;">
+                <button type="button" 
+                    onclick="confirmInstaPayPayment(${Number(order.id)})"
+                    style="background:#2563eb;color:#fff;padding:8px 12px;border-radius:8px;font-size:12px;font-weight:800;border:0;cursor:pointer;font-family:inherit;display:inline-flex;align-items:center;gap:6px;flex:1;justify-content:center;">
+                    <i class="fa-solid fa-check-circle"></i>
+                    تأكيد الدفع
+                </button>
+                <button type="button" 
+                    onclick="updateOrderStatus(${Number(order.id)}, 'cancelled')"
+                    style="background:#fef2f2;color:#dc2626;padding:8px 12px;border-radius:8px;font-size:12px;font-weight:800;border:1.5px solid #fecaca;cursor:pointer;font-family:inherit;display:inline-flex;align-items:center;gap:6px;flex:1;justify-content:center;">
+                    <i class="fa-solid fa-xmark"></i>
+                    إلغاء
+                </button>
+            </div>
         `;
     }
 
