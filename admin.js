@@ -1654,33 +1654,49 @@ function sendWhatsAppStatusUpdate(orderId) {
         return;
     }
 
-    let phone = String(order.customer_phone).replace(/\D/g, "");
+        let phone = String(order.customer_phone).replace(/\D/g, "");
     if (phone.startsWith("0")) phone = "2" + phone;
+
+    // ✅ حماية: تأكد إن الرقم في النطاق المعقول
+    if (phone.length < 11 || phone.length > 15) {
+        alert("رقم الهاتف غير صحيح");
+        return;
+    }
 
     const trackingUrl = getTrackingUrl(order.id, order.customer_phone);
     const customerName = order.customer_name || "عميل";
+    // ✅ لو مفيش رابط (تطوير محلي)، منضيفوش في الرسالة
+    const trackingLine = trackingUrl ? `\n\nلتتبع طلبك:\n${trackingUrl}` : '';
 
-    const totalAmount = Number(order.total_amount || 0).toLocaleString("en-US");
+    // ✅ هيدر موحّد — يظهر في الـ notification وفي أول الرسالة
+    const header = `طلب #${order.id} - STEP Store`;
 
     const messages = {
-        payment_pending: `مرحباً ${customerName}\n\nتم استلام طلبك رقم #${order.id} من متجر STEP.\n\n==========\nلإتمام الدفع عبر إنستاباي\n==========\n\nرقم إنستاباي:\n01120915594\n\nاسم الحساب:\nMohamed El Hanafy\n\nالمبلغ المطلوب:\n${totalAmount} جنيه\n\n==========\n\nبعد التحويل، ابعتلنا صورة الإيصال هنا على واتساب عشان نأكد طلبك في أسرع وقت.\n\nلتتبع طلبك:\n${trackingUrl}`,
-        pending: `مرحباً ${customerName}\n\nتم استلام طلبك رقم #${order.id} من متجر STEP بنجاح.\n\nلتتبع طلبك:\n${trackingUrl}`,
-        preparing: `مرحباً ${customerName}\n\nجاري تجهيز طلبك رقم #${order.id} من متجر STEP.\n\nلتتبع طلبك:\n${trackingUrl}`,
-        shipped: `مرحباً ${customerName}\n\nبشرى سارة! تم شحن طلبك رقم #${order.id} وهو في طريقه إليك.\n\nلتتبع طلبك مباشرة:\n${trackingUrl}`,
-        delivered: `مرحباً ${customerName}\n\nتم توصيل طلبك رقم #${order.id} بنجاح.\n\nشكراً لتسوقك من STEP!\n\nلمتابعة طلباتك:\n${trackingUrl}`,
-        return_requested: `مرحباً ${customerName}\n\nتم تسجيل طلب الاسترجاع للطلب رقم #${order.id}.\n\nلمتابعة حالة الطلب:\n${trackingUrl}`,
-        refunded: `مرحباً ${customerName}\n\nتم رد مبلغ الطلب رقم #${order.id} بنجاح.\n\nلمتابعة الطلب:\n${trackingUrl}`,
-        exchanged: `مرحباً ${customerName}\n\nتم استبدال الطلب رقم #${order.id} بنجاح.\n\nلمتابعة الطلب:\n${trackingUrl}`,
-        cancelled: `مرحباً ${customerName}\n\nتم إلغاء طلبك رقم #${order.id}.\n\nلو محتاج مساعدة كلمنا في أي وقت.`
+        payment_pending: `${header}\n\nمرحباً ${customerName}\n\nتم استلام طلبك من متجر STEP.\n\n==========\nلإتمام الدفع عبر إنستاباي\n==========\n\nرقم إنستاباي:\n01120915594\n\nاسم الحساب:\nMohamed El Hanafy\n\nالمبلغ المطلوب:\n${totalAmount} جنيه\n\n==========\n\nبعد التحويل، ابعتلنا صورة الإيصال هنا على واتساب عشان نأكد طلبك في أسرع وقت.${trackingLine}`,
+        pending: `${header}\n\nمرحباً ${customerName}\n\nتم استلام طلبك من متجر STEP بنجاح.${trackingLine}`,
+        preparing: `${header}\n\nمرحباً ${customerName}\n\nجاري تجهيز طلبك من متجر STEP.${trackingLine}`,
+        shipped: `${header}\n\nمرحباً ${customerName}\n\nبشرى سارة! تم شحن طلبك وهو في طريقه إليك.${trackingLine}`,
+        delivered: `${header}\n\nمرحباً ${customerName}\n\nتم توصيل طلبك بنجاح.\n\nشكراً لتسوقك من STEP!${trackingLine}`,
+        return_requested: `${header}\n\nمرحباً ${customerName}\n\nتم تسجيل طلب الاسترجاع.${trackingLine}`,
+        refunded: `${header}\n\nمرحباً ${customerName}\n\nتم رد مبلغ الطلب بنجاح.${trackingLine}`,
+        exchanged: `${header}\n\nمرحباً ${customerName}\n\nتم استبدال الطلب بنجاح.${trackingLine}`,
+        cancelled: `${header}\n\nمرحباً ${customerName}\n\nتم إلغاء طلبك.\n\nلو محتاج مساعدة كلمنا في أي وقت.`
     };
 
     const text = messages[order.status] ||
-        `مرحباً ${customerName}، تحديث بخصوص طلبك رقم #${order.id}.\n\n📍 لمتابعة الطلب:\n${trackingUrl}`;
+        `${header}\n\nمرحباً ${customerName}، تحديث بخصوص طلبك.${trackingLine}`;
+    const waUrl = `https://wa.me/${phone}?text=${encodeURIComponent(text)}`;
+    const waWindow = window.open(waUrl, "_blank");
 
-    window.open(
-        `https://wa.me/${phone}?text=${encodeURIComponent(text)}`,
-        "_blank"
-    );
+    // ✅ لو الـ popup blocker منع الفتح، انسخ الرسالة للعميل
+    if (!waWindow) {
+        navigator.clipboard.writeText(text).then(() => {
+            alert("⚠️ المتصفح منع فتح واتساب\n\nتم نسخ الرسالة — الصقها في واتساب يدويًا");
+        }).catch(() => {
+            // fallback أخير: أظهر الرسالة في prompt
+            prompt("انسخ الرسالة دي وأرسلها للعميل:", text);
+        });
+    }
 }
 
 // ========================================
