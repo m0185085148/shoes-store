@@ -1586,6 +1586,11 @@ async function applyStatusChange(orderId, newStatus, reason, notes) {
         updates.exchange_reason = reason;
     }
 
+    // ✅ تسجيل وقت التوصيل الفعلي
+    if (newStatus === "delivered" && oldStatus !== "delivered") {
+        updates.delivered_at = new Date().toISOString();
+    }
+
     try {
         const { error } = await client
             .from("orders")
@@ -2660,8 +2665,18 @@ if (addProductForm) {
         addSubmitButton.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> جاري الإضافة...';
 
         try {
+            // ✅ توليد كود الصنف تلقائيًا
+            const { data: newSku, error: skuError } = await client.rpc("generate_product_sku");
+            if (skuError) throw new Error("فشل توليد كود الصنف: " + skuError.message);
+
+            // ✅ توليد الباركود تلقائيًا
+            const { data: newBarcode, error: barcodeError } = await client.rpc("generate_product_barcode");
+            if (barcodeError) throw new Error("فشل توليد الباركود: " + barcodeError.message);
+
             const productData = {
                 name,
+                sku: newSku,
+                barcode: newBarcode,
                 price,
                 old_price: addOldPrice?.value === "" ? null : Number(addOldPrice.value),
                 badge: addBadge?.value.trim() || null,
