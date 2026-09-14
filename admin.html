@@ -532,7 +532,7 @@
                         <thead>
                             <tr>
                                 <th style="width:70px;">ID</th>
-                                <th style="width:110px;">SKU</th>
+                                <th style="width:110px;">كود الصنف</th>
                                 <th style="width:80px;">الصورة</th>
                                 <th>الاسم</th>
                                 <th style="width:110px;">السعر</th>
@@ -550,7 +550,7 @@
                                 <th>
                                     <div class="search-input-wrapper">
                                         <i class="fa-solid fa-barcode"></i>
-                                        <input type="text" id="searchSku" placeholder="SKU">
+                                        <input type="text" id="searchSku" placeholder="ابحث بالكود...">
                                     </div>
                                 </th>
                                 <th></th>
@@ -674,7 +674,7 @@
                                 <th>
                                     <div class="search-input-wrapper">
                                         <i class="fa-solid fa-barcode"></i>
-                                        <input type="text" id="invSearchSku" placeholder="SKU">
+                                        <input type="text" id="invSearchSku" placeholder="ابحث بالكود...">
                                     </div>
                                 </th>
                                 <th></th>
@@ -2269,6 +2269,38 @@
             'https://uobuxepixrqijgciurve.supabase.co',
             'sb_publishable_5cu-Flvr7CSvRPMT3hByMQ_CfO7mBIv'
         );
+
+            <!-- ============ SHIP CONFIRM MODAL ============ -->
+    <div class="modal" id="shipConfirmModal">
+        <div class="modal-content" style="max-width:520px;">
+            <div class="modal-header">
+                <div class="modal-title-group">
+                    <div class="modal-icon" style="background:#f3e8ff;color:#7c3aed;">
+                        <i class="fa-solid fa-truck-fast"></i>
+                    </div>
+                    <div>
+                        <h2>تأكيد الشحن</h2>
+                        <p style="font-size:13px;color:#888;margin-top:2px;">
+                            الطلب #<span id="shipConfirmOrderId">-</span>
+                        </p>
+                    </div>
+                </div>
+                <button type="button" class="close-modal" onclick="closeShipConfirmModal()">&times;</button>
+            </div>
+
+            <div id="shipConfirmBody"></div>
+
+            <div class="modal-actions">
+                <button type="button" class="btn-primary-modal" id="shipConfirmBtn">
+                    <i class="fa-solid fa-truck-fast"></i>
+                    تأكيد الشحن
+                </button>
+                <button type="button" class="btn-secondary-modal" onclick="closeShipConfirmModal()">
+                    إلغاء
+                </button>
+            </div>
+        </div>
+    </div>
     </script>
 
     <script src="admin.js"></script>

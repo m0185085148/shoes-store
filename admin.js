@@ -1323,6 +1323,20 @@ function renderStatusControl(order) {
 
     if (!nextOptions.length) return getStatusBadge(current);
 
+    // ✅ لو الطلب قيد التحضير وفيه مشكلة في المخزون → نظهر تحذير
+    let stockWarning = "";
+    if (current === "preparing" && nextOptions.includes("shipped")) {
+        const { canShip } = canShipOrder(order);
+        if (!canShip) {
+            stockWarning = `
+                <div style="margin-top:6px;padding:5px 10px;background:#fef2f2;color:#dc2626;border-radius:6px;font-size:11px;font-weight:800;text-align:center;border:1px solid #fecaca;">
+                    <i class="fa-solid fa-triangle-exclamation"></i>
+                    مخزون غير كافي للشحن
+                </div>
+            `;
+        }
+    }
+
     const options = nextOptions.map(s => `
         <option value="${s}">
             ${STATUS_LABELS[s] || s}
@@ -1335,6 +1349,7 @@ function renderStatusControl(order) {
             <option value="">تغيير إلى...</option>
             ${options}
         </select>
+        ${stockWarning}
     `;
 }
 
@@ -1533,6 +1548,12 @@ async function updateOrderStatus(orderId, newStatus) {
 
     if (STATUS_REQUIRES_REASON.includes(newStatus)) {
         openStatusReasonModal(order, newStatus);
+        return;
+    }
+
+    // ✅ حالة الشحن: نفتح modal مخصص بالتحقق من المخزون
+    if (newStatus === "shipped") {
+        openShipConfirmModal(order.id);
         return;
     }
 
@@ -6598,3 +6619,172 @@ async function confirmInstaPayPayment(orderId) {
 }
 
 window.confirmInstaPayPayment = confirmInstaPayPayment;
+// ========================================
+// SHIP CONFIRM MODAL
+// ========================================
+
+let pendingShipOrderId = null;
+
+/**
+ * فحص المخزون لكل منتجات الطلب
+ */
+function canShipOrder(order) {
+    const items = Array.isArray(order.items) ? order.items : [];
+    const results = [];
+
+    for (const item of items) {
+        const product = getProductById(item.id);
+        const sizeData = getSizeData(item.id, item.size);
+        const available = sizeData ? Number(sizeData.stock || 0) : 0;
+        const needed = Number(item.quantity || 1);
+        const isAvailable = available >= needed;
+
+        results.push({
+            productId: item.id,
+            name: item.name || "منتج",
+            image: item.image || product?.image || "",
+            sku: product?.sku || null,
+            size: item.size,
+            needed,
+            available,
+            isAvailable
+        });
+    }
+
+    const canShip = results.every(r => r.isAvailable);
+    const totalItems = results.reduce((s, r) => s + r.needed, 0);
+
+    return { canShip, results, totalItems };
+}
+
+/**
+ * فتح Modal الشحن
+ */
+function openShipConfirmModal(orderId) {
+    const order = adminOrders.find(o => Number(o.id) === Number(orderId));
+    if (!order) return;
+
+    pendingShipOrderId = orderId;
+
+    const modal = document.getElementById("shipConfirmModal");
+    const body = document.getElementById("shipConfirmBody");
+    const title = document.getElementById("shipConfirmOrderId");
+    const confirmBtn = document.getElementById("shipConfirmBtn");
+
+    if (!modal || !body) return;
+
+    if (title) title.textContent = `#${order.id}`;
+
+    const { canShip, results, totalItems } = canShipOrder(order);
+
+    // ✅ Items list
+    const itemsHTML = results.map(item => {
+        const icon = item.isAvailable
+            ? `<i class="fa-solid fa-circle-check" style="color:#16a34a;"></i>`
+            : `<i class="fa-solid fa-circle-xmark" style="color:#dc2626;"></i>`;
+
+        const bgColor = item.isAvailable ? "#f0fdf4" : "#fef2f2";
+        const borderColor = item.isAvailable ? "#86efac" : "#fecaca";
+
+        return `
+            <div style="display:flex;gap:12px;padding:12px;background:${bgColor};border:1px solid ${borderColor};border-radius:10px;margin-bottom:8px;align-items:center;">
+                <div style="width:52px;height:52px;border-radius:10px;background:#f5f5f5;background-image:url('${escapeAdminHTML(item.image)}');background-size:cover;background-position:center;flex-shrink:0;border:1px solid #e5e7eb;"></div>
+                <div style="flex:1;min-width:0;">
+                    <div style="font-size:13px;font-weight:800;color:#111;margin-bottom:4px;">${escapeAdminHTML(item.name)}</div>
+                    <div style="font-size:11px;color:#64748b;display:flex;gap:10px;flex-wrap:wrap;">
+                        <span>المقاس: <strong>${escapeAdminHTML(item.size)}</strong></span>
+                        <span>المطلوب: <strong>${item.needed}</strong></span>
+                        <span>المتاح: <strong style="color:${item.isAvailable ? '#16a34a' : '#dc2626'};">${item.available}</strong></span>
+                    </div>
+                </div>
+                <div style="font-size:18px;flex-shrink:0;">${icon}</div>
+            </div>
+        `;
+    }).join("");
+
+    // ✅ Warning
+    const warningHTML = canShip
+        ? `
+            <div style="background:#f0fdf4;border:1px solid #86efac;border-radius:10px;padding:12px;margin-bottom:12px;font-size:13px;color:#166534;display:flex;gap:10px;align-items:center;">
+                <i class="fa-solid fa-circle-check" style="font-size:18px;"></i>
+                <span>كل الكميات متوفرة. الشحن آمن ✅</span>
+            </div>
+        `
+        : `
+            <div style="background:#fef2f2;border:1px solid #fecaca;border-radius:10px;padding:12px;margin-bottom:12px;font-size:13px;color:#991b1b;display:flex;gap:10px;align-items:flex-start;">
+                <i class="fa-solid fa-triangle-exclamation" style="font-size:18px;flex-shrink:0;margin-top:2px;"></i>
+                <div>
+                    <strong style="display:block;margin-bottom:4px;">⚠️ لا يمكن الشحن</strong>
+                    <span>بعض الكميات مش متوفرة في المخزون. عدّل المخزون الأول أو ألغِ الطلب.</span>
+                </div>
+            </div>
+        `;
+
+    // ✅ Summary
+    const summaryHTML = `
+        <div style="display:flex;justify-content:space-between;padding:12px 14px;background:#f9fafb;border-radius:10px;margin-top:12px;font-size:13px;">
+            <span style="color:#64748b;">إجمالي القطع:</span>
+            <strong style="color:#111;">${totalItems} قطعة</strong>
+        </div>
+    `;
+
+    body.innerHTML = warningHTML + itemsHTML + summaryHTML;
+
+    // ✅ Enable/Disable confirm button
+    if (confirmBtn) {
+        if (canShip) {
+            confirmBtn.disabled = false;
+            confirmBtn.style.opacity = "1";
+            confirmBtn.style.cursor = "pointer";
+            confirmBtn.innerHTML = '<i class="fa-solid fa-truck-fast"></i> تأكيد الشحن';
+        } else {
+            confirmBtn.disabled = true;
+            confirmBtn.style.opacity = "0.5";
+            confirmBtn.style.cursor = "not-allowed";
+            confirmBtn.innerHTML = '<i class="fa-solid fa-ban"></i> مش ممكن الشحن';
+        }
+    }
+
+    modal.classList.add("open");
+}
+
+/**
+ * إغلاق Modal الشحن
+ */
+function closeShipConfirmModal() {
+    document.getElementById("shipConfirmModal")?.classList.remove("open");
+    pendingShipOrderId = null;
+    renderAdminOrders();
+}
+
+/**
+ * تأكيد الشحن — ينفذ تغيير الحالة
+ */
+async function confirmShipOrder() {
+    if (!pendingShipOrderId) return;
+
+    const orderId = pendingShipOrderId;
+    const order = adminOrders.find(o => Number(o.id) === Number(orderId));
+    if (!order) return;
+
+    const { canShip } = canShipOrder(order);
+    if (!canShip) {
+        alert("لا يمكن الشحن — المخزون غير كافي");
+        return;
+    }
+
+    const btn = document.getElementById("shipConfirmBtn");
+    if (btn) {
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> جاري الشحن...';
+    }
+
+    await applyStatusChange(orderId, "shipped", null, null);
+
+    closeShipConfirmModal();
+    showToast("تم شحن الطلب بنجاح ✅");
+}
+
+window.openShipConfirmModal = openShipConfirmModal;
+window.closeShipConfirmModal = closeShipConfirmModal;
+window.confirmShipOrder = confirmShipOrder;
