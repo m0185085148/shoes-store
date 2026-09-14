@@ -6521,7 +6521,7 @@ function renderProductPickerList(skuQuery, nameQuery) {
             <div class="product-picker-item-id">#${p.id}</div>
             <div class="product-picker-item-info">
                 <strong>${escapeAdminHTML(p.name || "منتج")}</strong>
-                <small>${p.sku ? `SKU: ${escapeAdminHTML(p.sku)}` : "بدون SKU"}</small>
+                <small>${p.sku ? `كود الصنف: ${escapeAdminHTML(p.sku)}` : "بدون كود"}</small>
             </div>
         </div>
     `).join("");
