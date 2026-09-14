@@ -1587,7 +1587,8 @@ async function applyStatusChange(orderId, newStatus, reason, notes) {
     }
 
     // ✅ تسجيل وقت التوصيل الفعلي
-    if (newStatus === "delivered" && oldStatus !== "delivered") {
+    // order.status لسه محتفظ بالحالة القديمة لحد هذه اللحظة
+    if (newStatus === "delivered" && order.status !== "delivered") {
         updates.delivered_at = new Date().toISOString();
     }
 
