@@ -6772,3 +6772,6 @@ async function confirmShipOrder() {
 window.openShipConfirmModal = openShipConfirmModal;
 window.closeShipConfirmModal = closeShipConfirmModal;
 window.confirmShipOrder = confirmShipOrder;
+
+// ✅ ربط زر تأكيد الشحن
+document.getElementById("shipConfirmBtn")?.addEventListener("click", confirmShipOrder);
