@@ -5237,26 +5237,6 @@ function _applyManualFilters(filters, fromId, toId) {
 // 64. SALES PRESETS
 // ========================================
 
-function setSalesPreset(preset, btnEl) {
-    document.querySelectorAll("#reportSales .preset-chip").forEach(b => b.classList.remove('active'));
-    btnEl?.classList.add('active');
-    _applyPresetToFilters(preset, salesReportFilters, 'salesDateFrom', 'salesDateTo');
-    loadSalesReport();
-}
-
-function applySalesFilters() {
-    _applyManualFilters(salesReportFilters, 'salesDateFrom', 'salesDateTo');
-    document.querySelectorAll("#reportSales .preset-chip").forEach(b => b.classList.remove('active'));
-    loadSalesReport();
-}
-
-function setDailyPreset(preset, btnEl) {
-    document.querySelectorAll("#reportDaily .preset-chip").forEach(b => b.classList.remove('active'));
-    btnEl?.classList.add('active');
-    _applyPresetToFilters(preset, dailyReportFilters, 'dailyDateFrom', 'dailyDateTo');
-    loadDailyReport();
-}
-
 function setGovPreset(preset, btnEl) {
     document.querySelectorAll("#reportGovernorate .preset-chip").forEach(b => b.classList.remove('active'));
     btnEl?.classList.add('active');
@@ -5616,49 +5596,121 @@ function exportSalesCSV() {
 
 async function loadDailyReport() {
     const el = document.getElementById("dailyList");
-    if (el) el.innerHTML = `<div class="empty-state"><i class="fa-solid fa-spinner fa-spin"></i><p>جاري التحميل...</p></div>`;
+    const totalsEl = document.getElementById("dailyTotals");
+    if (el) el.innerHTML = `<tr><td colspan="7" style="text-align:center;padding:30px;color:#94a3b8;">جاري التحميل...</td></tr>`;
+    if (totalsEl) totalsEl.innerHTML = "";
 
     try {
         const allOrders = await _fetchOrdersInRange(dailyReportFilters);
 
-        // ✅ نستثني الملغية
+        // ✅ نستثني الملغية والمرتجعة نهائيًا
         const orders = allOrders.filter(o => 
             !["cancelled", "refunded"].includes(o.status)
         );
+
+        // ✅ تجميع حسب اليوم
         const map = {};
         orders.forEach(o => {
             const d = new Date(o.created_at);
             const key = d.toISOString().slice(0, 10);
-            if (!map[key]) map[key] = { date: key, orders: 0, revenue: 0, items: 0 };
+
+            if (!map[key]) {
+                map[key] = {
+                    date: key,
+                    orders: 0,
+                    gross: 0,
+                    discount: 0,
+                    net: 0,
+                    shipping: 0,
+                    total: 0
+                };
+            }
+
+            const items = Array.isArray(o.items) ? o.items : [];
+            const orderGross = items.reduce((s, it) => s + Number(it.price || 0) * Number(it.quantity || 0), 0);
+            const orderDiscount = Number(o.discount_total || 0);
+            const orderShipping = Number(o.shipping_cost || 0);
+            const orderNet = orderGross - orderDiscount;
+            const orderTotal = orderNet + orderShipping;
+
             map[key].orders++;
-            map[key].revenue += Number(o.total_amount || 0);
-            (Array.isArray(o.items) ? o.items : []).forEach(i => map[key].items += Number(i.quantity || 0));
+            map[key].gross += orderGross;
+            map[key].discount += orderDiscount;
+            map[key].net += orderNet;
+            map[key].shipping += orderShipping;
+            map[key].total += orderTotal;
         });
+
         const list = Object.values(map).sort((a, b) => b.date.localeCompare(a.date));
 
-        const totalRevenue = list.reduce((s, d) => s + d.revenue, 0);
-        const days = list.length;
-        const avg = days > 0 ? totalRevenue / days : 0;
-        const best = list.reduce((a, b) => a.revenue > b.revenue ? a : b, { revenue: 0, date: "-" });
+        // ✅ الإجماليات الكلية
+        const totals = {
+            orders: list.reduce((s, d) => s + d.orders, 0),
+            gross: list.reduce((s, d) => s + d.gross, 0),
+            discount: list.reduce((s, d) => s + d.discount, 0),
+            net: list.reduce((s, d) => s + d.net, 0),
+            shipping: list.reduce((s, d) => s + d.shipping, 0),
+            total: list.reduce((s, d) => s + d.total, 0)
+        };
 
+        // ✅ KPIs
         const set = (id, v) => { const e = document.getElementById(id); if (e) e.textContent = v; };
-        set("dailyKpiTotal", totalRevenue.toLocaleString("en-US"));
-        set("dailyKpiDays", days);
-        set("dailyKpiAvg", Math.round(avg).toLocaleString("en-US"));
-        set("dailyKpiBest", best.date === "-" ? "-" : best.date);
+        set("dailyKpiGross", totals.gross.toLocaleString("en-US"));
+        set("dailyKpiDiscount", totals.discount.toLocaleString("en-US"));
+        set("dailyKpiNet", totals.net.toLocaleString("en-US"));
+        set("dailyKpiShipping", totals.shipping.toLocaleString("en-US"));
+        set("dailyKpiTotal", totals.total.toLocaleString("en-US"));
 
-        if (!list.length) { el.innerHTML = `<div class="empty-state"><p>لا توجد بيانات</p></div>`; return; }
+        if (!list.length) {
+            if (el) el.innerHTML = `<tr><td colspan="7" style="text-align:center;padding:35px;color:#64748b;">لا توجد بيانات</td></tr>`;
+            return;
+        }
 
-        const maxRev = Math.max(...list.map(d => d.revenue), 1);
-        el.innerHTML = list.map(d => {
-            const pct = Math.round((d.revenue / maxRev) * 100);
-            const dateObj = new Date(d.date);
-            const dateStr = dateObj.toLocaleDateString("ar-EG", { weekday: "long", day: "numeric", month: "short" });
-            return `<div class="daily-item"><div class="daily-item-date"><strong>${escapeAdminHTML(dateStr)}</strong><small>${d.date}</small></div><div class="daily-item-bar"><div class="daily-item-bar-fill" style="width:${pct}%"></div></div><div class="daily-item-stats"><div class="daily-item-stat"><strong>${d.revenue.toLocaleString("en-US")}</strong><span>ج.م</span></div><div class="daily-item-stat"><strong>${d.orders}</strong><span>طلب</span></div><div class="daily-item-stat"><strong>${d.items}</strong><span>قطعة</span></div></div></div>`;
-        }).join("");
+        // ✅ الجدول
+        if (el) {
+            el.innerHTML = list.map(d => {
+                const dateObj = new Date(d.date);
+                const dateStr = dateObj.toLocaleDateString("ar-EG-u-nu-latn", {
+                    weekday: "long",
+                    day: "numeric",
+                    month: "short"
+                });
+
+                const discountCell = d.discount > 0
+                    ? `<span style="color:#dc2626;font-weight:800;">${Math.round(d.discount).toLocaleString("en-US")}</span>`
+                    : `<span style="color:#cbd5e1;">0</span>`;
+
+                return `
+                    <tr>
+                        <td style="font-weight:700;color:#111;">${escapeAdminHTML(dateStr)}<div style="font-size:11px;color:#94a3b8;margin-top:3px;">${d.date}</div></td>
+                        <td style="text-align:center;font-weight:800;color:#8b5cf6;">${d.orders}</td>
+                        <td class="amount-cell">${Math.round(d.gross).toLocaleString("en-US")} <span class="currency">ج.م</span></td>
+                        <td>${discountCell}</td>
+                        <td class="amount-cell" style="color:#16a34a;font-weight:800;">${Math.round(d.net).toLocaleString("en-US")} <span class="currency">ج.م</span></td>
+                        <td class="amount-cell" style="font-size:12px;color:#64748b;">${d.shipping === 0 ? "—" : Math.round(d.shipping).toLocaleString("en-US") + " ج.م"}</td>
+                        <td class="amount-cell" style="color:#2563eb;font-weight:800;">${Math.round(d.total).toLocaleString("en-US")} <span class="currency">ج.م</span></td>
+                    </tr>
+                `;
+            }).join("");
+        }
+
+        // ✅ صف الإجمالي
+        if (totalsEl) {
+            totalsEl.innerHTML = `
+                <tr>
+                    <td colspan="1" class="totals-label">الإجمالي: ${list.length} يوم</td>
+                    <td class="totals-value" style="text-align:center;">${totals.orders} طلب</td>
+                    <td class="totals-value">${Math.round(totals.gross).toLocaleString("en-US")} ج</td>
+                    <td class="totals-value" style="color:#dc2626;">${Math.round(totals.discount).toLocaleString("en-US")} ج</td>
+                    <td class="totals-value" style="color:#16a34a;">${Math.round(totals.net).toLocaleString("en-US")} ج</td>
+                    <td class="totals-value">${Math.round(totals.shipping).toLocaleString("en-US")} ج</td>
+                    <td class="totals-value" style="color:#2563eb;">${Math.round(totals.total).toLocaleString("en-US")} ج</td>
+                </tr>
+            `;
+        }
     } catch (err) {
         console.error("Daily Report Error:", err);
-        if (el) el.innerHTML = `<div class="empty-state" style="color:#dc2626;"><p>حدث خطأ: ${escapeAdminHTML(err.message)}</p></div>`;
+        if (el) el.innerHTML = `<tr><td colspan="7" style="text-align:center;padding:30px;color:#dc2626;font-weight:700;">حدث خطأ: ${escapeAdminHTML(err.message)}</td></tr>`;
     }
 }
 
@@ -6259,9 +6311,6 @@ document.addEventListener("DOMContentLoaded", () => {
 
 window.openReport = openReport;
 window.backToReportsHome = backToReportsHome;
-window.setSalesPreset = setSalesPreset;
-window.applySalesFilters = applySalesFilters;
-window.setDailyPreset = setDailyPreset;
 window.setGovPreset = setGovPreset;
 window.setProdPreset = setProdPreset;
 window.setStatusPreset = setStatusPreset;
@@ -6779,137 +6828,335 @@ function switchSalesSubTab(tab, btnEl) {
     }
 }
 
-function openReportFiltersModal() {
-    const modal = document.getElementById("reportFiltersModal");
-    if (!modal) return;
-
-    const f = salesReportFilters;
-
-    const fromEl = document.getElementById("reportFilterDateFrom");
-    const toEl = document.getElementById("reportFilterDateTo");
-    if (fromEl) fromEl.value = f.from ? f.from.toISOString().slice(0, 10) : '';
-    if (toEl) toEl.value = f.to ? f.to.toISOString().slice(0, 10) : '';
-
-    const statusEl = document.getElementById("reportFilterStatus");
-    if (statusEl) statusEl.value = f.status || "delivered";
-
-    const govEl = document.getElementById("reportFilterGovernorate");
-    if (govEl) govEl.value = f.governorate || "all";
-
-    const custEl = document.getElementById("reportFilterCustomer");
-    if (custEl) custEl.value = f.customer || "";
-
-    document.querySelectorAll("#reportFiltersModal .preset-chip").forEach(b => {
-        b.classList.toggle("active", b.dataset.preset === f.preset);
+function updateSalesFilterSummary() {
+    ["date", "status", "governorate", "customer"].forEach(key => {
+        updateFiltersChip("sales", key);
     });
+}
+
+window.switchSalesSubTab = switchSalesSubTab;
+
+// ========================================
+// 84. COLLAPSIBLE FILTERS + PICKER
+// ========================================
+
+let filterPickerState = {
+    reportKey: null,
+    filterKey: null
+};
+
+// ✅ Toggle filters body
+function toggleFiltersBar(reportKey) {
+    const body = document.getElementById(reportKey + "FiltersBody");
+    const icon = document.getElementById(reportKey + "FiltersIcon");
+
+    if (!body) return;
+
+    body.classList.toggle("open");
+    icon?.classList.toggle("open", body.classList.contains("open"));
+}
+
+// ✅ Open filter picker
+function openFilterPicker(reportKey, filterKey) {
+    filterPickerState.reportKey = reportKey;
+    filterPickerState.filterKey = filterKey;
+
+    const modal = document.getElementById("filterPickerModal");
+    const titleEl = document.getElementById("filterPickerTitle");
+    const subtitleEl = document.getElementById("filterPickerSubtitle");
+    const bodyEl = document.getElementById("filterPickerBody");
+    const iconEl = document.getElementById("filterPickerIcon");
+
+    if (!modal || !bodyEl) return;
+
+    const configs = {
+        date: { title: "الفترة الزمنية", subtitle: "اختر الفترة اللي عايز تشوفها", icon: "fa-calendar", bg: "#eff6ff", color: "#2563eb" },
+        status: { title: "حالة الطلب", subtitle: "اختر الحالة المطلوبة", icon: "fa-tag", bg: "#fef3c7", color: "#d97706" },
+        governorate: { title: "المحافظة", subtitle: "اختر المحافظة", icon: "fa-location-dot", bg: "#dcfce7", color: "#16a34a" },
+        customer: { title: "العميل", subtitle: "ابحث باسم العميل أو رقمه", icon: "fa-user", bg: "#f3e8ff", color: "#8b5cf6" }
+    };
+
+    const cfg = configs[filterKey] || configs.date;
+    titleEl.textContent = cfg.title;
+    subtitleEl.textContent = cfg.subtitle;
+    iconEl.innerHTML = `<i class="fa-solid ${cfg.icon}"></i>`;
+    iconEl.style.background = cfg.bg;
+    iconEl.style.color = cfg.color;
+
+    if (filterKey === "date") renderDatePicker(bodyEl, reportKey);
+    else if (filterKey === "status") renderListPicker(bodyEl, reportKey, "status");
+    else if (filterKey === "governorate") renderListPicker(bodyEl, reportKey, "governorate");
+    else if (filterKey === "customer") renderCustomerPicker(bodyEl, reportKey);
 
     modal.classList.add("open");
 }
 
-function closeReportFiltersModal() {
-    document.getElementById("reportFiltersModal")?.classList.remove("open");
+function closeFilterPicker() {
+    document.getElementById("filterPickerModal")?.classList.remove("open");
+    filterPickerState = { reportKey: null, filterKey: null };
 }
 
-function setReportFilterPreset(preset, btnEl) {
-    document.querySelectorAll("#reportFiltersModal .preset-chip").forEach(b => b.classList.remove("active"));
+// ✅ Date Picker
+function renderDatePicker(bodyEl, reportKey) {
+    const filters = getFiltersByReport(reportKey);
+    const fromStr = filters.from ? filters.from.toISOString().slice(0, 10) : '';
+    const toStr = filters.to ? filters.to.toISOString().slice(0, 10) : '';
+
+    bodyEl.innerHTML = `
+        <div class="filter-picker-date">
+            <div class="filter-picker-date-group">
+                <label><i class="fa-solid fa-calendar-day"></i> من تاريخ</label>
+                <input type="date" id="pickerDateFrom" value="${fromStr}">
+            </div>
+            <div class="filter-picker-date-group">
+                <label><i class="fa-solid fa-calendar-day"></i> إلى تاريخ</label>
+                <input type="date" id="pickerDateTo" value="${toStr}">
+            </div>
+
+            <div class="filter-picker-presets">
+                <button type="button" class="filter-picker-preset ${filters.preset === 'today' ? 'active' : ''}" onclick="setPickerDatePreset('today', this)">اليوم</button>
+                <button type="button" class="filter-picker-preset ${filters.preset === 'week' ? 'active' : ''}" onclick="setPickerDatePreset('week', this)">آخر 7 أيام</button>
+                <button type="button" class="filter-picker-preset ${filters.preset === 'month' ? 'active' : ''}" onclick="setPickerDatePreset('month', this)">هذا الشهر</button>
+                <button type="button" class="filter-picker-preset ${filters.preset === 'all' ? 'active' : ''}" onclick="setPickerDatePreset('all', this)">الكل</button>
+            </div>
+
+            <div class="filter-picker-actions">
+                <button type="button" class="apply" onclick="applyDateFilter()">
+                    <i class="fa-solid fa-check"></i> تطبيق
+                </button>
+                <button type="button" class="reset" onclick="resetDateFilter()">
+                    <i class="fa-solid fa-rotate-left"></i> إعادة تعيين
+                </button>
+            </div>
+        </div>
+    `;
+}
+
+function setPickerDatePreset(preset, btnEl) {
+    document.querySelectorAll(".filter-picker-preset").forEach(b => b.classList.remove("active"));
     btnEl?.classList.add("active");
 
     const r = _getPresetRange(preset);
+    const fromEl = document.getElementById("pickerDateFrom");
+    const toEl = document.getElementById("pickerDateTo");
 
-    const fromEl = document.getElementById("reportFilterDateFrom");
-    const toEl = document.getElementById("reportFilterDateTo");
     if (fromEl) fromEl.value = r.from ? r.from.toISOString().slice(0, 10) : '';
     if (toEl) toEl.value = r.to ? r.to.toISOString().slice(0, 10) : '';
 }
 
-function applyReportFilters() {
-    const fv = document.getElementById("reportFilterDateFrom")?.value || '';
-    const tv = document.getElementById("reportFilterDateTo")?.value || '';
+function applyDateFilter() {
+    const reportKey = filterPickerState.reportKey;
+    const filters = getFiltersByReport(reportKey);
 
-    salesReportFilters.from = fv ? new Date(fv + 'T00:00:00') : null;
-    salesReportFilters.to = tv ? new Date(tv + 'T23:59:59') : null;
-    salesReportFilters.status = document.getElementById("reportFilterStatus")?.value || "delivered";
-    salesReportFilters.governorate = document.getElementById("reportFilterGovernorate")?.value || "all";
-    salesReportFilters.customer = document.getElementById("reportFilterCustomer")?.value.trim() || "";
-    salesReportFilters.preset = 'custom';
+    const fromStr = document.getElementById("pickerDateFrom")?.value || '';
+    const toStr = document.getElementById("pickerDateTo")?.value || '';
 
-    closeReportFiltersModal();
-    loadSalesReport();
+    filters.from = fromStr ? new Date(fromStr + 'T00:00:00') : null;
+    filters.to = toStr ? new Date(toStr + 'T23:59:59') : null;
+
+    const r_today = _getPresetRange("today");
+    const r_week = _getPresetRange("week");
+    const r_month = _getPresetRange("month");
+    const key = d => d ? d.toISOString().slice(0, 10) : '';
+
+    if (fromStr === key(r_today.from) && toStr === key(r_today.to)) filters.preset = "today";
+    else if (fromStr === key(r_week.from) && toStr === key(r_week.to)) filters.preset = "week";
+    else if (fromStr === key(r_month.from) && toStr === key(r_month.to)) filters.preset = "month";
+    else if (!fromStr && !toStr) filters.preset = "all";
+    else filters.preset = "custom";
+
+    updateFiltersChip(reportKey, "date");
+    closeFilterPicker();
+    reloadReport(reportKey);
 }
 
-function resetReportFilters() {
-    salesReportFilters = {
-        from: null,
-        to: null,
-        preset: "month",
-        status: "delivered",
-        governorate: "all",
-        customer: ""
-    };
-    _applyPresetToFilters("month", salesReportFilters, null, null);
+function resetDateFilter() {
+    const fromEl = document.getElementById("pickerDateFrom");
+    const toEl = document.getElementById("pickerDateTo");
+    if (fromEl) fromEl.value = '';
+    if (toEl) toEl.value = '';
 
-    const r = _getPresetRange("month");
-    const fromEl = document.getElementById("reportFilterDateFrom");
-    const toEl = document.getElementById("reportFilterDateTo");
-    if (fromEl) fromEl.value = r.from ? r.from.toISOString().slice(0, 10) : '';
-    if (toEl) toEl.value = r.to ? r.to.toISOString().slice(0, 10) : '';
-
-    const statusEl = document.getElementById("reportFilterStatus");
-    if (statusEl) statusEl.value = "delivered";
-    const govEl = document.getElementById("reportFilterGovernorate");
-    if (govEl) govEl.value = "all";
-    const custEl = document.getElementById("reportFilterCustomer");
-    if (custEl) custEl.value = "";
-
-    document.querySelectorAll("#reportFiltersModal .preset-chip").forEach(b => {
-        b.classList.toggle("active", b.dataset.preset === "month");
+    document.querySelectorAll(".filter-picker-preset").forEach(b => {
+        b.classList.toggle("active", b.textContent.trim() === "الكل");
     });
 }
 
-function updateSalesFilterSummary() {
-    const el = document.getElementById("salesFilterSummary");
-    if (!el) return;
+// ✅ List Picker (Status + Governorate)
+function renderListPicker(bodyEl, reportKey, filterKey) {
+    const filters = getFiltersByReport(reportKey);
+    const currentValue = filters[filterKey] || "all";
 
-    const parts = [];
+    let options = [];
 
-    // التاريخ
-    if (salesReportFilters.from && salesReportFilters.to) {
-        const from = salesReportFilters.from.toLocaleDateString("ar-EG-u-nu-latn", { day: "numeric", month: "short" });
-        const to = salesReportFilters.to.toLocaleDateString("ar-EG-u-nu-latn", { day: "numeric", month: "short" });
-        parts.push(`${from} - ${to}`);
-    } else {
-        parts.push("كل الفترات");
+    if (filterKey === "status") {
+        options = [
+            { value: "all", label: "كل الحالات", icon: "fa-list" },
+            { value: "delivered", label: "تم التوصيل", icon: "fa-circle-check" },
+            { value: "pending", label: "جديدة", icon: "fa-clock" },
+            { value: "preparing", label: "قيد التحضير", icon: "fa-box-open" },
+            { value: "shipped", label: "تم الشحن", icon: "fa-truck-fast" },
+            { value: "payment_pending", label: "بانتظار الدفع", icon: "fa-hourglass-half" }
+        ];
+    } else if (filterKey === "governorate") {
+        const govs = new Set();
+        adminOrders.forEach(o => { if (o.governorate) govs.add(o.governorate); });
+        govs.add("القاهرة");
+        govs.add("الجيزة");
+
+        options = [
+            { value: "all", label: "كل المحافظات", icon: "fa-map" },
+            ...Array.from(govs).sort().map(g => ({
+                value: g, label: g, icon: "fa-location-dot"
+            }))
+        ];
     }
 
-    // الحالة
-    const statusLabels = {
-        delivered: "تم التوصيل",
-        all: "كل الحالات",
-        pending: "جديدة",
-        preparing: "قيد التحضير",
-        shipped: "تم الشحن"
-    };
-    parts.push(statusLabels[salesReportFilters.status] || salesReportFilters.status);
-
-    // المحافظة
-    if (salesReportFilters.governorate && salesReportFilters.governorate !== "all") {
-        parts.push(salesReportFilters.governorate);
-    }
-
-    // العميل
-    if (salesReportFilters.customer) {
-        parts.push(`"${salesReportFilters.customer}"`);
-    }
-
-    el.innerHTML = `<i class="fa-solid fa-calendar"></i><span>${parts.join(" · ")}</span>`;
+    bodyEl.innerHTML = options.map(opt => `
+        <button type="button" class="filter-picker-item ${currentValue === opt.value ? 'selected' : ''}"
+            onclick="applyListFilter('${escapeAdminHTML(opt.value)}')">
+            <i class="fa-solid ${opt.icon}"></i>
+            <span>${escapeAdminHTML(opt.label)}</span>
+            <span class="filter-picker-check"><i class="fa-solid fa-check"></i></span>
+        </button>
+    `).join("");
 }
 
-window.switchSalesSubTab = switchSalesSubTab;
-window.openReportFiltersModal = openReportFiltersModal;
-window.closeReportFiltersModal = closeReportFiltersModal;
-window.setReportFilterPreset = setReportFilterPreset;
-window.applyReportFilters = applyReportFilters;
-window.resetReportFilters = resetReportFilters;
+function applyListFilter(value) {
+    const reportKey = filterPickerState.reportKey;
+    const filterKey = filterPickerState.filterKey;
+    const filters = getFiltersByReport(reportKey);
+
+    filters[filterKey] = value;
+    updateFiltersChip(reportKey, filterKey);
+    closeFilterPicker();
+    reloadReport(reportKey);
+}
+
+// ✅ Customer Picker
+function renderCustomerPicker(bodyEl, reportKey) {
+    const filters = getFiltersByReport(reportKey);
+    const currentValue = filters.customer || "";
+
+    bodyEl.innerHTML = `
+        <div class="filter-picker-date">
+            <div class="filter-picker-date-group">
+                <label><i class="fa-solid fa-user"></i> اسم العميل أو رقم الهاتف</label>
+                <input type="text" id="pickerCustomerInput" value="${escapeAdminHTML(currentValue)}" placeholder="اكتب للبحث...">
+            </div>
+
+            <div class="filter-picker-actions">
+                <button type="button" class="apply" onclick="applyCustomerFilter()">
+                    <i class="fa-solid fa-check"></i> تطبيق
+                </button>
+                <button type="button" class="reset" onclick="resetCustomerFilter()">
+                    <i class="fa-solid fa-rotate-left"></i> إعادة تعيين
+                </button>
+            </div>
+        </div>
+    `;
+
+    setTimeout(() => document.getElementById("pickerCustomerInput")?.focus(), 100);
+}
+
+function applyCustomerFilter() {
+    const reportKey = filterPickerState.reportKey;
+    const filters = getFiltersByReport(reportKey);
+
+    filters.customer = document.getElementById("pickerCustomerInput")?.value.trim() || "";
+    updateFiltersChip(reportKey, "customer");
+    closeFilterPicker();
+    reloadReport(reportKey);
+}
+
+function resetCustomerFilter() {
+    const input = document.getElementById("pickerCustomerInput");
+    if (input) input.value = "";
+}
+
+// ✅ Helpers
+function getFiltersByReport(reportKey) {
+    if (reportKey === "sales") return salesReportFilters;
+    if (reportKey === "daily") return dailyReportFilters;
+    if (reportKey === "gov") return govReportFilters;
+    if (reportKey === "prod") return prodReportFilters;
+    if (reportKey === "status") return statusReportFilters;
+    if (reportKey === "exchange") return exchangeReportFilters;
+    return {};
+}
+
+function reloadReport(reportKey) {
+    if (reportKey === "sales") loadSalesReport();
+    else if (reportKey === "daily") loadDailyReport();
+    else if (reportKey === "gov") loadGovernorateReport();
+    else if (reportKey === "prod") loadProductsReport();
+    else if (reportKey === "status") loadStatusReport();
+    else if (reportKey === "exchange") loadExchangeReport();
+}
+
+function updateFiltersChip(reportKey, filterKey) {
+    const filters = getFiltersByReport(reportKey);
+
+    if (filterKey === "date") {
+        const el = document.getElementById(reportKey + "ChipDate");
+        if (!el) return;
+
+        if (!filters.from || !filters.to) {
+            el.textContent = "كل الفترات";
+        } else {
+            const f = filters.from.toLocaleDateString("ar-EG-u-nu-latn", { day: "numeric", month: "short" });
+            const t = filters.to.toLocaleDateString("ar-EG-u-nu-latn", { day: "numeric", month: "short" });
+            el.textContent = `${f} - ${t}`;
+        }
+
+        const pill = el.closest(".filter-pill");
+        if (pill) pill.classList.toggle("active", filters.preset === "custom");
+    } else if (filterKey === "status") {
+        const el = document.getElementById(reportKey + "ChipStatus");
+        if (!el) return;
+
+        const labels = {
+            all: "الكل",
+            delivered: "تم التوصيل",
+            pending: "جديدة",
+            preparing: "قيد التحضير",
+            shipped: "تم الشحن",
+            payment_pending: "بانتظار الدفع"
+        };
+
+        el.textContent = labels[filters.status] || filters.status;
+        const pill = el.closest(".filter-pill");
+        if (pill) pill.classList.toggle("active", filters.status && filters.status !== "delivered");
+    } else if (filterKey === "governorate") {
+        const el = document.getElementById(reportKey + "ChipGov");
+        if (!el) return;
+
+        el.textContent = filters.governorate === "all" ? "الكل" : filters.governorate;
+        const pill = el.closest(".filter-pill");
+        if (pill) pill.classList.toggle("active", filters.governorate !== "all");
+    } else if (filterKey === "customer") {
+        const el = document.getElementById(reportKey + "ChipCustomer");
+        if (!el) return;
+
+        el.textContent = filters.customer || "الكل";
+        const pill = el.closest(".filter-pill");
+        if (pill) pill.classList.toggle("active", Boolean(filters.customer));
+    }
+}
+
+window.toggleFiltersBar = toggleFiltersBar;
+window.openFilterPicker = openFilterPicker;
+window.closeFilterPicker = closeFilterPicker;
+window.setPickerDatePreset = setPickerDatePreset;
+window.applyDateFilter = applyDateFilter;
+window.resetDateFilter = resetDateFilter;
+window.applyListFilter = applyListFilter;
+window.applyCustomerFilter = applyCustomerFilter;
+window.resetCustomerFilter = resetCustomerFilter;
+
+// ✅ إغلاق Modal الفلاتر عند الضغط على الخلفية
+document.getElementById("filterPickerModal")?.addEventListener("click", (e) => {
+    if (e.target.id === "filterPickerModal") closeFilterPicker();
+});
 
 // ========================================
 // 82. DISCOUNT DETAILS MODAL

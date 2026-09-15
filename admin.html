@@ -850,21 +850,51 @@
                     </button>
                 </div>
 
-                <!-- ✅ شريط الفلاتر (مختصر) -->
-                <div class="report-filter-bar-modern">
-                    <div class="filter-summary" id="salesFilterSummary">
-                        <i class="fa-solid fa-calendar"></i>
-                        <span>هذا الشهر</span>
-                    </div>
-                    <div class="filter-actions">
-                        <button class="btn-filter-open" onclick="openReportFiltersModal()">
-                            <i class="fa-solid fa-filter"></i>
-                            الفلاتر
+                <!-- ✅ Filter Bar (Collapsible) -->
+                <div class="report-filters-wrapper" id="salesFiltersWrapper">
+                    <div class="report-filters-header">
+                        <button type="button" class="filters-toggle-btn" onclick="toggleFiltersBar('sales')">
+                            <i class="fa-solid fa-sliders"></i>
+                            <span>الفلاتر</span>
+                            <span class="filters-count-badge" id="salesFiltersCount">4</span>
+                            <i class="fa-solid fa-chevron-down filters-toggle-icon" id="salesFiltersIcon"></i>
                         </button>
                         <button class="btn-export" onclick="exportSalesCSV()">
                             <i class="fa-solid fa-file-csv"></i>
                             CSV
                         </button>
+                    </div>
+
+                    <div class="report-filters-body" id="salesFiltersBody">
+                        <div class="filter-pills-grid">
+                            <button type="button" class="filter-pill" onclick="openFilterPicker('sales', 'date')">
+                                <i class="fa-solid fa-calendar"></i>
+                                <span class="filter-pill-label">الفترة</span>
+                                <strong class="filter-pill-value" id="salesChipDate">هذا الشهر</strong>
+                                <i class="fa-solid fa-chevron-down filter-pill-arrow"></i>
+                            </button>
+
+                            <button type="button" class="filter-pill" onclick="openFilterPicker('sales', 'status')">
+                                <i class="fa-solid fa-tag"></i>
+                                <span class="filter-pill-label">الحالة</span>
+                                <strong class="filter-pill-value" id="salesChipStatus">تم التوصيل</strong>
+                                <i class="fa-solid fa-chevron-down filter-pill-arrow"></i>
+                            </button>
+
+                            <button type="button" class="filter-pill" onclick="openFilterPicker('sales', 'governorate')">
+                                <i class="fa-solid fa-location-dot"></i>
+                                <span class="filter-pill-label">المحافظة</span>
+                                <strong class="filter-pill-value" id="salesChipGov">الكل</strong>
+                                <i class="fa-solid fa-chevron-down filter-pill-arrow"></i>
+                            </button>
+
+                            <button type="button" class="filter-pill" onclick="openFilterPicker('sales', 'customer')">
+                                <i class="fa-solid fa-user"></i>
+                                <span class="filter-pill-label">العميل</span>
+                                <strong class="filter-pill-value" id="salesChipCustomer">الكل</strong>
+                                <i class="fa-solid fa-chevron-down filter-pill-arrow"></i>
+                            </button>
+                        </div>
                     </div>
                 </div>
 
@@ -998,24 +1028,26 @@
                     <div></div>
                 </div>
 
-                <div class="report-filter-bar">
-                    <div class="report-filter-group">
-                        <label><i class="fa-solid fa-calendar"></i> من تاريخ</label>
-                        <input type="date" id="dailyDateFrom">
-                    </div>
-                    <div class="report-filter-group">
-                        <label><i class="fa-solid fa-calendar"></i> إلى تاريخ</label>
-                        <input type="date" id="dailyDateTo">
-                    </div>
-                    <div class="report-preset-chips">
-                        <button class="preset-chip" onclick="setDailyPreset('week', this)">آخر 7 أيام</button>
-                        <button class="preset-chip active" onclick="setDailyPreset('month', this)">هذا الشهر</button>
-                        <button class="preset-chip" onclick="setDailyPreset('all', this)">الكل</button>
-                    </div>
-                    <div class="report-filter-actions">
-                        <button class="btn-apply-filter" onclick="loadDailyReport()">
-                            <i class="fa-solid fa-filter"></i> تطبيق
+                <!-- ✅ Filter Bar (Collapsible) -->
+                <div class="report-filters-wrapper" id="dailyFiltersWrapper">
+                    <div class="report-filters-header">
+                        <button type="button" class="filters-toggle-btn" onclick="toggleFiltersBar('daily')">
+                            <i class="fa-solid fa-sliders"></i>
+                            <span>الفلاتر</span>
+                            <span class="filters-count-badge" id="dailyFiltersCount">1</span>
+                            <i class="fa-solid fa-chevron-down filters-toggle-icon" id="dailyFiltersIcon"></i>
                         </button>
+                    </div>
+
+                    <div class="report-filters-body" id="dailyFiltersBody">
+                        <div class="filter-pills-grid">
+                            <button type="button" class="filter-pill" onclick="openFilterPicker('daily', 'date')">
+                                <i class="fa-solid fa-calendar"></i>
+                                <span class="filter-pill-label">الفترة</span>
+                                <strong class="filter-pill-value" id="dailyChipDate">هذا الشهر</strong>
+                                <i class="fa-solid fa-chevron-down filter-pill-arrow"></i>
+                            </button>
+                        </div>
                     </div>
                 </div>
 
@@ -2297,92 +2329,6 @@
         </div>
     </div>
 
-        <!-- ============ REPORT FILTERS MODAL ============ -->
-    <div class="modal" id="reportFiltersModal">
-        <div class="modal-content modal-large">
-            <div class="modal-header">
-                <div class="modal-title-group">
-                    <div class="modal-icon" style="background:#f3e8ff;color:#8b5cf6;">
-                        <i class="fa-solid fa-filter"></i>
-                    </div>
-                    <div>
-                        <h2>فلاتر التقرير</h2>
-                        <p style="font-size:13px;color:#888;margin-top:2px;">حدّد الفترة والفلاتر المطلوبة</p>
-                    </div>
-                </div>
-                <button type="button" class="close-modal" onclick="closeReportFiltersModal()">&times;</button>
-            </div>
-
-            <div class="form-section">
-                <div class="form-section-title">
-                    <i class="fa-solid fa-calendar"></i>
-                    الفترة الزمنية
-                </div>
-
-                <div class="report-preset-chips" style="margin-bottom:14px;">
-                    <button class="preset-chip" data-preset="today" onclick="setReportFilterPreset('today', this)">اليوم</button>
-                    <button class="preset-chip" data-preset="week" onclick="setReportFilterPreset('week', this)">آخر 7 أيام</button>
-                    <button class="preset-chip active" data-preset="month" onclick="setReportFilterPreset('month', this)">هذا الشهر</button>
-                    <button class="preset-chip" data-preset="all" onclick="setReportFilterPreset('all', this)">الكل</button>
-                </div>
-
-                <div class="form-row">
-                    <div class="form-group">
-                        <label for="reportFilterDateFrom">من تاريخ</label>
-                        <input type="date" id="reportFilterDateFrom">
-                    </div>
-                    <div class="form-group">
-                        <label for="reportFilterDateTo">إلى تاريخ</label>
-                        <input type="date" id="reportFilterDateTo">
-                    </div>
-                </div>
-            </div>
-
-            <div class="form-section">
-                <div class="form-section-title">
-                    <i class="fa-solid fa-sliders"></i>
-                    فلاتر إضافية
-                </div>
-
-                <div class="form-group">
-                    <label for="reportFilterStatus">الحالة</label>
-                    <select id="reportFilterStatus">
-                        <option value="delivered" selected>تم التوصيل فقط</option>
-                        <option value="all">كل الحالات (ما عدا الملغي)</option>
-                        <option value="pending">جديدة</option>
-                        <option value="preparing">قيد التحضير</option>
-                        <option value="shipped">تم الشحن</option>
-                    </select>
-                </div>
-
-                <div class="form-group">
-                    <label for="reportFilterGovernorate">المحافظة</label>
-                    <select id="reportFilterGovernorate">
-                        <option value="all">كل المحافظات</option>
-                        <option value="القاهرة">القاهرة</option>
-                        <option value="الجيزة">الجيزة</option>
-                    </select>
-                </div>
-
-                <div class="form-group">
-                    <label for="reportFilterCustomer">العميل</label>
-                    <input type="text" id="reportFilterCustomer" placeholder="اسم العميل أو رقم الهاتف...">
-                </div>
-            </div>
-
-            <div class="modal-actions">
-                <button type="button" class="btn-primary-modal" onclick="applyReportFilters()">
-                    <i class="fa-solid fa-check"></i>
-                    تطبيق الفلاتر
-                </button>
-                <button type="button" class="btn-secondary-modal" onclick="resetReportFilters()">
-                    <i class="fa-solid fa-rotate-left"></i>
-                    إعادة تعيين
-                </button>
-            </div>
-        </div>
-    </div>
-
     <!-- ============ DISCOUNT DETAILS MODAL ============ -->
     <div class="modal" id="discountDetailsModal">
         <div class="modal-content" style="max-width:560px;">
@@ -2408,7 +2354,25 @@
             </div>
         </div>
     </div>
+    <!-- ============ FILTER PICKER MODAL ============ -->
+    <div class="modal" id="filterPickerModal">
+        <div class="modal-content" style="max-width:480px;">
+            <div class="modal-header">
+                <div class="modal-title-group">
+                    <div class="modal-icon" id="filterPickerIcon" style="background:#f3e8ff;color:#8b5cf6;">
+                        <i class="fa-solid fa-filter"></i>
+                    </div>
+                    <div>
+                        <h2 id="filterPickerTitle">اختر</h2>
+                        <p id="filterPickerSubtitle" style="font-size:13px;color:#888;margin-top:2px;"></p>
+                    </div>
+                </div>
+                <button type="button" class="close-modal" onclick="closeFilterPicker()">&times;</button>
+            </div>
 
+            <div id="filterPickerBody" class="filter-picker-body"></div>
+        </div>
+    </div>
     <!-- ============ SHIP CONFIRM MODAL ============ -->
     <div class="modal" id="shipConfirmModal">
         <div class="modal-content" style="max-width:520px;">
