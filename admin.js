@@ -7067,22 +7067,61 @@ function applyListFilter(value) {
     reloadReport(reportKey);
 }
 
+// ✅ استخراج قائمة العملاء الفريدين
+function getUniqueCustomers() {
+    const map = new Map();
+
+    adminOrders.forEach(o => {
+        if (!o.customer_name && !o.customer_phone) return;
+
+        const key = o.customer_id
+            ? `id:${o.customer_id}`
+            : `phone:${o.customer_phone || "unknown"}`;
+
+        if (!map.has(key)) {
+            map.set(key, {
+                key,
+                name: o.customer_name || "عميل",
+                phone: o.customer_phone || "-",
+                ordersCount: 0,
+                totalSpent: 0
+            });
+        }
+
+        const c = map.get(key);
+        c.ordersCount++;
+        c.totalSpent += Number(o.total_amount || 0);
+    });
+
+    return Array.from(map.values()).sort((a, b) => b.totalSpent - a.totalSpent);
+}
+
 // ✅ Customer Picker
 function renderCustomerPicker(bodyEl, reportKey) {
     const filters = getFiltersByReport(reportKey);
     const currentValue = filters.customer || "";
 
     bodyEl.innerHTML = `
-        <div class="filter-picker-date">
-            <div class="filter-picker-date-group">
-                <label><i class="fa-solid fa-user"></i> اسم العميل أو رقم الهاتف</label>
-                <input type="text" id="pickerCustomerInput" value="${escapeAdminHTML(currentValue)}" placeholder="اكتب للبحث...">
+        <div class="customer-picker-wrapper">
+            <!-- ✅ حقول البحث -->
+            <div class="customer-picker-search">
+                <div class="customer-picker-search-field">
+                    <i class="fa-solid fa-user"></i>
+                    <input type="text" id="pickerCustomerName" placeholder="ابحث بالاسم...">
+                </div>
+                <div class="customer-picker-search-field">
+                    <i class="fa-solid fa-phone"></i>
+                    <input type="text" id="pickerCustomerPhone" placeholder="ابحث بالهاتف...">
+                </div>
             </div>
 
+            <!-- ✅ قائمة العملاء -->
+            <div class="customer-picker-list" id="customerPickerList">
+                <!-- هتتعبى من JS -->
+            </div>
+
+            <!-- ✅ أزرار -->
             <div class="filter-picker-actions">
-                <button type="button" class="apply" onclick="applyCustomerFilter()">
-                    <i class="fa-solid fa-check"></i> تطبيق
-                </button>
                 <button type="button" class="reset" onclick="resetCustomerFilter()">
                     <i class="fa-solid fa-rotate-left"></i> إعادة تعيين
                 </button>
@@ -7090,7 +7129,137 @@ function renderCustomerPicker(bodyEl, reportKey) {
         </div>
     `;
 
-    setTimeout(() => document.getElementById("pickerCustomerInput")?.focus(), 100);
+    // ✅ نعرض القائمة الأولية
+    renderCustomerList("", "", reportKey);
+
+    // ✅ نربط حقول البحث
+    setTimeout(() => {
+        const nameInput = document.getElementById("pickerCustomerName");
+        const phoneInput = document.getElementById("pickerCustomerPhone");
+
+        if (nameInput) {
+            let t;
+            nameInput.addEventListener("input", (e) => {
+                clearTimeout(t);
+                t = setTimeout(() => {
+                    renderCustomerList(
+                        e.target.value,
+                        document.getElementById("pickerCustomerPhone")?.value || "",
+                        reportKey
+                    );
+                }, 200);
+            });
+            nameInput.focus();
+        }
+
+        if (phoneInput) {
+            let t;
+            phoneInput.addEventListener("input", (e) => {
+                clearTimeout(t);
+                t = setTimeout(() => {
+                    renderCustomerList(
+                        document.getElementById("pickerCustomerName")?.value || "",
+                        e.target.value,
+                        reportKey
+                    );
+                }, 200);
+            });
+        }
+    }, 50);
+}
+
+// ✅ دالة عرض قائمة العملاء
+function renderCustomerList(nameQuery, phoneQuery, reportKey) {
+    const listEl = document.getElementById("customerPickerList");
+    if (!listEl) return;
+
+    const filters = getFiltersByReport(reportKey);
+    const currentValue = filters.customer || "";
+
+    const name = String(nameQuery || "").trim().toLowerCase();
+    const phone = String(phoneQuery || "").trim().toLowerCase();
+
+    let customers = getUniqueCustomers();
+
+    // ✅ فلترة
+    if (name) {
+        customers = customers.filter(c =>
+            String(c.name || "").toLowerCase().includes(name)
+        );
+    }
+    if (phone) {
+        customers = customers.filter(c =>
+            String(c.phone || "").toLowerCase().includes(phone)
+        );
+    }
+
+    // ✅ خيار "الكل"
+    const clearBtn = `
+        <button type="button" class="customer-picker-item customer-picker-clear ${!currentValue ? 'selected' : ''}"
+            onclick="applyCustomerFilterValue('')">
+            <div class="customer-picker-item-icon">
+                <i class="fa-solid fa-users"></i>
+            </div>
+            <div class="customer-picker-item-info">
+                <strong>كل العملاء</strong>
+                <small>بدون فلتر</small>
+            </div>
+            <span class="customer-picker-item-check">
+                <i class="fa-solid fa-check"></i>
+            </span>
+        </button>
+    `;
+
+    // ✅ العملاء
+    if (!customers.length) {
+        listEl.innerHTML = clearBtn + `
+            <div class="customer-picker-empty">
+                <i class="fa-solid fa-user-slash"></i>
+                <p>لا يوجد عملاء مطابقين</p>
+            </div>
+        `;
+        return;
+    }
+
+    const customersHTML = customers.map(c => {
+        // ✅ نتأكد إن العميل الحالي محدد
+        const isSelected = currentValue &&
+            (String(c.name).includes(currentValue) || String(c.phone).includes(currentValue));
+
+        return `
+            <button type="button" class="customer-picker-item ${isSelected ? 'selected' : ''}"
+                onclick="applyCustomerFilterValue('${escapeAdminHTML(c.name)}')">
+                <div class="customer-picker-item-icon">
+                    <i class="fa-solid fa-user"></i>
+                </div>
+                <div class="customer-picker-item-info">
+                    <strong>${escapeAdminHTML(c.name)}</strong>
+                    <small>
+                        <i class="fa-solid fa-phone"></i>
+                        ${escapeAdminHTML(c.phone)}
+                        <span style="color:#cbd5e1;">·</span>
+                        ${c.ordersCount} طلب
+                    </small>
+                </div>
+                <span class="customer-picker-item-check">
+                    <i class="fa-solid fa-check"></i>
+                </span>
+            </button>
+        `;
+    }).join("");
+
+    listEl.innerHTML = clearBtn + customersHTML;
+}
+
+// ✅ عند اختيار عميل
+function applyCustomerFilterValue(value) {
+    const reportKey = filterPickerState.reportKey;
+    const filters = getFiltersByReport(reportKey);
+
+    filters.customer = value || "";
+    updateFiltersChip(reportKey, "customer");
+    closeFilterPicker();
+    reloadReport(reportKey);
 }
 
 function applyCustomerFilter() {
@@ -7104,8 +7273,13 @@ function applyCustomerFilter() {
 }
 
 function resetCustomerFilter() {
-    const input = document.getElementById("pickerCustomerInput");
-    if (input) input.value = "";
+    const nameInput = document.getElementById("pickerCustomerName");
+    const phoneInput = document.getElementById("pickerCustomerPhone");
+
+    if (nameInput) nameInput.value = "";
+    if (phoneInput) phoneInput.value = "";
+
+    renderCustomerList("", "", filterPickerState.reportKey);
 }
 
 // ✅ Helpers
@@ -7185,7 +7359,8 @@ window.setPickerDatePreset = setPickerDatePreset;
 window.applyDateFilter = applyDateFilter;
 window.resetDateFilter = resetDateFilter;
 window.applyListFilter = applyListFilter;
-window.applyCustomerFilter = applyCustomerFilter;
+window.applyCustomerFilterValue = applyCustomerFilterValue;
+window.renderCustomerList = renderCustomerList;
 window.resetCustomerFilter = resetCustomerFilter;
 
 // ✅ إغلاق Modal الفلاتر عند الضغط على الخلفية
