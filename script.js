@@ -1458,23 +1458,43 @@ window.copyToClipboard = copyToClipboard;
 // PENDING INSTAPAY BANNER
 // ========================================
 
-function checkPendingInstapay() {
+async function checkPendingInstapay() {
     try {
         const raw = localStorage.getItem('pendingInstapayOrder');
         if (!raw) return;
 
         const data = JSON.parse(raw);
-        if (!data || !data.orderId) return;
+        if (!data || !data.orderId) {
+            localStorage.removeItem('pendingInstapayOrder');
+            return;
+        }
 
-        // نتجاهل الطلبات الأقدم من 24 ساعة
+        // ✅ نتجاهل الطلبات الأقدم من 24 ساعة
         if (Date.now() - data.savedAt > 24 * 60 * 60 * 1000) {
             localStorage.removeItem('pendingInstapayOrder');
             return;
         }
 
-        // نعرض بانر لطيف
+        // ✅ نتأكد إن الطلب لسه موجود في الداتابيز ولسه payment_pending
+        if (!supabaseClient) return;
+
+        const { data: order, error } = await supabaseClient
+            .from("orders")
+            .select("id, status, payment_method")
+            .eq("id", data.orderId)
+            .maybeSingle();
+
+        // ✅ لو الطلب اتمسح أو حالته اتغيرت → امسح البانر
+        if (error || !order || order.status !== "payment_pending") {
+            localStorage.removeItem('pendingInstapayOrder');
+            return;
+        }
+
+        // ✅ نعرض البانر
         showInstapayBanner(data);
-    } catch (e) {}
+    } catch (e) {
+        console.warn("Check pending instapay error:", e);
+    }
 }
 
 function showInstapayBanner(data) {
