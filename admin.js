@@ -5080,7 +5080,15 @@ window.showFollowUpOrders = showFollowUpOrders;
 let currentReportKey = null;
 
 let salesReportOrders = [];
-let salesReportFilters = { from: null, to: null, preset: "month" };
+let salesReportTab = "orders";  // "orders" | "products"
+let salesReportFilters = {
+    from: null,
+    to: null,
+    preset: "month",
+    status: "delivered",
+    governorate: "all",
+    customer: ""
+};
 
 let customersReportRaw = [];
 let customersReportFilters = { sort: "spent_desc", type: "all", search: "" };
@@ -5300,105 +5308,255 @@ async function _fetchOrdersInRange(filters) {
 
 async function loadSalesReport() {
     const listEl = document.getElementById("salesOrdersList");
-    if (listEl) listEl.innerHTML = `<tr><td colspan="8" style="text-align:center;padding:30px;color:#94a3b8;">جاري التحميل...</td></tr>`;
+    const prodEl = document.getElementById("salesProductsList");
+    if (listEl) listEl.innerHTML = `<tr><td colspan="10" style="text-align:center;padding:30px;color:#94a3b8;">جاري التحميل...</td></tr>`;
+    if (prodEl) prodEl.innerHTML = `<tr><td colspan="8" style="text-align:center;padding:30px;color:#94a3b8;">جاري التحميل...</td></tr>`;
+
+    // ✅ تحديث ملخص الفلاتر
+    updateSalesFilterSummary();
 
     try {
         const allOrders = await _fetchOrdersInRange(salesReportFilters);
 
-        // ✅ نستثني الطلبات الملغية والمرتجعة نهائيًا
-        salesReportOrders = allOrders.filter(o => 
-            !["cancelled", "refunded"].includes(o.status)
-        );
+        // ✅ فلترة أولية (استثناء الملغي والمرتجع نهائيًا)
+        let filtered = allOrders.filter(o => !["cancelled", "refunded"].includes(o.status));
+
+        // ✅ فلترة الحالة
+        if (salesReportFilters.status && salesReportFilters.status !== "all") {
+            filtered = filtered.filter(o => o.status === salesReportFilters.status);
+        }
+
+        // ✅ فلترة المحافظة
+        if (salesReportFilters.governorate && salesReportFilters.governorate !== "all") {
+            filtered = filtered.filter(o => o.governorate === salesReportFilters.governorate);
+        }
+
+        // ✅ فلترة العميل (اسم أو هاتف)
+        if (salesReportFilters.customer) {
+            const term = salesReportFilters.customer.toLowerCase();
+            filtered = filtered.filter(o =>
+                String(o.customer_name || "").toLowerCase().includes(term) ||
+                String(o.customer_phone || "").includes(term)
+            );
+        }
+
+        salesReportOrders = filtered;
+
         renderSalesKPIs();
-        renderPaymentBreakdown();
-        renderStatusBreakdown();
-        renderSalesTopProducts();
         renderSalesOrdersTable();
+        renderSalesProductsTable();
     } catch (err) {
         console.error("Sales Report Error:", err);
-        if (listEl) listEl.innerHTML = `<tr><td colspan="8" style="text-align:center;padding:30px;color:#dc2626;font-weight:700;">حدث خطأ: ${escapeAdminHTML(err.message)}</td></tr>`;
+        if (listEl) listEl.innerHTML = `<tr><td colspan="10" style="text-align:center;padding:30px;color:#dc2626;font-weight:700;">حدث خطأ: ${escapeAdminHTML(err.message)}</td></tr>`;
+        if (prodEl) prodEl.innerHTML = `<tr><td colspan="8" style="text-align:center;padding:30px;color:#dc2626;font-weight:700;">حدث خطأ: ${escapeAdminHTML(err.message)}</td></tr>`;
     }
 }
 
+// ✅ حساب الإجماليات
+function _calcSalesTotals(orders) {
+    let gross = 0, discount = 0, shipping = 0, total = 0, items = 0;
+
+    orders.forEach(o => {
+        const oItems = Array.isArray(o.items) ? o.items : [];
+        const orderGross = oItems.reduce((s, i) => s + Number(i.price || 0) * Number(i.quantity || 0), 0);
+        const orderDiscount = Number(o.discount_total || 0);
+        const orderShipping = Number(o.shipping_cost || 0);
+
+        gross += orderGross;
+        discount += orderDiscount;
+        shipping += orderShipping;
+        total += orderGross - orderDiscount + orderShipping;
+
+        items += oItems.reduce((s, i) => s + Number(i.quantity || 0), 0);
+    });
+
+    const net = gross - discount;
+
+    return { gross, discount, net, shipping, total, items, orders: orders.length };
+}
+
 function renderSalesKPIs() {
-    const orders = salesReportOrders;
-    const revenue = orders.reduce((s, o) => s + Number(o.total_amount || 0), 0);
-    const ordersCount = orders.length;
-    const aov = ordersCount > 0 ? revenue / ordersCount : 0;
-    let itemsSold = 0;
-    orders.forEach(o => (Array.isArray(o.items) ? o.items : []).forEach(i => itemsSold += Number(i.quantity || 0)));
+    const t = _calcSalesTotals(salesReportOrders);
 
     const set = (id, v) => { const e = document.getElementById(id); if (e) e.textContent = v; };
-    set("salesKpiRevenue", revenue.toLocaleString("en-US"));
-    set("salesKpiOrders", ordersCount.toLocaleString("en-US"));
-    set("salesKpiAOV", Math.round(aov).toLocaleString("en-US"));
-    set("salesKpiItems", itemsSold.toLocaleString("en-US"));
-}
 
-function renderPaymentBreakdown() {
-    const el = document.getElementById("paymentBreakdown");
-    if (!el) return;
-    const map = {};
-    let total = 0;
-    salesReportOrders.forEach(o => {
-        const k = (o.payment_method || "unknown").toLowerCase();
-        if (!map[k]) map[k] = { count: 0, revenue: 0 };
-        map[k].count++;
-        map[k].revenue += Number(o.total_amount || 0);
-        total += Number(o.total_amount || 0);
-    });
-    const entries = Object.entries(map);
-    if (!entries.length) { el.innerHTML = `<div class="empty-state"><p>لا توجد بيانات</p></div>`; return; }
-    entries.sort((a, b) => b[1].revenue - a[1].revenue);
-    el.innerHTML = entries.map(([k, d]) => {
-        const m = PAYMENT_METHODS_META[k] || PAYMENT_METHODS_META.unknown;
-        const pct = total > 0 ? Math.round((d.revenue / total) * 100) : 0;
-        const c = { cash: { bg: "#dcfce7", color: "#16a34a" }, instapay: { bg: "#dbeafe", color: "#2563eb" }, unknown: { bg: "#f1f5f9", color: "#64748b" } }[k] || { bg: "#f1f5f9", color: "#64748b" };
-        return `<div class="breakdown-item"><div class="breakdown-item-left"><div class="breakdown-icon" style="background:${c.bg};color:${c.color};"><i class="fa-solid ${m.icon}"></i></div><div class="breakdown-label"><strong>${escapeAdminHTML(m.text)}</strong><small>${d.count} طلب · ${pct}%</small></div></div><div class="breakdown-value">${d.revenue.toLocaleString("en-US")} ج</div></div>`;
-    }).join("");
-}
-
-function renderStatusBreakdown() {
-    const el = document.getElementById("statusBreakdown");
-    if (!el) return;
-    const map = {};
-    salesReportOrders.forEach(o => { const s = o.status || "unknown"; map[s] = (map[s] || 0) + 1; });
-    const entries = Object.entries(map).sort((a, b) => b[1] - a[1]);
-    if (!entries.length) { el.innerHTML = `<div class="empty-state"><p>لا توجد بيانات</p></div>`; return; }
-    el.innerHTML = entries.map(([s, c]) => `<div class="breakdown-item"><div>${getStatusBadge(s)}</div><div class="breakdown-value">${c} طلب</div></div>`).join("");
-}
-
-function renderSalesTopProducts() {
-    const el = document.getElementById("salesTopProductsList");
-    if (!el) return;
-    const ps = {};
-    salesReportOrders.forEach(o => (Array.isArray(o.items) ? o.items : []).forEach(item => {
-        const k = String(item.id ?? item.name ?? "unknown");
-        if (!ps[k]) ps[k] = { id: item.id, name: item.name || "منتج", image: item.image || "", quantity: 0, revenue: 0 };
-        ps[k].quantity += Number(item.quantity || 1);
-        ps[k].revenue += Number(item.quantity || 1) * Number(item.price || 0);
-    }));
-    const top = Object.values(ps).sort((a, b) => b.quantity - a.quantity).slice(0, 8);
-    if (!top.length) { el.innerHTML = `<div class="empty-state"><i class="fa-solid fa-chart-line"></i><p>لا توجد مبيعات</p></div>`; return; }
-    el.innerHTML = top.map((p, i) => {
-        const rc = i === 0 ? "gold" : i === 1 ? "silver" : i === 2 ? "bronze" : "gray";
-        const rt = i < 3 ? ["🥇","🥈","🥉"][i] : `#${i+1}`;
-        return `<div class="top-item"><div class="top-item-info"><div class="rank-circle ${rc}">${rt}</div>${p.image ? `<img src="${escapeAdminHTML(p.image)}" class="top-item-img" onerror="this.style.display='none'">` : `<div class="top-item-img" style="display:flex;align-items:center;justify-content:center;color:#94a3b8;"><i class="fa-solid fa-image"></i></div>`}<div><div class="top-item-name">${escapeAdminHTML(p.name)}</div><div class="top-item-sales">${p.quantity} قطعة</div></div></div><div class="top-item-revenue">${p.revenue.toLocaleString("en-US")} ج.م</div></div>`;
-    }).join("");
+    set("salesKpiGross", t.gross.toLocaleString("en-US"));
+    set("salesKpiDiscount", t.discount.toLocaleString("en-US"));
+    set("salesKpiNet", t.net.toLocaleString("en-US"));
+    set("salesKpiShipping", t.shipping.toLocaleString("en-US"));
+    set("salesKpiTotal", t.total.toLocaleString("en-US"));
 }
 
 function renderSalesOrdersTable() {
     const listEl = document.getElementById("salesOrdersList");
+    const totalsEl = document.getElementById("salesOrdersTotals");
     const countEl = document.getElementById("salesOrdersCount");
+
     if (!listEl) return;
+
     if (countEl) countEl.textContent = `${salesReportOrders.length} طلب`;
-    if (!salesReportOrders.length) { listEl.innerHTML = `<tr><td colspan="8" style="text-align:center;padding:35px;color:#64748b;">لا توجد طلبات</td></tr>`; return; }
-    listEl.innerHTML = salesReportOrders.map(o => {
-        const pm = (o.payment_method || "unknown").toLowerCase();
-        const m = PAYMENT_METHODS_META[pm] || PAYMENT_METHODS_META.unknown;
-        const cls = pm === "cash" ? "cash" : pm === "instapay" ? "instapay" : "unknown";
-        return `<tr><td class="order-id-cell"><span>#</span>${escapeAdminHTML(o.id)}</td><td class="customer-cell"><strong>${escapeAdminHTML(o.customer_name || "عميل")}</strong></td><td class="phone-cell"><div class="phone" style="direction:ltr;justify-content:flex-end;">${escapeAdminHTML(o.customer_phone || "-")}</div></td><td class="date-cell">${formatDate(o.created_at)}</td><td><span class="payment-badge ${cls}"><i class="fa-solid ${m.icon}"></i> ${escapeAdminHTML(m.text)}</span></td><td>${getStatusBadge(o.status)}</td><td class="amount-cell">${Number(o.total_amount || 0).toLocaleString("en-US")} <span class="currency">ج.م</span></td><td><button type="button" class="action-icon-btn preview" onclick="viewOrderDetails(${Number(o.id)})"><i class="fa-solid fa-eye"></i></button></td></tr>`;
+
+    if (!salesReportOrders.length) {
+        listEl.innerHTML = `<tr><td colspan="10" style="text-align:center;padding:35px;color:#64748b;">لا توجد طلبات</td></tr>`;
+        if (totalsEl) totalsEl.innerHTML = "";
+        return;
+    }
+
+    listEl.innerHTML = salesReportOrders.map((o, i) => {
+        const items = Array.isArray(o.items) ? o.items : [];
+        const gross = items.reduce((s, item) => s + Number(item.price || 0) * Number(item.quantity || 0), 0);
+        const discount = Number(o.discount_total || 0);
+        const net = gross - discount;
+        const shipping = Number(o.shipping_cost || 0);
+        const total = net + shipping;
+
+        const discountCell = discount > 0
+            ? `<div class="discount-cell"><span class="discount-amount">${discount.toLocaleString("en-US")}</span><button type="button" class="discount-view-btn" onclick="showDiscountDetails(${Number(o.id)})" title="تفاصيل الخصم"><i class="fa-solid fa-magnifying-glass"></i></button></div>`
+            : `<span class="discount-amount zero">0</span>`;
+
+        return `
+            <tr>
+                <td style="color:#94a3b8;font-weight:800;">${i + 1}</td>
+                <td class="order-id-cell"><span>#</span>${escapeAdminHTML(o.id)}</td>
+                <td class="customer-cell"><strong>${escapeAdminHTML(o.customer_name || "عميل")}</strong></td>
+                <td style="font-size:12px;color:#64748b;">${escapeAdminHTML(o.governorate || "-")}</td>
+                <td class="amount-cell">${gross.toLocaleString("en-US")} <span class="currency">ج.م</span></td>
+                <td>${discountCell}</td>
+                <td class="amount-cell" style="color:#16a34a;">${net.toLocaleString("en-US")} <span class="currency">ج.م</span></td>
+                <td class="amount-cell" style="font-size:12px;color:#64748b;">${shipping === 0 ? "مجاني" : shipping.toLocaleString("en-US") + " ج.م"}</td>
+                <td class="amount-cell" style="color:#2563eb;font-weight:800;">${total.toLocaleString("en-US")} <span class="currency">ج.م</span></td>
+                <td>
+                    <button type="button" class="action-icon-btn preview" onclick="viewOrderDetails(${Number(o.id)})">
+                        <i class="fa-solid fa-eye"></i>
+                    </button>
+                </td>
+            </tr>
+        `;
     }).join("");
+
+    // ✅ صف الإجمالي
+    if (totalsEl) {
+        const t = _calcSalesTotals(salesReportOrders);
+        totalsEl.innerHTML = `
+            <tr>
+                <td colspan="2" class="totals-label">الإجمالي: ${t.orders} طلب</td>
+                <td colspan="2" class="totals-value">${t.items} قطعة</td>
+                <td class="totals-value">${t.gross.toLocaleString("en-US")} ج</td>
+                <td class="totals-value" style="color:#dc2626;">${t.discount.toLocaleString("en-US")} ج</td>
+                <td class="totals-value" style="color:#16a34a;">${t.net.toLocaleString("en-US")} ج</td>
+                <td class="totals-value">${t.shipping.toLocaleString("en-US")} ج</td>
+                <td class="totals-value" style="color:#2563eb;">${t.total.toLocaleString("en-US")} ج</td>
+                <td></td>
+            </tr>
+        `;
+    }
+}
+
+// ✅ دالة المنتجات (نفس منطق التوزيع)
+function renderSalesProductsTable() {
+    const listEl = document.getElementById("salesProductsList");
+    const totalsEl = document.getElementById("salesProductsTotals");
+    const countEl = document.getElementById("salesProductsCount");
+
+    if (!listEl) return;
+
+    // ✅ نبني قائمة المنتجات مع توزيع الخصم
+    const productMap = {};
+
+    salesReportOrders.forEach(o => {
+        const items = Array.isArray(o.items) ? o.items : [];
+        const orderGross = items.reduce((s, it) => s + Number(it.price || 0) * Number(it.quantity || 0), 0);
+        const orderDiscount = Number(o.discount_total || 0);
+
+        items.forEach(item => {
+            const key = String(item.id ?? item.name ?? "unknown");
+            const qty = Number(item.quantity || 1);
+            const price = Number(item.price || 0);
+            const before = qty * price;
+
+            // ✅ توزيع الخصم بنسبة القيمة
+            let discountShare = 0;
+            if (orderDiscount > 0 && orderGross > 0) {
+                discountShare = (before / orderGross) * orderDiscount;
+            }
+
+            if (!productMap[key]) {
+                productMap[key] = {
+                    id: item.id,
+                    name: item.name || "منتج",
+                    image: item.image || "",
+                    qty: 0,
+                    before: 0,
+                    discount: 0
+                };
+            }
+
+            productMap[key].qty += qty;
+            productMap[key].before += before;
+            productMap[key].discount += discountShare;
+        });
+    });
+
+    const list = Object.values(productMap).sort((a, b) => b.before - a.before);
+
+    if (countEl) {
+        const totalQty = list.reduce((s, p) => s + p.qty, 0);
+        countEl.textContent = `${totalQty} قطعة`;
+    }
+
+    if (!list.length) {
+        listEl.innerHTML = `<tr><td colspan="8" style="text-align:center;padding:35px;color:#64748b;">لا توجد منتجات</td></tr>`;
+        if (totalsEl) totalsEl.innerHTML = "";
+        return;
+    }
+
+    listEl.innerHTML = list.map((p, i) => {
+        const net = p.before - p.discount;
+        const discountCell = p.discount > 0
+            ? `<span class="discount-amount">${Math.round(p.discount).toLocaleString("en-US")}</span>`
+            : `<span class="discount-amount zero">0</span>`;
+
+        return `
+            <tr>
+                <td style="color:#94a3b8;font-weight:800;">${i + 1}</td>
+                <td>
+                    ${p.image
+                        ? `<img src="${escapeAdminHTML(p.image)}" style="width:45px;height:45px;border-radius:10px;object-fit:cover;">`
+                        : `<div style="width:45px;height:45px;border-radius:10px;background:#f1f5f9;display:flex;align-items:center;justify-content:center;color:#94a3b8;"><i class="fa-solid fa-image"></i></div>`
+                    }
+                </td>
+                <td><strong>${escapeAdminHTML(p.name)}</strong></td>
+                <td style="text-align:center;font-weight:800;color:#8b5cf6;font-size:15px;">${p.qty}</td>
+                <td class="amount-cell">${Math.round(p.before).toLocaleString("en-US")} <span class="currency">ج.م</span></td>
+                <td>${discountCell}</td>
+                <td class="amount-cell" style="color:#16a34a;font-weight:800;">${Math.round(net).toLocaleString("en-US")} <span class="currency">ج.م</span></td>
+                <td>
+                    <button type="button" class="action-icon-btn preview" onclick="showProductSalesDetails('${escapeAdminHTML(p.id)}')" title="تفاصيل">
+                        <i class="fa-solid fa-eye"></i>
+                    </button>
+                </td>
+            </tr>
+        `;
+    }).join("");
+
+    // ✅ صف الإجمالي
+    if (totalsEl) {
+        const totalQty = list.reduce((s, p) => s + p.qty, 0);
+        const totalBefore = list.reduce((s, p) => s + p.before, 0);
+        const totalDiscount = list.reduce((s, p) => s + p.discount, 0);
+        const totalNet = totalBefore - totalDiscount;
+
+        totalsEl.innerHTML = `
+            <tr>
+                <td colspan="3" class="totals-label">الإجمالي: ${list.length} منتج</td>
+                <td class="totals-value">${totalQty} قطعة</td>
+                <td class="totals-value">${Math.round(totalBefore).toLocaleString("en-US")} ج</td>
+                <td class="totals-value" style="color:#dc2626;">${Math.round(totalDiscount).toLocaleString("en-US")} ج</td>
+                <td class="totals-value" style="color:#16a34a;">${Math.round(totalNet).toLocaleString("en-US")} ج</td>
+                <td></td>
+            </tr>
+        `;
+    }
 }
 
 function exportSalesCSV() {
@@ -6602,6 +6760,391 @@ async function confirmInstaPayPayment(orderId) {
     }
 }
 
+// ========================================
+// 81. SALES REPORT — FILTERS + TABS
+// ========================================
+
+function switchSalesSubTab(tab, btnEl) {
+    salesReportTab = tab;
+
+    document.querySelectorAll(".report-sub-tab").forEach(b => b.classList.remove("active"));
+    btnEl?.classList.add("active");
+
+    document.querySelectorAll(".report-sub-panel").forEach(p => p.classList.remove("active"));
+
+    if (tab === "orders") {
+        document.getElementById("salesTabOrders")?.classList.add("active");
+    } else {
+        document.getElementById("salesTabProducts")?.classList.add("active");
+    }
+}
+
+function openReportFiltersModal() {
+    const modal = document.getElementById("reportFiltersModal");
+    if (!modal) return;
+
+    const f = salesReportFilters;
+
+    const fromEl = document.getElementById("reportFilterDateFrom");
+    const toEl = document.getElementById("reportFilterDateTo");
+    if (fromEl) fromEl.value = f.from ? f.from.toISOString().slice(0, 10) : '';
+    if (toEl) toEl.value = f.to ? f.to.toISOString().slice(0, 10) : '';
+
+    const statusEl = document.getElementById("reportFilterStatus");
+    if (statusEl) statusEl.value = f.status || "delivered";
+
+    const govEl = document.getElementById("reportFilterGovernorate");
+    if (govEl) govEl.value = f.governorate || "all";
+
+    const custEl = document.getElementById("reportFilterCustomer");
+    if (custEl) custEl.value = f.customer || "";
+
+    document.querySelectorAll("#reportFiltersModal .preset-chip").forEach(b => {
+        b.classList.toggle("active", b.dataset.preset === f.preset);
+    });
+
+    modal.classList.add("open");
+}
+
+function closeReportFiltersModal() {
+    document.getElementById("reportFiltersModal")?.classList.remove("open");
+}
+
+function setReportFilterPreset(preset, btnEl) {
+    document.querySelectorAll("#reportFiltersModal .preset-chip").forEach(b => b.classList.remove("active"));
+    btnEl?.classList.add("active");
+
+    const r = _getPresetRange(preset);
+
+    const fromEl = document.getElementById("reportFilterDateFrom");
+    const toEl = document.getElementById("reportFilterDateTo");
+    if (fromEl) fromEl.value = r.from ? r.from.toISOString().slice(0, 10) : '';
+    if (toEl) toEl.value = r.to ? r.to.toISOString().slice(0, 10) : '';
+}
+
+function applyReportFilters() {
+    const fv = document.getElementById("reportFilterDateFrom")?.value || '';
+    const tv = document.getElementById("reportFilterDateTo")?.value || '';
+
+    salesReportFilters.from = fv ? new Date(fv + 'T00:00:00') : null;
+    salesReportFilters.to = tv ? new Date(tv + 'T23:59:59') : null;
+    salesReportFilters.status = document.getElementById("reportFilterStatus")?.value || "delivered";
+    salesReportFilters.governorate = document.getElementById("reportFilterGovernorate")?.value || "all";
+    salesReportFilters.customer = document.getElementById("reportFilterCustomer")?.value.trim() || "";
+    salesReportFilters.preset = 'custom';
+
+    closeReportFiltersModal();
+    loadSalesReport();
+}
+
+function resetReportFilters() {
+    salesReportFilters = {
+        from: null,
+        to: null,
+        preset: "month",
+        status: "delivered",
+        governorate: "all",
+        customer: ""
+    };
+    _applyPresetToFilters("month", salesReportFilters, null, null);
+
+    const r = _getPresetRange("month");
+    const fromEl = document.getElementById("reportFilterDateFrom");
+    const toEl = document.getElementById("reportFilterDateTo");
+    if (fromEl) fromEl.value = r.from ? r.from.toISOString().slice(0, 10) : '';
+    if (toEl) toEl.value = r.to ? r.to.toISOString().slice(0, 10) : '';
+
+    const statusEl = document.getElementById("reportFilterStatus");
+    if (statusEl) statusEl.value = "delivered";
+    const govEl = document.getElementById("reportFilterGovernorate");
+    if (govEl) govEl.value = "all";
+    const custEl = document.getElementById("reportFilterCustomer");
+    if (custEl) custEl.value = "";
+
+    document.querySelectorAll("#reportFiltersModal .preset-chip").forEach(b => {
+        b.classList.toggle("active", b.dataset.preset === "month");
+    });
+}
+
+function updateSalesFilterSummary() {
+    const el = document.getElementById("salesFilterSummary");
+    if (!el) return;
+
+    const parts = [];
+
+    // التاريخ
+    if (salesReportFilters.from && salesReportFilters.to) {
+        const from = salesReportFilters.from.toLocaleDateString("ar-EG-u-nu-latn", { day: "numeric", month: "short" });
+        const to = salesReportFilters.to.toLocaleDateString("ar-EG-u-nu-latn", { day: "numeric", month: "short" });
+        parts.push(`${from} - ${to}`);
+    } else {
+        parts.push("كل الفترات");
+    }
+
+    // الحالة
+    const statusLabels = {
+        delivered: "تم التوصيل",
+        all: "كل الحالات",
+        pending: "جديدة",
+        preparing: "قيد التحضير",
+        shipped: "تم الشحن"
+    };
+    parts.push(statusLabels[salesReportFilters.status] || salesReportFilters.status);
+
+    // المحافظة
+    if (salesReportFilters.governorate && salesReportFilters.governorate !== "all") {
+        parts.push(salesReportFilters.governorate);
+    }
+
+    // العميل
+    if (salesReportFilters.customer) {
+        parts.push(`"${salesReportFilters.customer}"`);
+    }
+
+    el.innerHTML = `<i class="fa-solid fa-calendar"></i><span>${parts.join(" · ")}</span>`;
+}
+
+window.switchSalesSubTab = switchSalesSubTab;
+window.openReportFiltersModal = openReportFiltersModal;
+window.closeReportFiltersModal = closeReportFiltersModal;
+window.setReportFilterPreset = setReportFilterPreset;
+window.applyReportFilters = applyReportFilters;
+window.resetReportFilters = resetReportFilters;
+
+// ========================================
+// 82. DISCOUNT DETAILS MODAL
+// ========================================
+
+function showDiscountDetails(orderId) {
+    const order = salesReportOrders.find(o => Number(o.id) === Number(orderId)) ||
+                  adminOrders.find(o => Number(o.id) === Number(orderId));
+    if (!order) return;
+
+    const modal = document.getElementById("discountDetailsModal");
+    const body = document.getElementById("discountDetailsBody");
+    if (!modal || !body) return;
+
+    const items = Array.isArray(order.items) ? order.items : [];
+    const orderGross = items.reduce((s, it) => s + Number(it.price || 0) * Number(it.quantity || 0), 0);
+    const totalDiscount = Number(order.discount_total || 0);
+
+    // ✅ لو مفيش خصم
+    if (totalDiscount === 0) {
+        body.innerHTML = `
+            <div style="text-align:center;padding:30px 20px;">
+                <div style="width:60px;height:60px;margin:0 auto 14px;border-radius:50%;background:#f1f5f9;color:#94a3b8;display:flex;align-items:center;justify-content:center;font-size:24px;">
+                    <i class="fa-solid fa-percent"></i>
+                </div>
+                <h3 style="font-size:15px;font-weight:800;color:#111;margin-bottom:6px;">مفيش خصم على الطلب ده</h3>
+                <p style="font-size:13px;color:#64748b;">الطلب اتباع بسعره الكامل بدون أي خصومات</p>
+            </div>
+        `;
+        modal.classList.add("open");
+        return;
+    }
+
+    // ✅ تفاصيل المصدر
+    const discountType = order.discount_type || "manual";
+    const discountCode = order.discount_code || null;
+    const discountPercent = order.discount_percentage || null;
+
+    const typeLabels = {
+        coupon: "كود خصم",
+        auto: "خصم تلقائي",
+        manual: "خصم يدوي",
+        mixed: "متعدد",
+        none: "بدون"
+    };
+
+    let sourceHTML = `
+        <div style="display:flex;justify-content:space-between;padding:10px 0;border-bottom:1px solid #f5f5f5;">
+            <span style="color:#64748b;font-size:13px;">نوع الخصم</span>
+            <strong style="color:#111;font-size:13px;">${escapeAdminHTML(typeLabels[discountType] || discountType)}</strong>
+        </div>
+    `;
+
+    if (discountCode) {
+        sourceHTML += `
+            <div style="display:flex;justify-content:space-between;padding:10px 0;border-bottom:1px solid #f5f5f5;">
+                <span style="color:#64748b;font-size:13px;">الكود</span>
+                <strong style="color:#8b5cf6;font-size:13px;font-family:monospace;">${escapeAdminHTML(discountCode)}</strong>
+            </div>
+        `;
+    }
+
+    if (discountPercent) {
+        sourceHTML += `
+            <div style="display:flex;justify-content:space-between;padding:10px 0;border-bottom:1px solid #f5f5f5;">
+                <span style="color:#64748b;font-size:13px;">النسبة</span>
+                <strong style="color:#dc2626;font-size:13px;">${discountPercent}%</strong>
+            </div>
+        `;
+    }
+
+    // ✅ توزيع الخصم على المنتجات
+    const distributionHTML = items.map(item => {
+        const qty = Number(item.quantity || 1);
+        const price = Number(item.price || 0);
+        const before = qty * price;
+        const share = orderGross > 0 ? (before / orderGross) * totalDiscount : 0;
+        const after = before - share;
+
+        return `
+            <div style="display:flex;justify-content:space-between;align-items:center;padding:12px;background:#f9fafb;border-radius:8px;margin-bottom:6px;gap:10px;">
+                <div style="flex:1;min-width:0;">
+                    <div style="font-size:13px;font-weight:700;color:#111;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escapeAdminHTML(item.name || "منتج")}</div>
+                    <div style="font-size:11px;color:#94a3b8;margin-top:3px;">الكمية: ${qty}</div>
+                </div>
+                <div style="text-align:left;font-size:12px;">
+                    <div style="color:#64748b;text-decoration:line-through;">${Math.round(before).toLocaleString("en-US")} ج</div>
+                    <div style="color:#dc2626;font-weight:800;">- ${Math.round(share).toLocaleString("en-US")} ج</div>
+                    <div style="color:#16a34a;font-weight:800;">${Math.round(after).toLocaleString("en-US")} ج</div>
+                </div>
+            </div>
+        `;
+    }).join("");
+
+    // ✅ التصميم النهائي
+    body.innerHTML = `
+        <div style="background:linear-gradient(135deg,#fef2f2,#fee2e2);border:1.5px solid #fecaca;border-radius:12px;padding:18px;margin-bottom:18px;text-align:center;">
+            <div style="font-size:12px;color:#991b1b;font-weight:700;margin-bottom:6px;">إجمالي الخصم</div>
+            <div style="font-size:28px;font-weight:800;color:#dc2626;">${totalDiscount.toLocaleString("en-US")} <span style="font-size:16px;">ج.م</span></div>
+        </div>
+
+        <div style="margin-bottom:18px;">
+            <div style="font-size:13px;font-weight:800;color:#111;margin-bottom:10px;display:flex;align-items:center;gap:8px;">
+                <i class="fa-solid fa-tag" style="color:#8b5cf6;"></i>
+                مصدر الخصم
+            </div>
+            <div style="background:#fafbfc;border-radius:10px;padding:6px 14px;">
+                ${sourceHTML}
+            </div>
+        </div>
+
+        <div>
+            <div style="font-size:13px;font-weight:800;color:#111;margin-bottom:10px;display:flex;align-items:center;gap:8px;">
+                <i class="fa-solid fa-cubes" style="color:#8b5cf6;"></i>
+                التوزيع على المنتجات
+            </div>
+            ${distributionHTML}
+        </div>
+
+        <div style="margin-top:14px;padding:12px 14px;background:#f0fdf4;border:1px solid #86efac;border-radius:10px;display:flex;justify-content:space-between;font-size:13px;">
+            <span style="color:#166534;font-weight:700;">صافي بعد الخصم:</span>
+            <strong style="color:#16a34a;font-size:15px;">${Math.round(orderGross - totalDiscount).toLocaleString("en-US")} ج.م</strong>
+        </div>
+    `;
+
+    modal.classList.add("open");
+}
+
+function closeDiscountDetailsModal() {
+    document.getElementById("discountDetailsModal")?.classList.remove("open");
+}
+
+// ========================================
+// 83. PRODUCT SALES DETAILS
+// ========================================
+
+function showProductSalesDetails(productId) {
+    if (productId === null || productId === undefined) return;
+
+    const product = adminProducts.find(p => Number(p.id) === Number(productId));
+    if (!product) {
+        alert("المنتج غير موجود");
+        return;
+    }
+
+    // ✅ نجمع كل الطلبات اللي فيها المنتج ده
+    const relevantOrders = salesReportOrders.filter(o => {
+        const items = Array.isArray(o.items) ? o.items : [];
+        return items.some(it => Number(it.id) === Number(productId));
+    });
+
+    if (!relevantOrders.length) {
+        alert("لا توجد طلبات بيع للمنتج ده");
+        return;
+    }
+
+    // ✅ نبني جدول الطلبات
+    const ordersHTML = relevantOrders.map(o => {
+        const items = Array.isArray(o.items) ? o.items : [];
+        const productItems = items.filter(it => Number(it.id) === Number(productId));
+        const qty = productItems.reduce((s, it) => s + Number(it.quantity || 0), 0);
+        const value = productItems.reduce((s, it) => s + Number(it.price || 0) * Number(it.quantity || 0), 0);
+
+        return `
+            <div class="order-detail-item" style="cursor:pointer;" onclick="closeDiscountDetailsModal(); viewOrderDetails(${Number(o.id)})">
+                <div class="order-detail-info">
+                    <h4 style="font-size:14px;">طلب #${escapeAdminHTML(o.id)}</h4>
+                    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:6px;">
+                        ${getStatusBadge(o.status)}
+                    </div>
+                    <div style="font-size:12px;color:#64748b;margin-top:8px;">
+                        ${escapeAdminHTML(o.customer_name || "عميل")} · ${formatDate(o.created_at)}
+                    </div>
+                </div>
+                <div style="text-align:left;">
+                    <div style="font-size:12px;color:#64748b;">${qty} قطعة</div>
+                    <div style="font-size:14px;font-weight:800;color:#2563eb;margin-top:4px;">${Math.round(value).toLocaleString("en-US")} ج</div>
+                </div>
+            </div>
+        `;
+    }).join("");
+
+    const totalQty = relevantOrders.reduce((s, o) => {
+        const items = Array.isArray(o.items) ? o.items : [];
+        return s + items.filter(it => Number(it.id) === Number(productId))
+                        .reduce((sum, it) => sum + Number(it.quantity || 0), 0);
+    }, 0);
+
+    const totalValue = relevantOrders.reduce((s, o) => {
+        const items = Array.isArray(o.items) ? o.items : [];
+        return s + items.filter(it => Number(it.id) === Number(productId))
+                        .reduce((sum, it) => sum + Number(it.price || 0) * Number(it.quantity || 0), 0);
+    }, 0);
+
+    // ✅ نستخدم discountDetailsModal برضو
+    const modal = document.getElementById("discountDetailsModal");
+    const body = document.getElementById("discountDetailsBody");
+    if (!modal || !body) return;
+
+    body.innerHTML = `
+        <div style="display:flex;gap:14px;padding:14px;background:#f8fafc;border-radius:12px;margin-bottom:18px;align-items:center;">
+            ${product.image
+                ? `<img src="${escapeAdminHTML(product.image)}" style="width:60px;height:60px;border-radius:10px;object-fit:cover;">`
+                : `<div style="width:60px;height:60px;border-radius:10px;background:#f1f5f9;display:flex;align-items:center;justify-content:center;color:#94a3b8;"><i class="fa-solid fa-image"></i></div>`
+            }
+            <div style="flex:1;min-width:0;">
+                <div style="font-size:15px;font-weight:800;color:#111;">${escapeAdminHTML(product.name)}</div>
+                ${product.sku ? `<div style="font-size:11px;color:#94a3b8;margin-top:4px;font-family:monospace;">${escapeAdminHTML(product.sku)}</div>` : ""}
+            </div>
+        </div>
+
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:18px;">
+            <div style="background:#f3e8ff;padding:14px;border-radius:10px;text-align:center;">
+                <div style="font-size:22px;font-weight:800;color:#8b5cf6;">${totalQty}</div>
+                <div style="font-size:11px;color:#64748b;font-weight:700;margin-top:4px;">قطعة مُباعة</div>
+            </div>
+            <div style="background:#dcfce7;padding:14px;border-radius:10px;text-align:center;">
+                <div style="font-size:22px;font-weight:800;color:#16a34a;">${Math.round(totalValue).toLocaleString("en-US")}</div>
+                <div style="font-size:11px;color:#64748b;font-weight:700;margin-top:4px;">إجمالي المبيعات (ج.م)</div>
+            </div>
+        </div>
+
+        <div style="font-size:13px;font-weight:800;color:#111;margin-bottom:10px;display:flex;align-items:center;gap:8px;">
+            <i class="fa-solid fa-list" style="color:#8b5cf6;"></i>
+            الطلبات (${relevantOrders.length})
+        </div>
+        ${ordersHTML}
+    `;
+
+    modal.classList.add("open");
+}
+
+window.showDiscountDetails = showDiscountDetails;
+window.closeDiscountDetailsModal = closeDiscountDetailsModal;
+window.showProductSalesDetails = showProductSalesDetails;
 window.confirmInstaPayPayment = confirmInstaPayPayment;
 // ========================================
 // SHIP CONFIRM MODAL

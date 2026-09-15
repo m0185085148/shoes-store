@@ -4420,3 +4420,255 @@ body {
         font-weight: 800 !important;
     }
 }
+/* =========================================
+   REPORT SUB-TABS (الطلبات / المنتجات)
+   ========================================= */
+
+.report-sub-tabs {
+    display: flex;
+    gap: 6px;
+    background: #f8fafc;
+    padding: 6px;
+    border-radius: 12px;
+    margin-bottom: 18px;
+    border: 1.5px solid #e2e8f0;
+    width: fit-content;
+}
+
+.report-sub-tab {
+    padding: 10px 22px;
+    border-radius: 8px;
+    border: 0;
+    background: transparent;
+    color: #64748b;
+    font-family: inherit;
+    font-size: 13px;
+    font-weight: 700;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    transition: all .2s ease;
+}
+
+.report-sub-tab:hover {
+    background: #fff;
+    color: #334155;
+}
+
+.report-sub-tab.active {
+    background: linear-gradient(135deg, #8b5cf6, #7c3aed);
+    color: #fff;
+    box-shadow: 0 4px 12px rgba(139, 92, 246, 0.3);
+}
+
+.report-sub-tab i {
+    font-size: 12px;
+}
+
+/* =========================================
+   REPORT FILTER BAR MODERN
+   ========================================= */
+
+.report-filter-bar-modern {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 16px;
+    background: linear-gradient(180deg, #fafbfc, #f8fafc);
+    border: 1.5px solid #e2e8f0;
+    border-radius: 12px;
+    margin-bottom: 20px;
+    flex-wrap: wrap;
+}
+
+.filter-summary {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 14px;
+    background: #fff;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    font-size: 13px;
+    font-weight: 700;
+    color: #334155;
+}
+
+.filter-summary i {
+    color: #8b5cf6;
+    font-size: 12px;
+}
+
+.filter-actions {
+    display: flex;
+    gap: 8px;
+}
+
+.btn-filter-open {
+    padding: 9px 18px;
+    background: linear-gradient(135deg, #8b5cf6, #7c3aed);
+    color: #fff;
+    border: 0;
+    border-radius: 8px;
+    font-family: inherit;
+    font-size: 13px;
+    font-weight: 800;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    transition: all .2s ease;
+    box-shadow: 0 4px 12px rgba(139, 92, 246, 0.25);
+}
+
+.btn-filter-open:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 16px rgba(139, 92, 246, 0.35);
+}
+
+/* =========================================
+   REPORT SUB-PANEL
+   ========================================= */
+
+.report-sub-panel {
+    display: none;
+}
+
+.report-sub-panel.active {
+    display: block;
+    animation: fadeIn .25s ease;
+}
+
+/* =========================================
+   REPORT TOTALS ROW
+   ========================================= */
+
+.products-table tfoot td {
+    background: #f8fafc;
+    font-weight: 800;
+    font-size: 13px;
+    color: #111;
+    border-top: 2px solid #e2e8f0;
+    padding: 14px 12px;
+}
+
+.products-table tfoot td.totals-label {
+    color: #64748b;
+    font-weight: 700;
+}
+
+.products-table tfoot td.totals-value {
+    color: #8b5cf6;
+    font-size: 14px;
+}
+
+/* =========================================
+   DISCOUNT BUTTON (🔍)
+   ========================================= */
+
+.discount-cell {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.discount-amount {
+    font-weight: 800;
+    color: #dc2626;
+}
+
+.discount-amount.zero {
+    color: #94a3b8;
+    font-weight: 600;
+}
+
+.discount-view-btn {
+    width: 26px;
+    height: 26px;
+    border-radius: 6px;
+    border: 0;
+    background: #fef2f2;
+    color: #dc2626;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 11px;
+    transition: all .2s ease;
+    flex-shrink: 0;
+}
+
+.discount-view-btn:hover {
+    background: #dc2626;
+    color: #fff;
+    transform: scale(1.1);
+}
+
+/* =========================================
+   FILTER MODAL PRESET CHIPS
+   ========================================= */
+
+#reportFiltersModal .report-preset-chips {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+}
+
+#reportFiltersModal .preset-chip {
+    padding: 8px 14px;
+    border-radius: 8px;
+    border: 1.5px solid #e2e8f0;
+    background: #fff;
+    color: #64748b;
+    font-family: inherit;
+    font-size: 12px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all .2s ease;
+}
+
+#reportFiltersModal .preset-chip:hover {
+    border-color: #cbd5e1;
+    color: #334155;
+}
+
+#reportFiltersModal .preset-chip.active {
+    background: linear-gradient(135deg, #8b5cf6, #7c3aed);
+    color: #fff;
+    border-color: #8b5cf6;
+    box-shadow: 0 4px 12px rgba(139, 92, 246, 0.3);
+}
+
+/* =========================================
+   RESPONSIVE
+   ========================================= */
+
+@media (max-width: 700px) {
+    .report-sub-tabs {
+        width: 100%;
+    }
+    
+    .report-sub-tab {
+        flex: 1;
+        justify-content: center;
+        font-size: 12px;
+        padding: 9px 12px;
+    }
+    
+    .report-filter-bar-modern {
+        flex-direction: column;
+        align-items: stretch;
+    }
+    
+    .filter-actions {
+        width: 100%;
+    }
+    
+    .btn-filter-open,
+    .filter-actions .btn-export {
+        flex: 1;
+        justify-content: center;
+    }
+}

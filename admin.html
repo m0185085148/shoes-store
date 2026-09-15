@@ -748,7 +748,7 @@
                         </div>
                         <div class="rhc-content">
                             <h4>المبيعات التفصيلية</h4>
-                            <p>كل الطلبات مع فلترة بالتاريخ وطرق الدفع</p>
+                            <p>الطلبات والمنتجات مع فلاتر تاريخ ومحافظة وخصومات</p>
                             <span class="rhc-tag" style="background:#dcfce7;color:#16a34a;">المبيعات</span>
                         </div>
                     </div>
@@ -759,21 +759,12 @@
                         </div>
                         <div class="rhc-content">
                             <h4>المبيعات اليومية</h4>
-                            <p>توزيع المبيعات على أيام الفترة المحددة</p>
+                            <p>مبيعات كل يوم مع الخصومات والشحن</p>
                             <span class="rhc-tag" style="background:#dcfce7;color:#16a34a;">المبيعات</span>
                         </div>
                     </div>
 
-                    <div class="report-home-card" onclick="openReport('governorate')">
-                        <div class="rhc-icon" style="background:#fef3c7;color:#d97706;">
-                            <i class="fa-solid fa-map-location-dot"></i>
-                        </div>
-                        <div class="rhc-content">
-                            <h4>المبيعات حسب المحافظة</h4>
-                            <p>أداء كل محافظة ومناطق التوصيل</p>
-                            <span class="rhc-tag" style="background:#dcfce7;color:#16a34a;">المبيعات</span>
-                        </div>
-                    </div>
+                    <!-- ✅ تم دمج تقرير المحافظة في التقرير التفصيلي -->
 
                     <div class="report-home-card" onclick="openReport('customers')">
                         <div class="rhc-icon" style="background:#f3e8ff;color:#8b5cf6;">
@@ -847,135 +838,153 @@
                     <div></div>
                 </div>
 
-                <div class="report-filter-bar">
-                    <div class="report-filter-group">
-                        <label><i class="fa-solid fa-calendar"></i> من تاريخ</label>
-                        <input type="date" id="salesDateFrom">
+                <!-- ✅ تبويبات -->
+                <div class="report-sub-tabs">
+                    <button class="report-sub-tab active" data-subtab="orders" onclick="switchSalesSubTab('orders', this)">
+                        <i class="fa-solid fa-list"></i>
+                        الطلبات
+                    </button>
+                    <button class="report-sub-tab" data-subtab="products" onclick="switchSalesSubTab('products', this)">
+                        <i class="fa-solid fa-box"></i>
+                        المنتجات
+                    </button>
+                </div>
+
+                <!-- ✅ شريط الفلاتر (مختصر) -->
+                <div class="report-filter-bar-modern">
+                    <div class="filter-summary" id="salesFilterSummary">
+                        <i class="fa-solid fa-calendar"></i>
+                        <span>هذا الشهر</span>
                     </div>
-                    <div class="report-filter-group">
-                        <label><i class="fa-solid fa-calendar"></i> إلى تاريخ</label>
-                        <input type="date" id="salesDateTo">
-                    </div>
-                    <div class="report-preset-chips">
-                        <button class="preset-chip" data-preset="today" onclick="setSalesPreset('today', this)">اليوم</button>
-                        <button class="preset-chip" data-preset="week" onclick="setSalesPreset('week', this)">آخر 7 أيام</button>
-                        <button class="preset-chip active" data-preset="month" onclick="setSalesPreset('month', this)">هذا الشهر</button>
-                        <button class="preset-chip" data-preset="all" onclick="setSalesPreset('all', this)">الكل</button>
-                    </div>
-                    <div class="report-filter-actions">
-                        <button class="btn-apply-filter" onclick="applySalesFilters()">
-                            <i class="fa-solid fa-filter"></i> تطبيق
+                    <div class="filter-actions">
+                        <button class="btn-filter-open" onclick="openReportFiltersModal()">
+                            <i class="fa-solid fa-filter"></i>
+                            الفلاتر
                         </button>
                         <button class="btn-export" onclick="exportSalesCSV()">
-                            <i class="fa-solid fa-file-csv"></i> CSV
+                            <i class="fa-solid fa-file-csv"></i>
+                            CSV
                         </button>
                     </div>
                 </div>
 
+                <!-- ✅ KPIs -->
                 <div class="report-kpis">
+                    <div class="kpi-card">
+                        <div class="kpi-icon" style="background:#e0f2fe;color:#0284c7;">
+                            <i class="fa-solid fa-tag"></i>
+                        </div>
+                        <div class="kpi-data">
+                            <h3 id="salesKpiGross">0</h3>
+                            <p>إجمالي قبل الخصم</p>
+                        </div>
+                    </div>
+                    <div class="kpi-card">
+                        <div class="kpi-icon" style="background:#fee2e2;color:#dc2626;">
+                            <i class="fa-solid fa-percent"></i>
+                        </div>
+                        <div class="kpi-data">
+                            <h3 id="salesKpiDiscount">0</h3>
+                            <p>إجمالي الخصم</p>
+                        </div>
+                    </div>
                     <div class="kpi-card">
                         <div class="kpi-icon" style="background:#dcfce7;color:#16a34a;">
                             <i class="fa-solid fa-wallet"></i>
                         </div>
                         <div class="kpi-data">
-                            <h3 id="salesKpiRevenue">0</h3>
-                            <p>إجمالي المبيعات (ج.م)</p>
-                        </div>
-                    </div>
-                    <div class="kpi-card">
-                        <div class="kpi-icon" style="background:#eff6ff;color:#2563eb;">
-                            <i class="fa-solid fa-cart-shopping"></i>
-                        </div>
-                        <div class="kpi-data">
-                            <h3 id="salesKpiOrders">0</h3>
-                            <p>عدد الطلبات</p>
+                            <h3 id="salesKpiNet">0</h3>
+                            <p>صافي المبيعات</p>
                         </div>
                     </div>
                     <div class="kpi-card">
                         <div class="kpi-icon" style="background:#fef3c7;color:#d97706;">
-                            <i class="fa-solid fa-chart-simple"></i>
+                            <i class="fa-solid fa-truck-fast"></i>
                         </div>
                         <div class="kpi-data">
-                            <h3 id="salesKpiAOV">0</h3>
-                            <p>متوسط قيمة الطلب</p>
+                            <h3 id="salesKpiShipping">0</h3>
+                            <p>الشحن</p>
                         </div>
                     </div>
                     <div class="kpi-card">
                         <div class="kpi-icon" style="background:#f3e8ff;color:#8b5cf6;">
-                            <i class="fa-solid fa-cubes"></i>
+                            <i class="fa-solid fa-money-bill-wave"></i>
                         </div>
                         <div class="kpi-data">
-                            <h3 id="salesKpiItems">0</h3>
-                            <p>عدد القطع المُباعة</p>
+                            <h3 id="salesKpiTotal">0</h3>
+                            <p>الإجمالي النهائي</p>
                         </div>
                     </div>
                 </div>
 
-                <div class="report-split">
+                <!-- ✅ Tab 1: الطلبات -->
+                <div class="report-sub-panel active" id="salesTabOrders">
                     <div class="panel">
                         <div class="panel-header">
                             <span class="panel-title">
-                                <i class="fa-solid fa-credit-card"></i>
-                                توزيع طرق الدفع
+                                <i class="fa-solid fa-list"></i>
+                                تفاصيل الطلبات
                             </span>
+                            <span class="report-count" id="salesOrdersCount">0 طلب</span>
                         </div>
-                        <div id="paymentBreakdown" class="breakdown-list">
-                            <div class="empty-state"><p>لا توجد بيانات</p></div>
+                        <div class="table-wrap">
+                            <table class="products-table orders-table-modern">
+                                <thead>
+                                    <tr>
+                                        <th style="width:70px;">#</th>
+                                        <th style="width:80px;">رقم الطلب</th>
+                                        <th>العميل</th>
+                                        <th style="width:110px;">المحافظة</th>
+                                        <th style="width:110px;">قبل الخصم</th>
+                                        <th style="width:120px;">الخصم</th>
+                                        <th style="width:110px;">صافي المبيعات</th>
+                                        <th style="width:100px;">الشحن</th>
+                                        <th style="width:110px;">الإجمالي</th>
+                                        <th style="width:70px;">تفاصيل</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="salesOrdersList">
+                                    <tr><td colspan="10" style="text-align:center;padding:30px;color:#94a3b8;">جاري التحميل...</td></tr>
+                                </tbody>
+                                <tfoot id="salesOrdersTotals"></tfoot>
+                            </table>
                         </div>
                     </div>
+                </div>
+
+                <!-- ✅ Tab 2: المنتجات -->
+                <div class="report-sub-panel" id="salesTabProducts">
                     <div class="panel">
                         <div class="panel-header">
                             <span class="panel-title">
-                                <i class="fa-solid fa-circle-info"></i>
-                                توزيع حالات الطلبات
+                                <i class="fa-solid fa-box"></i>
+                                تفاصيل المنتجات
                             </span>
+                            <span class="report-count" id="salesProductsCount">0 قطعة</span>
                         </div>
-                        <div id="statusBreakdown" class="breakdown-list">
-                            <div class="empty-state"><p>لا توجد بيانات</p></div>
+                        <div class="table-wrap">
+                            <table class="products-table orders-table-modern">
+                                <thead>
+                                    <tr>
+                                        <th style="width:70px;">#</th>
+                                        <th style="width:70px;">الصورة</th>
+                                        <th>المنتج</th>
+                                        <th style="width:90px;">الكمية</th>
+                                        <th style="width:120px;">قبل الخصم</th>
+                                        <th style="width:110px;">الخصم</th>
+                                        <th style="width:120px;">صافي المبيعات</th>
+                                        <th style="width:70px;">تفاصيل</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="salesProductsList">
+                                    <tr><td colspan="8" style="text-align:center;padding:30px;color:#94a3b8;">جاري التحميل...</td></tr>
+                                </tbody>
+                                <tfoot id="salesProductsTotals"></tfoot>
+                            </table>
                         </div>
                     </div>
                 </div>
 
-                <div class="panel">
-                    <div class="panel-header">
-                        <span class="panel-title">
-                            <i class="fa-solid fa-fire"></i>
-                            أفضل المنتجات مبيعًا في الفترة المحددة
-                        </span>
-                    </div>
-                    <div id="salesTopProductsList" class="top-selling-list">
-                        <div class="empty-state"><p>لا توجد مبيعات في هذه الفترة</p></div>
-                    </div>
-                </div>
-
-                <div class="panel">
-                    <div class="panel-header">
-                        <span class="panel-title">
-                            <i class="fa-solid fa-list"></i>
-                            تفاصيل الطلبات
-                        </span>
-                        <span class="report-count" id="salesOrdersCount">0 طلب</span>
-                    </div>
-                    <div class="table-wrap">
-                        <table class="products-table orders-table-modern">
-                            <thead>
-                                <tr>
-                                    <th style="width:80px;">رقم الطلب</th>
-                                    <th>العميل</th>
-                                    <th style="width:120px;">الهاتف</th>
-                                    <th style="width:120px;">التاريخ</th>
-                                    <th style="width:140px;">طريقة الدفع</th>
-                                    <th style="width:110px;">الحالة</th>
-                                    <th style="width:110px;">الإجمالي</th>
-                                    <th style="width:70px;">تفاصيل</th>
-                                </tr>
-                            </thead>
-                            <tbody id="salesOrdersList">
-                                <tr><td colspan="8" style="text-align:center;padding:30px;color:#94a3b8;">جاري التحميل...</td></tr>
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
             </div>
 
             <!-- ============ DAILY SALES ============ -->
@@ -1012,39 +1021,48 @@
 
                 <div class="report-kpis">
                     <div class="kpi-card">
+                        <div class="kpi-icon" style="background:#e0f2fe;color:#0284c7;">
+                            <i class="fa-solid fa-tag"></i>
+                        </div>
+                        <div class="kpi-data">
+                            <h3 id="dailyKpiGross">0</h3>
+                            <p>إجمالي قبل الخصم</p>
+                        </div>
+                    </div>
+                    <div class="kpi-card">
+                        <div class="kpi-icon" style="background:#fee2e2;color:#dc2626;">
+                            <i class="fa-solid fa-percent"></i>
+                        </div>
+                        <div class="kpi-data">
+                            <h3 id="dailyKpiDiscount">0</h3>
+                            <p>إجمالي الخصم</p>
+                        </div>
+                    </div>
+                    <div class="kpi-card">
                         <div class="kpi-icon" style="background:#dcfce7;color:#16a34a;">
                             <i class="fa-solid fa-wallet"></i>
                         </div>
                         <div class="kpi-data">
-                            <h3 id="dailyKpiTotal">0</h3>
-                            <p>إجمالي الفترة</p>
-                        </div>
-                    </div>
-                    <div class="kpi-card">
-                        <div class="kpi-icon" style="background:#eff6ff;color:#2563eb;">
-                            <i class="fa-solid fa-calendar"></i>
-                        </div>
-                        <div class="kpi-data">
-                            <h3 id="dailyKpiDays">0</h3>
-                            <p>عدد الأيام</p>
+                            <h3 id="dailyKpiNet">0</h3>
+                            <p>صافي المبيعات</p>
                         </div>
                     </div>
                     <div class="kpi-card">
                         <div class="kpi-icon" style="background:#fef3c7;color:#d97706;">
-                            <i class="fa-solid fa-chart-simple"></i>
+                            <i class="fa-solid fa-truck-fast"></i>
                         </div>
                         <div class="kpi-data">
-                            <h3 id="dailyKpiAvg">0</h3>
-                            <p>متوسط اليوم</p>
+                            <h3 id="dailyKpiShipping">0</h3>
+                            <p>الشحن</p>
                         </div>
                     </div>
                     <div class="kpi-card">
                         <div class="kpi-icon" style="background:#f3e8ff;color:#8b5cf6;">
-                            <i class="fa-solid fa-crown"></i>
+                            <i class="fa-solid fa-money-bill-wave"></i>
                         </div>
                         <div class="kpi-data">
-                            <h3 id="dailyKpiBest">-</h3>
-                            <p>أفضل يوم</p>
+                            <h3 id="dailyKpiTotal">0</h3>
+                            <p>الإجمالي النهائي</p>
                         </div>
                     </div>
                 </div>
@@ -1056,8 +1074,24 @@
                             تفصيل المبيعات يوميًا
                         </span>
                     </div>
-                    <div id="dailyList" class="daily-list">
-                        <div class="empty-state"><p>لا توجد بيانات</p></div>
+                    <div class="table-wrap">
+                        <table class="products-table orders-table-modern">
+                            <thead>
+                                <tr>
+                                    <th style="width:140px;">التاريخ</th>
+                                    <th style="width:90px;">عدد الطلبات</th>
+                                    <th style="width:110px;">قبل الخصم</th>
+                                    <th style="width:110px;">الخصم</th>
+                                    <th style="width:110px;">صافي المبيعات</th>
+                                    <th style="width:100px;">الشحن</th>
+                                    <th style="width:110px;">الإجمالي</th>
+                                </tr>
+                            </thead>
+                            <tbody id="dailyList">
+                                <tr><td colspan="7" style="text-align:center;padding:30px;color:#94a3b8;">جاري التحميل...</td></tr>
+                            </tbody>
+                            <tfoot id="dailyTotals"></tfoot>
+                        </table>
                     </div>
                 </div>
             </div>
@@ -2262,6 +2296,119 @@
             </div>
         </div>
     </div>
+
+        <!-- ============ REPORT FILTERS MODAL ============ -->
+    <div class="modal" id="reportFiltersModal">
+        <div class="modal-content modal-large">
+            <div class="modal-header">
+                <div class="modal-title-group">
+                    <div class="modal-icon" style="background:#f3e8ff;color:#8b5cf6;">
+                        <i class="fa-solid fa-filter"></i>
+                    </div>
+                    <div>
+                        <h2>فلاتر التقرير</h2>
+                        <p style="font-size:13px;color:#888;margin-top:2px;">حدّد الفترة والفلاتر المطلوبة</p>
+                    </div>
+                </div>
+                <button type="button" class="close-modal" onclick="closeReportFiltersModal()">&times;</button>
+            </div>
+
+            <div class="form-section">
+                <div class="form-section-title">
+                    <i class="fa-solid fa-calendar"></i>
+                    الفترة الزمنية
+                </div>
+
+                <div class="report-preset-chips" style="margin-bottom:14px;">
+                    <button class="preset-chip" data-preset="today" onclick="setReportFilterPreset('today', this)">اليوم</button>
+                    <button class="preset-chip" data-preset="week" onclick="setReportFilterPreset('week', this)">آخر 7 أيام</button>
+                    <button class="preset-chip active" data-preset="month" onclick="setReportFilterPreset('month', this)">هذا الشهر</button>
+                    <button class="preset-chip" data-preset="all" onclick="setReportFilterPreset('all', this)">الكل</button>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="reportFilterDateFrom">من تاريخ</label>
+                        <input type="date" id="reportFilterDateFrom">
+                    </div>
+                    <div class="form-group">
+                        <label for="reportFilterDateTo">إلى تاريخ</label>
+                        <input type="date" id="reportFilterDateTo">
+                    </div>
+                </div>
+            </div>
+
+            <div class="form-section">
+                <div class="form-section-title">
+                    <i class="fa-solid fa-sliders"></i>
+                    فلاتر إضافية
+                </div>
+
+                <div class="form-group">
+                    <label for="reportFilterStatus">الحالة</label>
+                    <select id="reportFilterStatus">
+                        <option value="delivered" selected>تم التوصيل فقط</option>
+                        <option value="all">كل الحالات (ما عدا الملغي)</option>
+                        <option value="pending">جديدة</option>
+                        <option value="preparing">قيد التحضير</option>
+                        <option value="shipped">تم الشحن</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label for="reportFilterGovernorate">المحافظة</label>
+                    <select id="reportFilterGovernorate">
+                        <option value="all">كل المحافظات</option>
+                        <option value="القاهرة">القاهرة</option>
+                        <option value="الجيزة">الجيزة</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label for="reportFilterCustomer">العميل</label>
+                    <input type="text" id="reportFilterCustomer" placeholder="اسم العميل أو رقم الهاتف...">
+                </div>
+            </div>
+
+            <div class="modal-actions">
+                <button type="button" class="btn-primary-modal" onclick="applyReportFilters()">
+                    <i class="fa-solid fa-check"></i>
+                    تطبيق الفلاتر
+                </button>
+                <button type="button" class="btn-secondary-modal" onclick="resetReportFilters()">
+                    <i class="fa-solid fa-rotate-left"></i>
+                    إعادة تعيين
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ============ DISCOUNT DETAILS MODAL ============ -->
+    <div class="modal" id="discountDetailsModal">
+        <div class="modal-content" style="max-width:560px;">
+            <div class="modal-header">
+                <div class="modal-title-group">
+                    <div class="modal-icon" style="background:#fee2e2;color:#dc2626;">
+                        <i class="fa-solid fa-percent"></i>
+                    </div>
+                    <div>
+                        <h2>تفاصيل الخصم</h2>
+                        <p style="font-size:13px;color:#888;margin-top:2px;">تفاصيل كاملة عن الخصومات</p>
+                    </div>
+                </div>
+                <button type="button" class="close-modal" onclick="closeDiscountDetailsModal()">&times;</button>
+            </div>
+
+            <div id="discountDetailsBody"></div>
+
+            <div class="modal-actions">
+                <button type="button" class="btn-secondary-modal" onclick="closeDiscountDetailsModal()" style="width:100%;">
+                    إغلاق
+                </button>
+            </div>
+        </div>
+    </div>
+
     <!-- ============ SHIP CONFIRM MODAL ============ -->
     <div class="modal" id="shipConfirmModal">
         <div class="modal-content" style="max-width:520px;">
