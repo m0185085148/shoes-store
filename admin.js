@@ -1774,7 +1774,8 @@ function viewOrderDetails(orderId) {
     const items = Array.isArray(order.items) ? order.items : [];
     const exchangeItems = order.exchange_details?.items || [];
 
-    const itemsHTML = items.map((item, index) => {
+    // ===== Items =====
+    const itemsHTML = items.map((item) => {
         const quantity = Number(item.quantity || 1);
         const price = Number(item.price || 0);
 
@@ -1794,224 +1795,232 @@ function viewOrderDetails(orderId) {
         const sizeReserved = sizeData ? Number(sizeData.reserved) : 0;
         const sizeStock = sizeData ? Number(sizeData.stock) : 0;
 
-        // ✅ هل الكمية كافية؟
         const canFulfill = sizeAvailable >= quantity;
-        const statusClass = canFulfill ? 'available' : 'low';
-        const statusIcon = canFulfill ? 'fa-check-circle' : 'fa-exclamation-triangle';
-        const statusText = canFulfill 
-            ? 'الكمية كافية' 
-            : `⚠️ غير كافي! المتاح ${sizeAvailable} بس`;
 
         let stockHTML = "";
         if (product && sizeData) {
             stockHTML = `
-                <div class="stock-info">
-                    <span class="${statusClass}">
-                        <i class="fa-solid ${statusIcon}"></i>
-                        ${statusText}
+                <div class="od-item-stock">
+                    <span class="${canFulfill ? 'ok' : 'bad'}">
+                        <i class="fa-solid ${canFulfill ? 'fa-circle-check' : 'fa-triangle-exclamation'}"></i>
+                        ${canFulfill ? 'الكمية كافية' : `غير كافي - المتاح ${sizeAvailable}`}
                     </span>
-                    <span>
-                        <i class="fa-solid fa-box"></i>
-                        المطلوب: <strong>${quantity}</strong>
-                    </span>
-                    <span class="${sizeAvailable === 0 ? 'low' : ''}">
-                        <i class="fa-solid fa-warehouse"></i>
-                        المتاح: <strong>${sizeAvailable}</strong>
-                    </span>
-                    ${sizeReserved > 0 ? `
-                        <span class="reserved">
-                            <i class="fa-solid fa-lock"></i>
-                            محجوز: <strong>${sizeReserved}</strong>
-                        </span>
-                    ` : ""}
-                    <span>
-                        <i class="fa-solid fa-cubes"></i>
-                        إجمالي المخزون: <strong>${sizeStock}</strong>
-                    </span>
-                    ${product.sku ? `
-                        <span>
-                            <i class="fa-solid fa-barcode"></i>
-                            ${escapeAdminHTML(product.sku)}
-                        </span>
-                    ` : ""}
+                    <span><i class="fa-solid fa-box"></i> المطلوب: <strong>${quantity}</strong></span>
+                    <span><i class="fa-solid fa-warehouse"></i> المتاح: <strong>${sizeAvailable}</strong></span>
+                    ${sizeReserved > 0 ? `<span class="warn"><i class="fa-solid fa-lock"></i> محجوز: <strong>${sizeReserved}</strong></span>` : ""}
+                    <span><i class="fa-solid fa-cubes"></i> الإجمالي: <strong>${sizeStock}</strong></span>
+                    ${product.sku ? `<span><i class="fa-solid fa-barcode"></i> ${escapeAdminHTML(product.sku)}</span>` : ""}
                 </div>
             `;
         } else if (product) {
             stockHTML = `
-                <div class="stock-info">
-                    <span class="low">
-                        <i class="fa-solid fa-triangle-exclamation"></i>
-                        المقاس ${escapeAdminHTML(effectiveSize)} غير موجود
-                    </span>
+                <div class="od-item-stock">
+                    <span class="bad"><i class="fa-solid fa-triangle-exclamation"></i> المقاس ${escapeAdminHTML(effectiveSize)} غير موجود</span>
                 </div>
             `;
         }
 
         const sizeDisplayHTML = isExchanged
-            ? `
-                <div class="size-display exchanged">
-                    <span class="size-old">${escapeAdminHTML(item.size)}</span>
-                    <i class="fa-solid fa-arrow-left size-arrow"></i>
-                    <span class="size-new">${escapeAdminHTML(exchangeInfo.new_size)}</span>
-                    <span class="size-tag">مستبدل</span>
-                </div>
-            `
-            : `
-                <div class="size-display">
-                    <span class="size-label">المقاس:</span>
-                    <span class="size-value">${escapeAdminHTML(item.size || "-")}</span>
-                </div>
-            `;
+            ? `<div class="od-size-display exchanged">
+                <span class="old">${escapeAdminHTML(item.size)}</span>
+                <i class="fa-solid fa-arrow-left"></i>
+                <span class="new">${escapeAdminHTML(exchangeInfo.new_size)}</span>
+                <span class="tag">مستبدل</span>
+               </div>`
+            : `<div class="od-size-display"><span>المقاس:</span> <strong>${escapeAdminHTML(item.size || "-")}</strong></div>`;
 
         return `
-            <div class="order-detail-item">
-                <div class="order-detail-img"
-                    style="background-image:url('${escapeAdminHTML(image)}');">
-                </div>
-                <div class="order-detail-info">
+            <div class="od-item">
+                <div class="od-item-img" style="background-image:url('${escapeAdminHTML(image)}');"></div>
+                <div class="od-item-info">
                     <h4>${escapeAdminHTML(item.name || "منتج")}</h4>
                     ${sizeDisplayHTML}
-                    <div class="qty-info">
-                        <i class="fa-solid fa-cubes"></i>
-                        الكمية: <strong>${quantity}</strong>
-                    </div>
+                    <div class="od-item-qty"><i class="fa-solid fa-cubes"></i> الكمية: <strong>${quantity}</strong></div>
                     ${stockHTML}
                 </div>
-                <div class="order-detail-price">
-                    ${(price * quantity).toLocaleString("en-US")} ج
-                </div>
+                <div class="od-item-price">${(price * quantity).toLocaleString("en-US")} ج</div>
             </div>
         `;
     }).join("");
 
-    const returnReasonHTML = order.return_reason ? `
-        <p style="margin-top:10px;background:#fef2f2;padding:10px;border-radius:8px;">
-            <strong style="color:#dc2626;">سبب الاسترجاع:</strong>
-            ${escapeAdminHTML(order.return_reason)}
-        </p>
-    ` : "";
+    // ===== Reasons =====
+    const returnReasonHTML = order.return_reason
+        ? `<div class="od-reason bad"><i class="fa-solid fa-rotate-left"></i> <strong>سبب الاسترجاع:</strong> ${escapeAdminHTML(order.return_reason)}</div>`
+        : "";
 
-    const exchangeReasonHTML = order.exchange_reason ? `
-        <p style="margin-top:10px;background:#fff7ed;padding:10px;border-radius:8px;">
-            <strong style="color:#d97706;">سبب الاستبدال:</strong>
-            ${escapeAdminHTML(order.exchange_reason)}
-        </p>
-    ` : "";
+    const exchangeReasonHTML = order.exchange_reason
+        ? `<div class="od-reason warn"><i class="fa-solid fa-arrows-rotate"></i> <strong>سبب الاستبدال:</strong> ${escapeAdminHTML(order.exchange_reason)}</div>`
+        : "";
 
-    const historyHTML = Array.isArray(order.status_history) && order.status_history.length
-        ? `
-            <div style="margin-top:20px;">
-                <h4 style="margin-bottom:10px;">سجل تغييرات الحالة:</h4>
-                <div style="border-right:3px solid #e5e7eb;padding-right:12px;">
-                    ${order.status_history.map(h => `
-                        <div style="margin-bottom:12px;padding-bottom:12px;border-bottom:1px dashed #f0f0f0;">
-                            <div style="font-weight:700;font-size:13px;color:#111;">
-                                ${escapeAdminHTML(STATUS_LABELS[h.status] || h.status)}
-                            </div>
-                            ${h.reason ? `
-                                <div style="font-size:12px;color:#dc2626;margin-top:3px;">
-                                    السبب: ${escapeAdminHTML(h.reason)}
-                                </div>
-                            ` : ""}
-                            ${h.notes ? `
-                                <div style="font-size:12px;color:#555;margin-top:3px;">
-                                    ملاحظات: ${escapeAdminHTML(h.notes)}
-                                </div>
-                            ` : ""}
-                            <div style="font-size:11px;color:#999;margin-top:4px;">
-                                ${escapeAdminHTML(h.by || "-")} · ${formatDate(h.at)}
+    // ===== History (Collapsible) =====
+    const history = Array.isArray(order.status_history) ? order.status_history : [];
+    const historyHTML = history.length ? `
+        <div class="od-collapsible" id="odHistory">
+            <button type="button" class="od-collapsible-header" onclick="toggleOdHistory(this)">
+                <div class="od-collapsible-title">
+                    <i class="fa-solid fa-clock-rotate-left"></i>
+                    <span>سجل تغييرات الحالة</span>
+                    <span class="od-collapsible-count">${history.length}</span>
+                </div>
+                <i class="fa-solid fa-chevron-down od-collapsible-arrow"></i>
+            </button>
+            <div class="od-collapsible-body">
+                <div class="od-timeline">
+                    ${history.map(h => `
+                        <div class="od-timeline-item">
+                            <div class="od-timeline-status">${escapeAdminHTML(STATUS_LABELS[h.status] || h.status)}</div>
+                            ${h.reason ? `<div class="od-timeline-reason">السبب: ${escapeAdminHTML(h.reason)}</div>` : ""}
+                            ${h.notes ? `<div class="od-timeline-notes">${escapeAdminHTML(h.notes)}</div>` : ""}
+                            <div class="od-timeline-meta">
+                                <i class="fa-solid fa-user"></i> ${escapeAdminHTML(h.by || "-")}
+                                <span>·</span>
+                                ${formatDate(h.at)}
                             </div>
                         </div>
                     `).join("")}
                 </div>
             </div>
-        `
-        : "";
+        </div>
+    ` : "";
 
+    // ===== Tracking =====
     const trackUrl = order.customer_phone
         ? getTrackingUrl(order.id, order.customer_phone)
         : null;
 
     const trackingHTML = trackUrl ? `
-        <div style="margin-top:16px;padding:14px;background:#eff6ff;border:1px solid #dbeafe;border-radius:10px;">
-            <div style="font-size:13px;font-weight:800;color:#1e40af;margin-bottom:10px;display:flex;align-items:center;gap:8px;">
+        <div class="od-tracking">
+            <div class="od-tracking-header">
                 <i class="fa-solid fa-truck-fast"></i>
-                رابط تتبع الطلب للعميل:
+                <span>رابط تتبع الطلب</span>
             </div>
-            <div style="font-size:11px;color:#475569;word-break:break-all;background:#fff;padding:10px;border-radius:6px;margin-bottom:10px;line-height:1.6;">
-                ${escapeAdminHTML(trackUrl)}
-            </div>
-            <button type="button"
-                onclick="copyTrackingLink(${order.id}, '${escapeAdminHTML(order.customer_phone)}', this)"
-                style="background:#2563eb;color:#fff;padding:9px 16px;border-radius:8px;font-size:13px;font-weight:700;border:0;cursor:pointer;font-family:inherit;display:inline-flex;align-items:center;gap:6px;">
-                <i class="fa-solid fa-copy"></i>
-                نسخ الرابط
+            <div class="od-tracking-url">${escapeAdminHTML(trackUrl)}</div>
+            <button type="button" onclick="copyTrackingLink(${order.id}, '${escapeAdminHTML(order.customer_phone)}', this)" class="od-tracking-btn">
+                <i class="fa-solid fa-copy"></i> نسخ الرابط
             </button>
         </div>
     ` : "";
 
-    orderModalDetails.innerHTML = `
-        <h3>تفاصيل الطلب #${escapeAdminHTML(order.id)}</h3>
-
-        <p><strong>اسم العميل:</strong> ${escapeAdminHTML(order.customer_name || "-")}</p>
-        <p><strong>رقم الهاتف:</strong> ${escapeAdminHTML(order.customer_phone || "-")}</p>
-        <p><strong>العنوان:</strong> ${escapeAdminHTML(order.customer_address || "غير مدون")}</p>
-        <p><strong>الحالة:</strong> ${getStatusBadge(order.status)}</p>
-        <p><strong>تاريخ الطلب:</strong> ${formatDate(order.created_at)}</p>
-
-        ${trackingHTML}
-        ${returnReasonHTML}
-        ${exchangeReasonHTML}
-
-        <hr style="margin:15px 0;border:0;border-top:1px solid #ddd;">
-
-        <h4>المنتجات:</h4>
-        ${itemsHTML || "<p>لا توجد تفاصيل للمنتجات</p>"}
-
-        <div style="margin-top:15px;padding-top:15px;border-top:2px solid #f0f0f0;">
-            <div style="display:flex;justify-content:space-between;font-size:14px;color:#555;padding:5px 0;">
-                <span>المنتجات:</span>
-                <strong>${Number(order.subtotal || order.total_amount || 0).toLocaleString("en-US")} جنيه</strong>
+    // ===== Customer Info =====
+    const infoHTML = `
+        <div class="od-info-grid">
+            <div class="od-info-item">
+                <i class="fa-solid fa-user"></i>
+                <div>
+                    <span>العميل</span>
+                    <strong>${escapeAdminHTML(order.customer_name || "-")}</strong>
+                </div>
             </div>
-            <div style="display:flex;justify-content:space-between;font-size:14px;color:#555;padding:5px 0;">
-                <span>الشحن:</span>
-                <strong style="color:${Number(order.shipping_cost) === 0 ? '#16a34a' : '#111'};">
-                    ${Number(order.shipping_cost) === 0
-                        ? 'مجاني'
-                        : Number(order.shipping_cost || 0).toLocaleString("en-US") + ' جنيه'}
-                </strong>
+            <div class="od-info-item">
+                <i class="fa-solid fa-phone"></i>
+                <div>
+                    <span>الهاتف</span>
+                    <strong style="direction:ltr;">${escapeAdminHTML(order.customer_phone || "-")}</strong>
+                </div>
             </div>
-            <div style="display:flex;justify-content:space-between;font-size:16px;padding:10px 0 0;border-top:1px solid #eee;margin-top:8px;">
-                <strong>الإجمالي:</strong>
-                <strong style="color:#2563eb;">${Number(order.total_amount || 0).toLocaleString("en-US")} جنيه</strong>
+            <div class="od-info-item">
+                <i class="fa-solid fa-location-dot"></i>
+                <div>
+                    <span>المحافظة</span>
+                    <strong>${escapeAdminHTML(order.governorate || "-")}</strong>
+                </div>
+            </div>
+            <div class="od-info-item">
+                <i class="fa-solid fa-calendar"></i>
+                <div>
+                    <span>التاريخ</span>
+                    <strong>${formatDate(order.created_at)}</strong>
+                </div>
             </div>
         </div>
+        <div class="od-address">
+            <i class="fa-solid fa-house"></i>
+            <div>
+                <span>العنوان</span>
+                <strong>${escapeAdminHTML(order.customer_address || "غير مدون")}</strong>
+            </div>
+        </div>
+    `;
 
-        ${
-            (order.status === "pending" || order.status === "preparing")
-                ? `
-                    <div style="margin-top:16px;padding:14px;background:#fef3c7;border:1px solid #fcd34d;border-radius:10px;">
-                        <div style="font-size:13px;font-weight:800;color:#78350f;margin-bottom:10px;">
-                            <i class="fa-solid fa-clock"></i>
-                            إجراءات الحجز
-                        </div>
-                        <button type="button"
-                            onclick="releaseOrderReservation(${order.id})"
-                            style="background:#d97706;color:#fff;padding:9px 16px;border-radius:8px;font-size:13px;font-weight:700;border:0;cursor:pointer;font-family:inherit;display:inline-flex;align-items:center;gap:6px;">
-                            <i class="fa-solid fa-unlock"></i>
-                            تحرير الحجز
-                        </button>
+    // ===== Final HTML =====
+    orderModalDetails.innerHTML = `
+        <div class="od-wrapper">
+
+            <!-- Header -->
+            <div class="od-header">
+                <div>
+                    <div class="od-header-small">تفاصيل الطلب</div>
+                    <h2>#${escapeAdminHTML(order.id)}</h2>
+                </div>
+                <div>${getStatusBadge(order.status)}</div>
+            </div>
+
+            <!-- Customer Info -->
+            ${infoHTML}
+
+            <!-- Tracking -->
+            ${trackingHTML}
+
+            <!-- Reasons -->
+            ${returnReasonHTML}
+            ${exchangeReasonHTML}
+
+            <!-- Items -->
+            <div class="od-section">
+                <div class="od-section-title">
+                    <i class="fa-solid fa-box"></i>
+                    المنتجات (${items.length})
+                </div>
+                ${itemsHTML || "<p style='text-align:center;color:#94a3b8;padding:20px;'>لا توجد منتجات</p>"}
+            </div>
+
+            <!-- Summary -->
+            <div class="od-summary">
+                <div class="od-summary-row">
+                    <span>المنتجات</span>
+                    <strong>${Number(order.subtotal || order.total_amount || 0).toLocaleString("en-US")} ج</strong>
+                </div>
+                <div class="od-summary-row">
+                    <span>الشحن</span>
+                    <strong style="color:${Number(order.shipping_cost) === 0 ? '#16a34a' : '#111'};">
+                        ${Number(order.shipping_cost) === 0 ? 'مجاني 🎉' : Number(order.shipping_cost || 0).toLocaleString("en-US") + ' ج'}
+                    </strong>
+                </div>
+                <div class="od-summary-row total">
+                    <span>الإجمالي</span>
+                    <strong>${Number(order.total_amount || 0).toLocaleString("en-US")} ج</strong>
+                </div>
+            </div>
+
+            <!-- Release Action -->
+            ${(order.status === "pending" || order.status === "preparing") ? `
+                <div class="od-action-box">
+                    <div class="od-action-text">
+                        <i class="fa-solid fa-clock"></i>
+                        <span>إجراءات الحجز</span>
                     </div>
-                `
-                : ""
-        }
+                    <button type="button" onclick="releaseOrderReservation(${order.id})" class="od-action-btn">
+                        <i class="fa-solid fa-unlock"></i> تحرير الحجز
+                    </button>
+                </div>
+            ` : ""}
 
-        ${historyHTML}
+            <!-- History (Collapsible) -->
+            ${historyHTML}
+
+        </div>
     `;
 
     orderModal.classList.add("open");
 }
 
+// ✅ دالة فتح/قفل السجل
+function toggleOdHistory(btn) {
+    const item = btn.closest(".od-collapsible");
+    if (!item) return;
+
+    item.classList.toggle("open");
+}
 if (closeOrderModalBtn) {
     closeOrderModalBtn.addEventListener("click", () => {
         orderModal?.classList.remove("open");
