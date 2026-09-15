@@ -476,7 +476,8 @@ body {
     white-space: nowrap;
 }
 
-.products-table td[colspan] {
+/* ✅ Empty state فقط (لما مفيش صفوف أخرى) */
+.products-table tbody tr:only-child td[colspan] {
     font-size: 14px;
     color: #94a3b8;
     padding: 50px 20px !important;
@@ -484,7 +485,7 @@ body {
     background: linear-gradient(180deg, #ffffff, #fafbfc);
 }
 
-.products-table td[colspan]::before {
+.products-table tbody tr:only-child td[colspan]::before {
     content: "\f07a";
     font-family: "Font Awesome 6 Free";
     font-weight: 900;
@@ -493,6 +494,17 @@ body {
     color: #cbd5e1;
     margin-bottom: 12px;
     opacity: 0.6;
+}
+
+/* ✅ صف الإجمالي في الـ tfoot (شكله العادي) */
+.products-table tfoot td {
+    padding: 14px 12px !important;
+    font-weight: 800 !important;
+    font-size: 13px !important;
+    color: #111 !important;
+    background: #f8fafc !important;
+    border-top: 2px solid #e2e8f0;
+    text-align: right;
 }
 
 /* =========================================
