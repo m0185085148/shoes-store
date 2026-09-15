@@ -307,9 +307,6 @@ function getSizeData(productId, size) {
 
 function getAvailableStock(product) {
     const sizes = getProductSizes(product.id);
-    if (!sizes.length) {
-        return Math.max(0, Number(product.stock_quantity || 0) - Number(product.reserved_quantity || 0));
-    }
     return sizes.reduce((sum, s) => {
         return sum + Math.max(0, Number(s.stock || 0) - Number(s.reserved || 0));
     }, 0);
@@ -317,13 +314,11 @@ function getAvailableStock(product) {
 
 function getProductReservedTotal(product) {
     const sizes = getProductSizes(product.id);
-    if (!sizes.length) return Number(product.reserved_quantity || 0);
     return sizes.reduce((sum, s) => sum + Number(s.reserved || 0), 0);
 }
 
 function getProductTotalStock(product) {
     const sizes = getProductSizes(product.id);
-    if (!sizes.length) return Number(product.stock_quantity || 0);
     return sizes.reduce((sum, s) => sum + Number(s.stock || 0), 0);
 }
 
@@ -2069,8 +2064,8 @@ async function loadAdminProducts() {
                 .from("products")
                 .select(`
                     id, name, price, old_price, badge, sizes, image,
-                    created_at, description, sku,
-                    stock_quantity, reserved_quantity, low_stock_threshold,
+                    created_at, description, sku, barcode, purchase_price,
+                    low_stock_threshold,
                     created_by, created_by_username,
                     updated_by, updated_by_username, updated_at,
                     created_user_id, created_username,
@@ -2548,10 +2543,6 @@ if (editProductForm) {
             const client = getSupabaseClient();
 
             if (isManager()) {
-                const totalStock = newData.sizes_with_quantities.reduce(
-                    (sum, s) => sum + Number(s.quantity || 0), 0
-                );
-
                 const { error } = await client
                     .from("products")
                     .update({
@@ -2563,7 +2554,6 @@ if (editProductForm) {
                         image: newData.image,
                         images: newData.images || [],
                         description: newData.description,
-                        stock_quantity: totalStock,
                         updated_by: currentAdmin.id,
                         updated_by_username: currentAdmin.username || currentAdmin.email,
                         updated_at: new Date().toISOString(),
@@ -2706,8 +2696,6 @@ if (addProductForm) {
                 image: addImageUrl?.value.trim() || null,
                 images: [...addImagesList],
                 description: addDescription?.value.trim() || "",
-                stock_quantity: totalStock,
-                reserved_quantity: 0,
                 created_by: currentAdmin.id,
                 created_by_username: currentAdmin.username || currentAdmin.email,
                 created_user_id: currentAdmin.id,
@@ -3624,9 +3612,6 @@ async function approveChangeRequest(requestId, fromModal = false) {
         if (request.action === "update") {
             const newData = request.new_data || {};
             const sizesWithQty = newData.sizes_with_quantities || [];
-            const totalStock = sizesWithQty.reduce(
-                (sum, s) => sum + Number(s.quantity || 0), 0
-            );
 
             const { error } = await client
                 .from("products")
@@ -3639,7 +3624,6 @@ async function approveChangeRequest(requestId, fromModal = false) {
                     image: newData.image || null,
                     images: Array.isArray(newData.images) ? newData.images : [],
                     description: newData.description || "",
-                    stock_quantity: totalStock,
                     updated_by: request.requested_by,
                     updated_by_username: request.requested_by_username,
                     updated_at: new Date().toISOString(),
