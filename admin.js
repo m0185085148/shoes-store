@@ -6906,11 +6906,11 @@ function renderDatePicker(bodyEl, reportKey) {
         <div class="filter-picker-date">
             <div class="filter-picker-date-group">
                 <label><i class="fa-solid fa-calendar-day"></i> من تاريخ</label>
-                <input type="date" id="pickerDateFrom" value="${fromStr}">
+                <input type="text" id="pickerDateFrom" value="${fromStr}" placeholder="اختر التاريخ..." readonly>
             </div>
             <div class="filter-picker-date-group">
                 <label><i class="fa-solid fa-calendar-day"></i> إلى تاريخ</label>
-                <input type="date" id="pickerDateTo" value="${toStr}">
+                <input type="text" id="pickerDateTo" value="${toStr}" placeholder="اختر التاريخ..." readonly>
             </div>
 
             <div class="filter-picker-presets">
@@ -6930,6 +6930,25 @@ function renderDatePicker(bodyEl, reportKey) {
             </div>
         </div>
     `;
+
+    // ✅ بعد ما HTML جاهز → فعّل Flatpickr
+    setTimeout(() => {
+        const options = {
+            locale: "ar",
+            dateFormat: "Y/m/d",
+            altInput: true,
+            altFormat: "Y/m/d",
+            disableMobile: true,
+            allowInput: false,
+            static: false
+        };
+
+        const fromInput = document.getElementById("pickerDateFrom");
+        const toInput = document.getElementById("pickerDateTo");
+
+        if (fromInput) flatpickr(fromInput, options);
+        if (toInput) flatpickr(toInput, options);
+    }, 50);
 }
 
 function setPickerDatePreset(preset, btnEl) {
@@ -6940,8 +6959,17 @@ function setPickerDatePreset(preset, btnEl) {
     const fromEl = document.getElementById("pickerDateFrom");
     const toEl = document.getElementById("pickerDateTo");
 
-    if (fromEl) fromEl.value = r.from ? r.from.toISOString().slice(0, 10) : '';
-    if (toEl) toEl.value = r.to ? r.to.toISOString().slice(0, 10) : '';
+    // ✅ بصيغة Y/m/d
+    const format = d => d ? `${d.getFullYear()}/${String(d.getMonth()+1).padStart(2,'0')}/${String(d.getDate()).padStart(2,'0')}` : '';
+
+    if (fromEl) {
+        fromEl.value = format(r.from);
+        if (fromEl._flatpickr) fromEl._flatpickr.setDate(r.from || null, false);
+    }
+    if (toEl) {
+        toEl.value = format(r.to);
+        if (toEl._flatpickr) toEl._flatpickr.setDate(r.to || null, false);
+    }
 }
 
 function applyDateFilter() {
@@ -6973,8 +7001,15 @@ function applyDateFilter() {
 function resetDateFilter() {
     const fromEl = document.getElementById("pickerDateFrom");
     const toEl = document.getElementById("pickerDateTo");
-    if (fromEl) fromEl.value = '';
-    if (toEl) toEl.value = '';
+
+    if (fromEl) {
+        fromEl.value = '';
+        if (fromEl._flatpickr) fromEl._flatpickr.clear();
+    }
+    if (toEl) {
+        toEl.value = '';
+        if (toEl._flatpickr) toEl._flatpickr.clear();
+    }
 
     document.querySelectorAll(".filter-picker-preset").forEach(b => {
         b.classList.toggle("active", b.textContent.trim() === "الكل");

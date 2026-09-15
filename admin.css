@@ -5075,3 +5075,210 @@ body {
         justify-content: center;
     }
 }
+/* =========================================
+   IMPROVED FILTER PICKER MODAL
+   ========================================= */
+
+#filterPickerModal .modal-content {
+    max-width: 520px;
+    border-radius: 20px;
+    overflow: hidden;
+}
+
+#filterPickerModal .modal-header {
+    padding: 20px 24px 16px;
+    background: linear-gradient(135deg, #fafbfc, #f8fafc);
+    border-bottom: 1px solid #f0f0f0;
+}
+
+#filterPickerModal .filter-picker-body {
+    padding: 22px 24px;
+    gap: 12px;
+    max-height: 65vh;
+}
+
+/* ✅ Date picker groups */
+#filterPickerModal .filter-picker-date {
+    gap: 16px;
+}
+
+#filterPickerModal .filter-picker-date-group {
+    gap: 8px;
+}
+
+#filterPickerModal .filter-picker-date-group label {
+    font-size: 13px;
+    font-weight: 800;
+    color: #334155;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 2px;
+}
+
+#filterPickerModal .filter-picker-date-group label i {
+    width: 26px;
+    height: 26px;
+    background: #eff6ff;
+    color: #2563eb;
+    border-radius: 8px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 12px;
+}
+
+#filterPickerModal .filter-picker-date-group input {
+    padding: 14px 16px;
+    font-size: 15px;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+    border-radius: 12px;
+    border: 1.5px solid #e2e8f0;
+    background: #fafbfc;
+    color: #111;
+    text-align: center;
+    cursor: pointer;
+    transition: all .2s ease;
+}
+
+#filterPickerModal .filter-picker-date-group input:hover {
+    border-color: #cbd5e1;
+    background: #fff;
+}
+
+#filterPickerModal .filter-picker-date-group input:focus {
+    border-color: #8b5cf6;
+    background: #fff;
+    box-shadow: 0 0 0 4px rgba(139, 92, 246, 0.1);
+}
+
+/* ✅ Presets (اليوم / آخر 7 أيام / إلخ) */
+#filterPickerModal .filter-picker-presets {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 8px;
+    margin-top: 8px;
+    padding: 12px;
+    background: #f8fafc;
+    border-radius: 14px;
+    border: 1.5px solid #e2e8f0;
+}
+
+#filterPickerModal .filter-picker-preset {
+    padding: 12px 8px;
+    border-radius: 10px;
+    border: 1.5px solid #e2e8f0;
+    background: #fff;
+    color: #64748b;
+    font-family: inherit;
+    font-size: 12px;
+    font-weight: 800;
+    cursor: pointer;
+    transition: all .2s ease;
+    text-align: center;
+    white-space: nowrap;
+}
+
+#filterPickerModal .filter-picker-preset:hover {
+    border-color: #8b5cf6;
+    color: #7c3aed;
+    background: #faf5ff;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(139, 92, 246, 0.15);
+}
+
+#filterPickerModal .filter-picker-preset.active {
+    background: linear-gradient(135deg, #8b5cf6, #7c3aed);
+    color: #fff;
+    border-color: #8b5cf6;
+    box-shadow: 0 6px 16px rgba(139, 92, 246, 0.35);
+    transform: translateY(-2px);
+}
+
+/* ✅ Action buttons */
+#filterPickerModal .filter-picker-actions {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+    margin-top: 14px;
+    padding-top: 18px;
+    border-top: 1.5px dashed #e2e8f0;
+}
+
+#filterPickerModal .filter-picker-actions button {
+    padding: 15px;
+    border-radius: 12px;
+    font-size: 14px;
+    font-weight: 800;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    cursor: pointer;
+    transition: all .25s cubic-bezier(.2,.8,.2,1);
+    letter-spacing: 0.3px;
+}
+
+#filterPickerModal .filter-picker-actions .apply {
+    background: linear-gradient(135deg, #8b5cf6, #7c3aed);
+    color: #fff;
+    box-shadow: 0 6px 18px rgba(139, 92, 246, 0.35);
+    border: 0;
+}
+
+#filterPickerModal .filter-picker-actions .apply:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 10px 24px rgba(139, 92, 246, 0.45);
+}
+
+#filterPickerModal .filter-picker-actions .apply:active {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(139, 92, 246, 0.3);
+}
+
+#filterPickerModal .filter-picker-actions .reset {
+    background: #f1f5f9;
+    color: #475569;
+    border: 1.5px solid #e2e8f0;
+}
+
+#filterPickerModal .filter-picker-actions .reset:hover {
+    background: #e2e8f0;
+    color: #111;
+    transform: translateY(-3px);
+    box-shadow: 0 6px 14px rgba(0, 0, 0, 0.08);
+}
+
+/* ✅ Flatpickr - شكله عربي */
+.flatpickr-calendar {
+    font-family: 'Tajawal', sans-serif !important;
+    box-shadow: 0 20px 50px rgba(0, 0, 0, 0.15) !important;
+    border-radius: 14px !important;
+    border: 1px solid #e2e8f0 !important;
+}
+
+.flatpickr-day.selected,
+.flatpickr-day.selected:hover {
+    background: linear-gradient(135deg, #8b5cf6, #7c3aed) !important;
+    border-color: #7c3aed !important;
+}
+
+.flatpickr-day.today {
+    border-color: #8b5cf6 !important;
+}
+
+.flatpickr-months {
+    padding: 8px 0 !important;
+}
+
+/* ✅ Responsive */
+@media (max-width: 500px) {
+    #filterPickerModal .filter-picker-presets {
+        grid-template-columns: repeat(2, 1fr);
+    }
+    
+    #filterPickerModal .filter-picker-actions {
+        grid-template-columns: 1fr;
+    }
+}
