@@ -135,7 +135,7 @@ const cancelAdjustBtn = document.getElementById("cancelAdjustBtn");
 // ========================================
 // 10. GLOBAL VARIABLES
 // ========================================
-
+let postLoadCallback = null;
 let currentAdmin = null;
 let adminProducts = [];
 let currentSessionToken = null;
@@ -1172,8 +1172,17 @@ async function loadAdminOrders() {
         if (paymentPendingBtn) paymentPendingBtn.classList.add("active");
 
         updateDashboard();
+        updateOrderFilterCounts();
+
+        // ✅ تشغيل callback لو موجود
+        if (typeof postLoadCallback === "function") {
+            const cb = postLoadCallback;
+            postLoadCallback = null;
+            setTimeout(cb, 0);
+        }
     } catch (error) {
         console.error("Load Orders Error:", error);
+        postLoadCallback = null;
         adminOrdersList.innerHTML = `
             <tr>
                 <td colspan="8" style="text-align:center;padding:30px;color:#dc2626;font-weight:700;">
@@ -1511,6 +1520,44 @@ function filterOrders(status, btnElement) {
     renderAdminOrders();
     adminOrders = oldOrders;
 }
+// ========================================
+// ORDER FILTER COUNTS (شارات الأزرار)
+// ========================================
+
+function updateOrderFilterCounts() {
+    if (!adminOrders || !Array.isArray(adminOrders)) return;
+
+    const counts = {
+        payment_pending: 0,
+        pending: 0,
+        preparing: 0,
+        shipped: 0,
+        delivered: 0,
+        exchange: 0,
+        return: 0,
+        cancelled: 0,
+        all: adminOrders.length
+    };
+
+    adminOrders.forEach(o => {
+        const s = o.status;
+        if (counts[s] !== undefined) counts[s]++;
+
+        if (["exchange_requested", "exchange_received", "exchange_shipped", "exchanged"].includes(s)) {
+            counts.exchange++;
+        }
+        if (["return_requested", "return_received", "refunded"].includes(s)) {
+            counts.return++;
+        }
+    });
+
+    Object.keys(counts).forEach(key => {
+        const el = document.querySelector(`.filter-chip[data-filter="${key}"] .filter-chip-count`);
+        if (el) el.textContent = counts[key];
+    });
+}
+
+window.updateOrderFilterCounts = updateOrderFilterCounts;
 
 // ========================================
 // 27. UPDATE ORDER STATUS
@@ -1640,7 +1687,7 @@ async function applyStatusChange(orderId, newStatus, reason, notes) {
         }
 
 
-        // ✅ خصم المخزون عند الشحن
+        // ✅ خصم المخزون عند الشحن العادي
         if (newStatus === "shipped" && oldStatus !== "shipped") {
             try {
                 await client.rpc("process_order_shipped", {
@@ -1650,6 +1697,19 @@ async function applyStatusChange(orderId, newStatus, reason, notes) {
             } catch (e) {
                 console.warn("Stock deduction failed:", e);
                 showToast("⚠️ فشل خصم المخزون");
+            }
+        }
+
+        // ✅ شحن بديل الاستبدال → خصم مخزون المنتج الجديد
+        if (newStatus === "exchange_shipped" && oldStatus !== "exchange_shipped") {
+            try {
+                await client.rpc("process_exchange_shipped", {
+                    p_order_id: orderId
+                });
+                showToast("تم خصم مخزون البديل ✅");
+            } catch (e) {
+                console.warn("Exchange ship deduction failed:", e);
+                showToast("⚠️ فشل خصم مخزون البديل");
             }
         }
 
@@ -2847,6 +2907,13 @@ async function loadInventory() {
     if (countOut) countOut.textContent = outStockCount;
 
     renderInventoryList();
+
+    // ✅ تشغيل callback لو موجود
+    if (typeof postLoadCallback === "function") {
+        const cb = postLoadCallback;
+        postLoadCallback = null;
+        setTimeout(cb, 0);
+    }
 }
 
 function renderInventoryList() {
@@ -4559,9 +4626,8 @@ document.getElementById("exchangeReceivedModal")?.addEventListener("click", (e) 
 
 function showLowStockProducts() {
     closeNotificationsDropdown();
-    switchTab('inventory');
 
-    setTimeout(() => {
+    postLoadCallback = () => {
         const lowBtn = document.querySelector('.inv-filter-chip[data-filter="low"]');
         if (lowBtn) {
             document.querySelectorAll('.inv-filter-chip').forEach(b => b.classList.remove('active'));
@@ -4569,14 +4635,15 @@ function showLowStockProducts() {
             currentInventoryFilter = 'low';
             renderInventoryList();
         }
-    }, 100);
+    };
+
+    switchTab('inventory');
 }
 
 function showOutOfStockProducts() {
     closeNotificationsDropdown();
-    switchTab('inventory');
 
-    setTimeout(() => {
+    postLoadCallback = () => {
         const outBtn = document.querySelector('.inv-filter-chip[data-filter="out"]');
         if (outBtn) {
             document.querySelectorAll('.inv-filter-chip').forEach(b => b.classList.remove('active'));
@@ -4584,62 +4651,66 @@ function showOutOfStockProducts() {
             currentInventoryFilter = 'out';
             renderInventoryList();
         }
-    }, 100);
+    };
+
+    switchTab('inventory');
 }
 
 function showUrgentOrders() {
     closeNotificationsDropdown();
-    switchTab('orders');
 
-    setTimeout(() => {
+    postLoadCallback = () => {
         customOrderStatuses = ["pending"];
-        const pendingBtn = document.querySelector('.filter-chip[onclick*="pending"]');
-        if (pendingBtn) {
-            document.querySelectorAll('.filter-chip').forEach(b => b.classList.remove('active'));
-            pendingBtn.classList.add('active');
-        }
+        document.querySelectorAll('.filter-chip').forEach(b => b.classList.remove('active'));
+        const pendingChip = document.querySelector('.filter-chip[data-filter="pending"]');
+        if (pendingChip) pendingChip.classList.add('active');
         renderAdminOrders();
-    }, 100);
+    };
+
+    switchTab('orders');
 }
 
 function showActiveOrders() {
     closeNotificationsDropdown();
-    switchTab('orders');
 
-    setTimeout(() => {
+    postLoadCallback = () => {
         customOrderStatuses = [
             "pending", "preparing", "shipped",
             "return_requested", "return_received",
             "exchange_requested", "exchange_received", "exchange_shipped"
         ];
-
         document.querySelectorAll('.filter-chip').forEach(b => b.classList.remove('active'));
+        const allChip = document.querySelector('.filter-chip[data-filter="all"]');
+        if (allChip) allChip.classList.add('active');
         renderAdminOrders();
-    }, 100);
+    };
+
+    switchTab('orders');
 }
 
 function showFollowUpOrders() {
     closeNotificationsDropdown();
-    switchTab('orders');
 
-    setTimeout(() => {
+    postLoadCallback = () => {
         customOrderStatuses = ["exchange_requested", "return_requested"];
         document.querySelectorAll('.filter-chip').forEach(b => b.classList.remove('active'));
         renderAdminOrders();
-    }, 100);
+    };
+
+    switchTab('orders');
 }
 
 function showExchangeOrders() {
     closeNotificationsDropdown();
-    switchTab('orders');
 
-    setTimeout(() => {
+    postLoadCallback = () => {
         customOrderStatuses = ["exchange_requested", "return_requested"];
         document.querySelectorAll('.filter-chip').forEach(b => b.classList.remove('active'));
         renderAdminOrders();
-    }, 100);
-}
+    };
 
+    switchTab('orders');
+}
 // ========================================
 // 54. SMART ALERTS
 // ========================================

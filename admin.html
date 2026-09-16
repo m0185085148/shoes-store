@@ -370,41 +370,50 @@
         <!-- ============ ORDERS ============ -->
         <div id="viewOrders" class="tab-content">
             <div class="orders-filter-bar-modern">
-                <button class="filter-chip active" onclick="filterOrders('payment_pending', this)">
+                <button class="filter-chip active" data-filter="payment_pending" onclick="filterOrders('payment_pending', this)">
                     <span class="dot" style="background:#2563eb;"></span>
                     بانتظار الدفع
+                    <span class="filter-chip-count">0</span>
                 </button>
-                <button class="filter-chip" onclick="filterOrders('pending', this)">
+                <button class="filter-chip" data-filter="pending" onclick="filterOrders('pending', this)">
                     <span class="dot pending"></span>
                     جديدة
+                    <span class="filter-chip-count">0</span>
                 </button>
-                <button class="filter-chip" onclick="filterOrders('preparing', this)">
+                <button class="filter-chip" data-filter="preparing" onclick="filterOrders('preparing', this)">
                     <span class="dot preparing"></span>
                     قيد التحضير
+                    <span class="filter-chip-count">0</span>
                 </button>
-                <button class="filter-chip" onclick="filterOrders('shipped', this)">
+                <button class="filter-chip" data-filter="shipped" onclick="filterOrders('shipped', this)">
                     <span class="dot shipped"></span>
                     تم الشحن
+                    <span class="filter-chip-count">0</span>
                 </button>
-                <button class="filter-chip" onclick="filterOrders('delivered', this)">
+                <button class="filter-chip" data-filter="delivered" onclick="filterOrders('delivered', this)">
                     <span class="dot delivered"></span>
                     تم التوصيل
+                    <span class="filter-chip-count">0</span>
                 </button>
-                <button class="filter-chip" onclick="filterOrders('exchange', this)">
+                <button class="filter-chip" data-filter="exchange" onclick="filterOrders('exchange', this)">
                     <span class="dot exchange"></span>
                     استبدال
+                    <span class="filter-chip-count">0</span>
                 </button>
-                <button class="filter-chip" onclick="filterOrders('return', this)">
+                <button class="filter-chip" data-filter="return" onclick="filterOrders('return', this)">
                     <span class="dot return"></span>
                     استرجاع
+                    <span class="filter-chip-count">0</span>
                 </button>
-                <button class="filter-chip" onclick="filterOrders('cancelled', this)">
+                <button class="filter-chip" data-filter="cancelled" onclick="filterOrders('cancelled', this)">
                     <span class="dot cancelled"></span>
                     ملغى
+                    <span class="filter-chip-count">0</span>
                 </button>
-                <button class="filter-chip" onclick="filterOrders('all', this)">
+                <button class="filter-chip" data-filter="all" onclick="filterOrders('all', this)">
                     <span class="dot all"></span>
                     الكل
+                    <span class="filter-chip-count">0</span>
                 </button>
             </div>
 
