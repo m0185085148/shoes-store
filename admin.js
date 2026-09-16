@@ -1551,9 +1551,35 @@ function updateOrderFilterCounts() {
         }
     });
 
+    // ✅ الحالات النهائية — مش محتاجة Action (مش بتعرض العدد)
+    const FINAL_STATUSES = ["delivered", "cancelled"];
+
     Object.keys(counts).forEach(key => {
         const el = document.querySelector(`.filter-chip[data-filter="${key}"] .filter-chip-count`);
-        if (el) el.textContent = counts[key];
+        if (!el) return;
+
+        const count = counts[key];
+
+        // ✅ "الكل" → بيظهر دايماً (حتى لو صفر)
+        if (key === "all") {
+            el.textContent = count;
+            el.style.display = "inline-flex";
+            return;
+        }
+
+        // ✅ الحالات النهائية → مش بتظهر خالص
+        if (FINAL_STATUSES.includes(key)) {
+            el.style.display = "none";
+            return;
+        }
+
+        // ✅ الحالات المحتاجة Action → تظهر بس لو > 0
+        if (count > 0) {
+            el.textContent = count;
+            el.style.display = "inline-flex";
+        } else {
+            el.style.display = "none";
+        }
     });
 }
 
