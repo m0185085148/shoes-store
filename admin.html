@@ -1463,42 +1463,73 @@
                     <div></div>
                 </div>
 
-                                                <!-- ✅ الفلاتر -->
-                <div class="report-filter-bar">
-                    <div class="report-filter-group" style="flex:1;min-width:220px;">
-                        <label><i class="fa-solid fa-box"></i> المنتج *</label>
-                        <button type="button" class="product-picker-btn" id="ledgerProductPickerBtn" onclick="openLedgerProductPicker()">
-                            <span id="ledgerProductPickerLabel">اختر منتج...</span>
-                            <i class="fa-solid fa-chevron-down"></i>
-                        </button>
-                    </div>
-                    <div class="report-filter-group">
-                        <label><i class="fa-solid fa-shoe-prints"></i> المقاس *</label>
-                        <select id="ledgerSizeSelect" required onchange="loadItemLedgerReport()">
-                            <option value="">اختر المقاس...</option>
-                        </select>
-                    </div>
-                    <div class="report-filter-group">
-                        <label><i class="fa-solid fa-calendar"></i> من تاريخ *</label>
-                        <input type="date" id="ledgerDateFrom">
-                    </div>
-                    <div class="report-filter-group">
-                        <label><i class="fa-solid fa-calendar"></i> إلى تاريخ *</label>
-                        <input type="date" id="ledgerDateTo">
-                    </div>
-                    <div class="report-preset-chips">
-                        <button class="preset-chip" onclick="setLedgerPreset('week', this)">آخر 7 أيام</button>
-                        <button class="preset-chip" onclick="setLedgerPreset('month', this)">هذا الشهر</button>
-                        <button class="preset-chip active" onclick="setLedgerPreset('year', this)">هذه السنة</button>
-                        <button class="preset-chip" onclick="setLedgerPreset('all', this)">الكل</button>
-                    </div>
-                    <div class="report-filter-actions">
-                        <button class="btn-apply-filter" onclick="loadItemLedgerReport()">
-                            <i class="fa-solid fa-filter"></i> تطبيق
+                                                <!-- ✅ الفلاتر (Collapsible) -->
+                <div class="report-filters-wrapper" id="ledgerFiltersWrapper">
+                    <div class="report-filters-header">
+                        <button type="button" class="filters-toggle-btn" onclick="toggleFiltersBar('ledger')">
+                            <i class="fa-solid fa-sliders"></i>
+                            <span>الفلاتر</span>
+                            <span class="filters-count-badge" id="ledgerFiltersCount">4</span>
+                            <i class="fa-solid fa-chevron-down filters-toggle-icon" id="ledgerFiltersIcon"></i>
                         </button>
                         <button class="btn-export" onclick="exportItemLedgerCSV()">
-                            <i class="fa-solid fa-file-csv"></i> CSV
+                            <i class="fa-solid fa-file-csv"></i>
+                            CSV
                         </button>
+                    </div>
+
+                    <div class="report-filters-body" id="ledgerFiltersBody">
+                        <div class="filter-pills-grid">
+                            <!-- المنتج -->
+                            <button type="button" class="filter-pill" onclick="openLedgerProductPicker()">
+                                <i class="fa-solid fa-box"></i>
+                                <span class="filter-pill-label">المنتج *</span>
+                                <strong class="filter-pill-value" id="ledgerProductPickerLabel">اختر منتج...</strong>
+                                <i class="fa-solid fa-chevron-down filter-pill-arrow"></i>
+                            </button>
+
+                            <!-- المقاس -->
+                            <div class="filter-pill filter-pill-static" onclick="document.getElementById('ledgerSizeSelect').click()">
+                                <i class="fa-solid fa-shoe-prints"></i>
+                                <span class="filter-pill-label">المقاس *</span>
+                                <select id="ledgerSizeSelect" required onchange="loadItemLedgerReport()"
+                                    onclick="event.stopPropagation();"
+                                    style="grid-column:2;grid-row:2;width:100%;border:0;background:transparent;font-family:inherit;font-size:13px;font-weight:800;color:#111;padding:0;outline:none;cursor:pointer;text-align:right;appearance:none;-webkit-appearance:none;-moz-appearance:none;">
+                                    <option value="">اختر المقاس...</option>
+                                </select>
+                            </div>
+
+                            <!-- من تاريخ -->
+                            <div class="filter-pill filter-pill-static" onclick="document.getElementById('ledgerDateFrom').click()">
+                                <i class="fa-solid fa-calendar"></i>
+                                <span class="filter-pill-label">من تاريخ</span>
+                                <input type="text" id="ledgerDateFrom" readonly placeholder="YYYY/MM/DD"
+                                    style="grid-column:2;grid-row:2;width:100%;border:0;background:transparent;font-family:inherit;font-size:13px;font-weight:800;color:#111;padding:0;outline:none;cursor:pointer;text-align:right;">
+                            </div>
+
+                            <!-- إلى تاريخ -->
+                            <div class="filter-pill filter-pill-static" onclick="document.getElementById('ledgerDateTo').click()">
+                                <i class="fa-solid fa-calendar"></i>
+                                <span class="filter-pill-label">إلى تاريخ</span>
+                                <input type="text" id="ledgerDateTo" readonly placeholder="YYYY/MM/DD"
+                                    style="grid-column:2;grid-row:2;width:100%;border:0;background:transparent;font-family:inherit;font-size:13px;font-weight:800;color:#111;padding:0;outline:none;cursor:pointer;text-align:right;">
+                            </div>
+                        </div>
+
+                        <!-- ✅ Presets -->
+                        <div class="report-preset-chips" style="margin-top:14px;">
+                            <button type="button" class="preset-chip" onclick="setLedgerPreset('week', this)">آخر 7 أيام</button>
+                            <button type="button" class="preset-chip" onclick="setLedgerPreset('month', this)">هذا الشهر</button>
+                            <button type="button" class="preset-chip active" onclick="setLedgerPreset('year', this)">هذه السنة</button>
+                            <button type="button" class="preset-chip" onclick="setLedgerPreset('all', this)">الكل</button>
+                        </div>
+
+                        <!-- ✅ تطبيق -->
+                        <div style="margin-top:14px;display:flex;justify-content:flex-end;">
+                            <button type="button" class="btn-apply-filter" onclick="loadItemLedgerReport()">
+                                <i class="fa-solid fa-filter"></i> تطبيق
+                            </button>
+                        </div>
                     </div>
                 </div>
 

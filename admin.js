@@ -7684,10 +7684,52 @@ function setLedgerPreset(preset, btnEl) {
 
     const fromEl = document.getElementById("ledgerDateFrom");
     const toEl = document.getElementById("ledgerDateTo");
-    if (fromEl) fromEl.value = r.from ? r.from.toISOString().slice(0, 10) : '';
-    if (toEl) toEl.value = r.to ? r.to.toISOString().slice(0, 10) : '';
+
+    if (fromEl) {
+        fromEl.value = formatYMD(r.from);
+        if (fromEl._flatpickr) fromEl._flatpickr.setDate(r.from || null, false);
+    }
+    if (toEl) {
+        toEl.value = formatYMD(r.to);
+        if (toEl._flatpickr) toEl._flatpickr.setDate(r.to || null, false);
+    }
 
     loadItemLedgerReport();
+}
+// ✅ تنسيق التاريخ YYYY/MM/DD
+function formatYMD(d) {
+    if (!d) return '';
+    return `${d.getFullYear()}/${String(d.getMonth()+1).padStart(2,'0')}/${String(d.getDate()).padStart(2,'0')}`;
+}
+
+// ✅ تحويل من YYYY/MM/DD لـ Date
+function parseYMD(str) {
+    if (!str) return null;
+    const parts = str.split('/').map(p => parseInt(p, 10));
+    if (parts.length !== 3 || parts.some(isNaN)) return null;
+    return new Date(parts[0], parts[1] - 1, parts[2]);
+}
+
+// ✅ تهيئة Flatpickr على حقول التاريخ
+function initLedgerDatePickers() {
+    const fromEl = document.getElementById("ledgerDateFrom");
+    const toEl = document.getElementById("ledgerDateTo");
+    if (!fromEl || !toEl) return;
+
+    // ✅ اتأكد إنها اتهيأت قبل كده
+    if (fromEl._flatpickr) return;
+
+    const opts = {
+        locale: "ar",
+        dateFormat: "Y/m/d",
+        altInput: false,
+        disableMobile: true,
+        allowInput: false,
+        static: false
+    };
+
+    flatpickr(fromEl, opts);
+    flatpickr(toEl, opts);
 }
 
 // ✅ تعبئة قائمة المقاسات
@@ -7717,11 +7759,16 @@ function initLedgerDefaults() {
     const fromEl = document.getElementById("ledgerDateFrom");
     const toEl = document.getElementById("ledgerDateTo");
 
-    if (fromEl && r.from) fromEl.value = r.from.toISOString().slice(0, 10);
-    if (toEl && r.to) toEl.value = r.to.toISOString().slice(0, 10);
+    if (fromEl && r.from) {
+        fromEl.value = formatYMD(r.from);
+        if (fromEl._flatpickr) fromEl._flatpickr.setDate(r.from, false);
+    }
+    if (toEl && r.to) {
+        toEl.value = formatYMD(r.to);
+        if (toEl._flatpickr) toEl._flatpickr.setDate(r.to, false);
+    }
 }
 
-// ✅ الدالة الرئيسية
 // ✅ الدالة الرئيسية
 async function loadItemLedgerReport() {
     const listEl = document.getElementById("ledgerList");
@@ -8199,6 +8246,7 @@ window.openLedgerProductPicker = openLedgerProductPicker;
 window.initLedgerDefaults = initLedgerDefaults;
 window.populateLedgerSizes = populateLedgerSizes;
 window.confirmInstaPayPayment = confirmInstaPayPayment;
+window.initLedgerDatePickers = initLedgerDatePickers;
 // ========================================
 // SHIP CONFIRM MODAL
 // ========================================

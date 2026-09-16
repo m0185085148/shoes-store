@@ -6241,3 +6241,24 @@ body {
     font-weight: 700;
     opacity: 0.8;
 }
+/* ===== Static Filter Pills (مع inputs جواها) ===== */
+
+.filter-pill.filter-pill-static {
+    cursor: default;
+}
+
+.filter-pill.filter-pill-static:hover {
+    transform: none;
+    box-shadow: none;
+    border-color: #8b5cf6;
+    background: #fff;
+}
+
+.filter-pill.filter-pill-static > i:first-child {
+    transition: all .2s ease;
+}
+
+.filter-pill.filter-pill-static:hover > i:first-child {
+    background: linear-gradient(135deg, #8b5cf6, #7c3aed);
+    color: #fff;
+}
