@@ -4147,6 +4147,135 @@ function selectExchangeSize(btn, index) {
     const hidden = picker.querySelector(".exchange-newsize-value");
     if (hidden) hidden.value = btn.dataset.size;
 }
+// ========================================
+// EXCHANGE HELPERS (جديد)
+// ========================================
+
+let exchangePickerIndex = null;
+
+// ✅ تغيير نوع الاستبدال (مقاس / موديل)
+function selectExchangeType(index, type, btnEl) {
+    const item = document.querySelector(`.exchange-received-item[data-index="${index}"]`);
+    if (!item) return;
+
+    // تحديث الأزرار
+    item.querySelectorAll(".movement-type-tab").forEach(b => b.classList.remove("active"));
+    btnEl?.classList.add("active");
+
+    // حفظ النوع
+    item.dataset.exchangeType = type;
+
+    const productSection = item.querySelector(".exchange-new-product-section");
+    const sizeLabelText = item.querySelector(`.size-label-text[data-index="${index}"]`);
+
+    if (type === "model") {
+        // إظهار قسم اختيار المنتج
+        if (productSection) productSection.style.display = "block";
+        if (sizeLabelText) sizeLabelText.textContent = "مقاس المنتج الجديد *";
+    } else {
+        // إخفاء قسم اختيار المنتج + رجوع للمنتج الأصلي
+        if (productSection) productSection.style.display = "none";
+        if (sizeLabelText) sizeLabelText.textContent = "المقاس الجديد *";
+
+        // تصفير حقل المنتج الجديد
+        const hiddenProductId = item.querySelector(`.exchange-new-product-id[data-index="${index}"]`);
+        if (hiddenProductId) hiddenProductId.value = "";
+
+        const labelEl = item.querySelector(`.exchange-picked-product-label[data-index="${index}"]`);
+        if (labelEl) labelEl.textContent = "اختر منتج...";
+
+        // إعادة تحميل المقاسات من المنتج الأصلي
+        const order = currentExchangeReceivedOrder;
+        const originalItem = order?.exchange_details?.items?.[index];
+        if (originalItem) {
+            reloadExchangeSizePicker(index, originalItem.product_id, originalItem.old_size);
+        }
+    }
+}
+
+// ✅ فتح Product Picker لوضع الاستبدال
+function openExchangeProductPicker(index) {
+    exchangePickerIndex = index;
+    openProductPicker("exchange");
+}
+
+// ✅ إعادة تحميل المقاسات لمنتج معين
+function reloadExchangeSizePicker(index, productId, oldSize = null) {
+    const picker = document.querySelector(`.size-picker[data-index="${index}"]`);
+    if (!picker) return;
+
+    const product = getProductById(productId);
+    if (!product) return;
+
+    const allSizes = parseSizes(product.sizes);
+    const productSizesData = getProductSizes(productId);
+
+    const sizesOptions = allSizes.map(sizeStr => {
+        const sizeData = productSizesData.find(s => String(s.size) === String(sizeStr));
+        const available = sizeData ? Math.max(0, Number(sizeData.stock) - Number(sizeData.reserved)) : 0;
+        const isOld = oldSize && String(sizeStr) === String(oldSize);
+
+        if (isOld) {
+            return `
+                <button type="button" class="size-pick-btn old" disabled>
+                    <span class="size-pick-num">${escapeAdminHTML(sizeStr)}</span>
+                    <span class="size-pick-label">الحالي</span>
+                </button>
+            `;
+        }
+
+        if (available === 0) {
+            return `
+                <button type="button" class="size-pick-btn unavailable" disabled>
+                    <span class="size-pick-num">${escapeAdminHTML(sizeStr)}</span>
+                    <span class="size-pick-label">غير متاح</span>
+                </button>
+            `;
+        }
+
+        return `
+            <button type="button" class="size-pick-btn available" 
+                data-size="${escapeAdminHTML(sizeStr)}"
+                onclick="selectExchangeSize(this, ${index})">
+                <span class="size-pick-num">${escapeAdminHTML(sizeStr)}</span>
+                <span class="size-pick-label">متاح ${available}</span>
+            </button>
+        `;
+    }).join("");
+
+    // ✅ نجدّد المحتوى (نحافظ على hidden input)
+    const hiddenInput = picker.querySelector(`.exchange-newsize-value[data-index="${index}"]`);
+    picker.innerHTML = sizesOptions;
+    if (hiddenInput) {
+        hiddenInput.value = "";
+        picker.appendChild(hiddenInput);
+    }
+}
+
+// ✅ التعامل مع اختيار منتج جديد للاستبدال
+function handleExchangeProductSelection(productId) {
+    const index = exchangePickerIndex;
+    if (index === null || index === undefined) return;
+
+    const product = adminProducts.find(p => Number(p.id) === Number(productId));
+    if (!product) return;
+
+    // تحديث اسم المنتج المختار
+    const labelEl = document.querySelector(`.exchange-picked-product-label[data-index="${index}"]`);
+    if (labelEl) labelEl.textContent = product.name || `#${productId}`;
+
+    // تحديث hidden input
+    const hiddenInput = document.querySelector(`.exchange-new-product-id[data-index="${index}"]`);
+    if (hiddenInput) hiddenInput.value = productId;
+
+    // إعادة تحميل المقاسات من المنتج الجديد (بدون old_size)
+    reloadExchangeSizePicker(index, productId, null);
+
+    closeProductPicker();
+
+    // تصفير المتغير بعد لحظة
+    setTimeout(() => { exchangePickerIndex = null; }, 100);
+}
 
 function openExchangeReceivedModal(orderId) {
     const order = adminOrders.find(o => Number(o.id) === Number(orderId));
@@ -4165,18 +4294,18 @@ function openExchangeReceivedModal(orderId) {
 
     currentExchangeReceivedOrder = order;
 
+    // ✅ نحدد النوع الافتراضي من السبب
+    const mainReason = order.exchange_reason || "";
+    const defaultIsModel = /موديل|منتج تاني|منتج مختلف|موديل تاني|موديل مختلف/i.test(mainReason);
+
     const itemsHTML = items.map((item, index) => {
         const product = getProductById(item.product_id);
         const allSizes = product ? parseSizes(product.sizes) : [];
         const productSizesData = getProductSizes(item.product_id);
 
         const sizesOptions = allSizes.map(sizeStr => {
-            const sizeData = productSizesData.find(
-                s => String(s.size) === String(sizeStr)
-            );
-            const available = sizeData
-                ? Math.max(0, Number(sizeData.stock) - Number(sizeData.reserved))
-                : 0;
+            const sizeData = productSizesData.find(s => String(s.size) === String(sizeStr));
+            const available = sizeData ? Math.max(0, Number(sizeData.stock) - Number(sizeData.reserved)) : 0;
             const isOld = String(sizeStr) === String(item.old_size);
 
             if (isOld) {
@@ -4208,7 +4337,7 @@ function openExchangeReceivedModal(orderId) {
         }).join("");
 
         return `
-            <div class="exchange-received-item" data-index="${index}">
+            <div class="exchange-received-item" data-index="${index}" data-exchange-type="${defaultIsModel ? 'model' : 'size'}">
                 <div class="exchange-received-header">
                     <div class="exchange-item-img" 
                         style="background-image:url('${escapeAdminHTML(item.image || '')}');"></div>
@@ -4224,11 +4353,52 @@ function openExchangeReceivedModal(orderId) {
                         </div>
                     </div>
                 </div>
-                
+
+                <!-- ✅ نوع الاستبدال -->
+                <div class="movement-type-tabs" data-index="${index}">
+                    <button type="button" 
+                        class="movement-type-tab ${!defaultIsModel ? 'active' : ''}" 
+                        data-type="size"
+                        onclick="selectExchangeType(${index}, 'size', this)">
+                        <i class="fa-solid fa-shoe-prints"></i> استبدال مقاس
+                    </button>
+                    <button type="button" 
+                        class="movement-type-tab ${defaultIsModel ? 'active' : ''}" 
+                        data-type="model"
+                        onclick="selectExchangeType(${index}, 'model', this)">
+                        <i class="fa-solid fa-box"></i> استبدال موديل
+                    </button>
+                </div>
+
+                <!-- ✅ اختيار المنتج الجديد (يظهر فقط لو موديل) -->
+                <div class="exchange-new-product-section" 
+                    data-index="${index}" 
+                    style="display:${defaultIsModel ? 'block' : 'none'};margin-bottom:14px;">
+                    <label style="display:block;font-size:13px;font-weight:800;color:#334155;margin-bottom:8px;">
+                        <i class="fa-solid fa-box" style="color:#8b5cf6;font-size:12px;"></i>
+                        المنتج الجديد *
+                    </label>
+                    <button type="button" class="product-picker-btn" 
+                        data-index="${index}"
+                        onclick="openExchangeProductPicker(${index})">
+                        <span class="exchange-picked-product-label" data-index="${index}">
+                            اختر منتج...
+                        </span>
+                        <i class="fa-solid fa-chevron-down"></i>
+                    </button>
+                    <input type="hidden" 
+                        class="exchange-new-product-id" 
+                        data-index="${index}" 
+                        value="">
+                </div>
+
+                <!-- ✅ اختيار المقاس -->
                 <div class="exchange-received-newsize">
                     <label>
                         <i class="fa-solid fa-shoe-prints"></i>
-                        المقاس الجديد *
+                        <span class="size-label-text" data-index="${index}">
+                            ${defaultIsModel ? 'مقاس المنتج الجديد *' : 'المقاس الجديد *'}
+                        </span>
                     </label>
                     <div class="size-picker" data-index="${index}">
                         ${sizesOptions}
@@ -4247,7 +4417,7 @@ function openExchangeReceivedModal(orderId) {
                 ${escapeAdminHTML(order.customer_name || "عميل")}
             </div>
             <div style="font-size:12px;color:#166534;margin-top:6px;">
-                سيرجع المقاس القديم للمخزون، ويتم حجز المقاس الجديد تلقائيًا.
+                المقاس القديم سيرجع للمخزون، ويتم حجز الجديد تلقائيًا.
             </div>
         </div>
         ${itemsHTML}
@@ -4255,7 +4425,6 @@ function openExchangeReceivedModal(orderId) {
 
     document.getElementById("exchangeReceivedModal").classList.add("open");
 }
-
 function closeExchangeReceivedModalFn() {
     document.getElementById("exchangeReceivedModal")?.classList.remove("open");
     currentExchangeReceivedOrder = null;
@@ -4268,30 +4437,41 @@ async function saveExchangeReceived() {
     const client = getSupabaseClient();
     if (!client) return;
 
-    const selects = document.querySelectorAll(".exchange-newsize-value");
     const newItems = [];
+    const exchangeItems = order.exchange_details.items || [];
 
-    for (const select of selects) {
-        const idx = Number(select.dataset.index);
-        const newSize = select.value;
+    for (let index = 0; index < exchangeItems.length; index++) {
+        const itemEl = document.querySelector(`.exchange-received-item[data-index="${index}"]`);
+        if (!itemEl) continue;
 
+        const exchangeType = itemEl.dataset.exchangeType || "size";
+        const newSize = itemEl.querySelector(`.exchange-newsize-value[data-index="${index}"]`)?.value;
+        const newProductId = itemEl.querySelector(`.exchange-new-product-id[data-index="${index}"]`)?.value;
+
+        // ✅ Validation
         if (!newSize) {
-            alert("اختر المقاس الجديد لكل منتج");
-            const picker = select.closest(".size-picker");
-            picker?.scrollIntoView({ behavior: "smooth", block: "center" });
+            alert(`اختر المقاس الجديد للعنصر #${index + 1}`);
+            itemEl.scrollIntoView({ behavior: "smooth", block: "center" });
             return;
         }
 
-        const item = order.exchange_details.items[idx];
+        if (exchangeType === "model" && !newProductId) {
+            alert(`اختر المنتج الجديد للعنصر #${index + 1}`);
+            itemEl.scrollIntoView({ behavior: "smooth", block: "center" });
+            return;
+        }
+
+        const originalItem = exchangeItems[index];
 
         newItems.push({
-            product_id: item.product_id,
-            product_name: item.product_name,
-            image: item.image,
-            old_size: item.old_size,
+            product_id: originalItem.product_id,
+            product_name: originalItem.product_name,
+            image: originalItem.image,
+            old_size: originalItem.old_size,
             new_size: newSize,
-            quantity: item.quantity,
-            reason: item.reason
+            new_product_id: exchangeType === "model" ? Number(newProductId) : null,
+            quantity: originalItem.quantity,
+            reason: originalItem.reason
         });
     }
 
@@ -6792,7 +6972,7 @@ function renderProductPickerList(skuQuery, nameQuery) {
     }
 
     // ✅ خيار "الكل" — يظهر في وضع المخزون بس
-    const clearBtn = pickerMode === "ledger" ? "" : `
+    const clearBtn = (pickerMode === "ledger" || pickerMode === "exchange") ? "" : `
         <div class="product-picker-item-clear" onclick="selectPickerProduct(null)">
             <i class="fa-solid fa-rotate-left"></i>
             عرض كل المنتجات
@@ -6813,6 +6993,12 @@ function renderProductPickerList(skuQuery, nameQuery) {
 
 function selectPickerProduct(productId) {
     selectedPickerProductId = productId;
+
+    // ✅ لو في وضع الاستبدال
+    if (pickerMode === "exchange") {
+        handleExchangeProductSelection(productId);
+        return;
+    }
 
     // ✅ لو في وضع كارت الصنف
     if (pickerMode === "ledger") {
