@@ -1654,9 +1654,21 @@ async function applyStatusChange(orderId, newStatus, reason, notes) {
         }
 
 
-        // تحرير الحجز عند الإلغاء
-        if ((newStatus === "cancelled" || newStatus === "refunded") &&
-            oldStatus !== newStatus) {
+        // ✅ استرجاع المنتج → نرجّع المخزون + نسجّل حركة return
+        if (newStatus === "return_received" && oldStatus !== "return_received") {
+            try {
+                await client.rpc("process_return_received", {
+                    p_order_id: orderId
+                });
+                showToast("تم إرجاع المنتجات للمخزون ✅");
+            } catch (e) {
+                console.warn("Process return failed:", e);
+                showToast("⚠️ فشل إرجاع المخزون");
+            }
+        }
+
+        // ✅ تحرير الحجز عند الإلغاء فقط (مش refunded لأنها بتيجي بعد return_received)
+        if (newStatus === "cancelled" && oldStatus !== newStatus) {
             try {
                 await client.rpc("release_order_stock", {
                     p_order_id: orderId
@@ -2496,6 +2508,7 @@ async function applySizeChanges(client, productId, newSizesWithQty, oldSizes) {
 
                 await client.from("inventory_movements").insert({
                     product_id: productId,
+                    size: String(item.size),
                     movement_type: "adjustment",
                     quantity: item.quantity - Number(existing.stock),
                     previous_stock: Number(existing.stock),
@@ -2516,6 +2529,7 @@ async function applySizeChanges(client, productId, newSizesWithQty, oldSizes) {
             if (item.quantity > 0) {
                 await client.from("inventory_movements").insert({
                     product_id: productId,
+                    size: String(item.size),
                     movement_type: "initial",
                     quantity: item.quantity,
                     previous_stock: 0,
@@ -2740,6 +2754,7 @@ if (addProductForm) {
                     try {
                         await client.from("inventory_movements").insert({
                             product_id: insertedProduct.id,
+                            size: String(item.size),
                             movement_type: "initial",
                             quantity: Number(item.quantity),
                             previous_stock: 0,
@@ -6802,17 +6817,22 @@ function selectPickerProduct(productId) {
     // ✅ لو في وضع كارت الصنف
     if (pickerMode === "ledger") {
         const labelEl = document.getElementById("ledgerProductPickerLabel");
-        const btnEl = document.getElementById("ledgerProductPickerBtn");
 
         if (productId === null) {
-            if (labelEl) labelEl.textContent = "اختر منتج...";
-            if (btnEl) btnEl.classList.remove("active");
+            if (labelEl) {
+                labelEl.textContent = "اختر منتج...";
+                const pill = labelEl.closest(".filter-pill");
+                if (pill) pill.classList.remove("active");
+            }
             ledgerFilters.productId = null;
             populateLedgerSizes(null);
         } else {
             const product = adminProducts.find(p => Number(p.id) === Number(productId));
-            if (labelEl) labelEl.textContent = product?.name || `#${productId}`;
-            if (btnEl) btnEl.classList.add("active");
+            if (labelEl) {
+                labelEl.textContent = product?.name || `#${productId}`;
+                const pill = labelEl.closest(".filter-pill");
+                if (pill) pill.classList.add("active");
+            }
             ledgerFilters.productId = productId;
             populateLedgerSizes(productId);
         }
@@ -7696,57 +7716,162 @@ function setLedgerPreset(preset, btnEl) {
 
     loadItemLedgerReport();
 }
-// ✅ تنسيق التاريخ YYYY/MM/DD
+// ========================================
+// HELPERS — DATE FORMAT
+// ========================================
+
+// ✅ تنسيق YYYY/MM/DD
 function formatYMD(d) {
     if (!d) return '';
     return `${d.getFullYear()}/${String(d.getMonth()+1).padStart(2,'0')}/${String(d.getDate()).padStart(2,'0')}`;
 }
 
-// ✅ تحويل من YYYY/MM/DD لـ Date
+// ✅ Parse YYYY/MM/DD
 function parseYMD(str) {
     if (!str) return null;
-    const parts = str.split('/').map(p => parseInt(p, 10));
+    const parts = String(str).split('/').map(p => parseInt(p, 10));
     if (parts.length !== 3 || parts.some(isNaN)) return null;
-    return new Date(parts[0], parts[1] - 1, parts[2]);
+    const d = new Date(parts[0], parts[1] - 1, parts[2]);
+    return isNaN(d.getTime()) ? null : d;
 }
 
-// ✅ تهيئة Flatpickr على حقول التاريخ
+// ✅ تحديث لابل التواريخ
+function updateLedgerDateLabels(fromDate, toDate) {
+    const fromEl = document.getElementById("ledgerDateFrom");
+    const toEl = document.getElementById("ledgerDateTo");
+    const fromLabel = document.getElementById("ledgerDateFromLabel");
+    const toLabel = document.getElementById("ledgerDateToLabel");
+
+    if (fromEl) {
+        fromEl.value = formatYMD(fromDate);
+        if (fromEl._flatpickr) fromEl._flatpickr.setDate(fromDate || null, false);
+    }
+    if (toEl) {
+        toEl.value = formatYMD(toDate);
+        if (toEl._flatpickr) toEl._flatpickr.setDate(toDate || null, false);
+    }
+
+    if (fromLabel) {
+        fromLabel.textContent = fromDate ? formatYMD(fromDate) : "YYYY/MM/DD";
+        const pill = fromLabel.closest(".filter-pill");
+        if (pill) pill.classList.toggle("active", Boolean(fromDate));
+    }
+    if (toLabel) {
+        toLabel.textContent = toDate ? formatYMD(toDate) : "YYYY/MM/DD";
+        const pill = toLabel.closest(".filter-pill");
+        if (pill) pill.classList.toggle("active", Boolean(toDate));
+    }
+}
+
+// ✅ تهيئة Flatpickr
 function initLedgerDatePickers() {
     const fromEl = document.getElementById("ledgerDateFrom");
     const toEl = document.getElementById("ledgerDateTo");
     if (!fromEl || !toEl) return;
-
-    // ✅ اتأكد إنها اتهيأت قبل كده
     if (fromEl._flatpickr) return;
 
     const opts = {
         locale: "ar",
         dateFormat: "Y/m/d",
-        altInput: false,
         disableMobile: true,
         allowInput: false,
-        static: false
+        static: true,
+        onChange: function(selectedDates, dateStr) {
+            if (this.element.id === "ledgerDateFrom") {
+                const lbl = document.getElementById("ledgerDateFromLabel");
+                if (lbl) {
+                    lbl.textContent = dateStr || "YYYY/MM/DD";
+                    const pill = lbl.closest(".filter-pill");
+                    if (pill) pill.classList.toggle("active", Boolean(dateStr));
+                }
+            } else {
+                const lbl = document.getElementById("ledgerDateToLabel");
+                if (lbl) {
+                    lbl.textContent = dateStr || "YYYY/MM/DD";
+                    const pill = lbl.closest(".filter-pill");
+                    if (pill) pill.classList.toggle("active", Boolean(dateStr));
+                }
+            }
+        }
     };
 
     flatpickr(fromEl, opts);
     flatpickr(toEl, opts);
 }
 
-// ✅ تعبئة قائمة المقاسات
-function populateLedgerSizes(productId) {
-    const select = document.getElementById("ledgerSizeSelect");
-    if (!select) return;
+// ✅ فتح Date Picker
+function openLedgerDatePicker(which) {
+    initLedgerDatePickers();
+    const el = which === "from"
+        ? document.getElementById("ledgerDateFrom")
+        : document.getElementById("ledgerDateTo");
+    if (el && el._flatpickr) {
+        el._flatpickr.open();
+    }
+}
+// ✅ قائمة مقاسات المنتج (في الذاكرة)
+let ledgerSizeList = [];
 
+function populateLedgerSizes(productId) {
     if (!productId) {
-        select.innerHTML = '<option value="">اختر المقاس...</option>';
+        ledgerSizeList = [];
         return;
     }
-
-    const productSizes = getProductSizes(productId)
+    ledgerSizeList = getProductSizes(productId)
         .sort((a, b) => Number(a.size) - Number(b.size));
+}
 
-    select.innerHTML = '<option value="">اختر المقاس...</option>' +
-        productSizes.map(s => `<option value="${escapeAdminHTML(s.size)}">${escapeAdminHTML(s.size)}</option>`).join("");
+// ✅ فتح Modal المقاس
+function openLedgerSizePicker() {
+    if (!ledgerFilters.productId) {
+        alert("اختر منتج أولاً");
+        return;
+    }
+    if (!ledgerSizeList.length) {
+        alert("لا توجد مقاسات لهذا المنتج");
+        return;
+    }
+    renderLedgerSizeList();
+    document.getElementById("sizePickerModal")?.classList.add("open");
+}
+
+// ✅ قفل Modal المقاس
+function closeLedgerSizePicker() {
+    document.getElementById("sizePickerModal")?.classList.remove("open");
+}
+
+// ✅ عرض قائمة المقاسات
+function renderLedgerSizeList() {
+    const body = document.getElementById("sizePickerBody");
+    if (!body) return;
+
+    const hidden = document.getElementById("ledgerSizeSelect");
+    const currentSize = hidden?.value || "";
+
+    body.innerHTML = ledgerSizeList.map(s => `
+        <button type="button" class="filter-picker-item ${String(s.size) === String(currentSize) ? 'selected' : ''}"
+            onclick="selectLedgerSize('${escapeAdminHTML(s.size)}')">
+            <i class="fa-solid fa-shoe-prints"></i>
+            <span>مقاس ${escapeAdminHTML(s.size)}</span>
+            <span class="filter-picker-check"><i class="fa-solid fa-check"></i></span>
+        </button>
+    `).join("");
+}
+
+// ✅ اختيار مقاس
+function selectLedgerSize(size) {
+    const hidden = document.getElementById("ledgerSizeSelect");
+    if (hidden) hidden.value = size;
+
+    const label = document.getElementById("ledgerSizePickerLabel");
+    if (label) {
+        label.textContent = size ? `مقاس ${size}` : "اختر المقاس...";
+        const pill = label.closest(".filter-pill");
+        if (pill) pill.classList.toggle("active", Boolean(size));
+    }
+
+    closeLedgerSizePicker();
+    loadItemLedgerReport();
 }
 
 // ✅ تعيين التواريخ الافتراضية (من أول السنة لحد اليوم)
@@ -7767,6 +7892,13 @@ function initLedgerDefaults() {
         toEl.value = formatYMD(r.to);
         if (toEl._flatpickr) toEl._flatpickr.setDate(r.to, false);
     }
+
+    // ✅ جديد: تحديث اللابل اللي في الـ pill
+    const fromLabel = document.getElementById("ledgerDateFromLabel");
+    const toLabel = document.getElementById("ledgerDateToLabel");
+
+    if (fromLabel) fromLabel.textContent = r.from ? formatYMD(r.from) : "YYYY/MM/DD";
+    if (toLabel) toLabel.textContent = r.to ? formatYMD(r.to) : "YYYY/MM/DD";
 }
 
 // ✅ الدالة الرئيسية
@@ -7782,11 +7914,20 @@ async function loadItemLedgerReport() {
         initLedgerDefaults();
     }
 
-    // ✅ نقرا التواريخ من الحقول
+    // ✅ نقرا التواريخ من الحقول (بصيغة YYYY/MM/DD)
     const fromStr = fromElCheck?.value || '';
     const toStr = toElCheck?.value || '';
-    ledgerFilters.from = fromStr ? new Date(fromStr + 'T00:00:00') : null;
-    ledgerFilters.to = toStr ? new Date(toStr + 'T23:59:59') : null;
+
+    const fromDate = parseYMD(fromStr);
+    const toDate = parseYMD(toStr);
+
+    ledgerFilters.from = fromDate
+        ? new Date(fromDate.getFullYear(), fromDate.getMonth(), fromDate.getDate(), 0, 0, 0, 0)
+        : null;
+
+    ledgerFilters.to = toDate
+        ? new Date(toDate.getFullYear(), toDate.getMonth(), toDate.getDate(), 23, 59, 59, 999)
+        : null;
 
     // ✅ لو مفيش منتج
     if (!ledgerFilters.productId) {

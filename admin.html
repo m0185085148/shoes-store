@@ -1489,31 +1489,37 @@
                             </button>
 
                             <!-- المقاس -->
-                            <div class="filter-pill filter-pill-static" onclick="document.getElementById('ledgerSizeSelect').click()">
+                            <button type="button" class="filter-pill" onclick="openLedgerSizePicker()">
                                 <i class="fa-solid fa-shoe-prints"></i>
                                 <span class="filter-pill-label">المقاس *</span>
-                                <select id="ledgerSizeSelect" required onchange="loadItemLedgerReport()"
-                                    onclick="event.stopPropagation();"
-                                    style="grid-column:2;grid-row:2;width:100%;border:0;background:transparent;font-family:inherit;font-size:13px;font-weight:800;color:#111;padding:0;outline:none;cursor:pointer;text-align:right;appearance:none;-webkit-appearance:none;-moz-appearance:none;">
-                                    <option value="">اختر المقاس...</option>
-                                </select>
-                            </div>
+                                <strong class="filter-pill-value" id="ledgerSizePickerLabel">اختر المقاس...</strong>
+                                <i class="fa-solid fa-chevron-down filter-pill-arrow"></i>
+                            </button>
 
                             <!-- من تاريخ -->
-                            <div class="filter-pill filter-pill-static" onclick="document.getElementById('ledgerDateFrom').click()">
+                            <button type="button" class="filter-pill" onclick="openLedgerDatePicker('from')">
                                 <i class="fa-solid fa-calendar"></i>
                                 <span class="filter-pill-label">من تاريخ</span>
-                                <input type="text" id="ledgerDateFrom" readonly placeholder="YYYY/MM/DD"
-                                    style="grid-column:2;grid-row:2;width:100%;border:0;background:transparent;font-family:inherit;font-size:13px;font-weight:800;color:#111;padding:0;outline:none;cursor:pointer;text-align:right;">
-                            </div>
+                                <strong class="filter-pill-value" id="ledgerDateFromLabel">YYYY/MM/DD</strong>
+                                <i class="fa-solid fa-chevron-down filter-pill-arrow"></i>
+                            </button>
 
                             <!-- إلى تاريخ -->
-                            <div class="filter-pill filter-pill-static" onclick="document.getElementById('ledgerDateTo').click()">
+                            <button type="button" class="filter-pill" onclick="openLedgerDatePicker('to')">
                                 <i class="fa-solid fa-calendar"></i>
                                 <span class="filter-pill-label">إلى تاريخ</span>
-                                <input type="text" id="ledgerDateTo" readonly placeholder="YYYY/MM/DD"
-                                    style="grid-column:2;grid-row:2;width:100%;border:0;background:transparent;font-family:inherit;font-size:13px;font-weight:800;color:#111;padding:0;outline:none;cursor:pointer;text-align:right;">
-                            </div>
+                                <strong class="filter-pill-value" id="ledgerDateToLabel">YYYY/MM/DD</strong>
+                                <i class="fa-solid fa-chevron-down filter-pill-arrow"></i>
+                            </button>
+                                                    </div>
+
+                        <!-- ✅ Hidden inputs (للـ JS) -->
+                        <input type="hidden" id="ledgerSizeSelect" value="">
+                        <input type="text" id="ledgerDateFrom" style="position:absolute;opacity:0;pointer-events:none;width:0;height:0;">
+                        <input type="text" id="ledgerDateTo" style="position:absolute;opacity:0;pointer-events:none;width:0;height:0;">
+
+                        <!-- ✅ Presets -->
+                        <div class="report-preset-chips" style="margin-top:14px;">
                         </div>
 
                         <!-- ✅ Presets -->
@@ -2540,6 +2546,24 @@
             </div>
 
             <div id="filterPickerBody" class="filter-picker-body"></div>
+        </div>
+    </div>
+        <!-- ============ SIZE PICKER MODAL ============ -->
+    <div class="modal" id="sizePickerModal">
+        <div class="modal-content" style="max-width:460px;">
+            <div class="modal-header">
+                <div class="modal-title-group">
+                    <div class="modal-icon" style="background:#fef3c7;color:#d97706;">
+                        <i class="fa-solid fa-shoe-prints"></i>
+                    </div>
+                    <div>
+                        <h2>اختر المقاس</h2>
+                        <p style="font-size:13px;color:#888;margin-top:2px;">اختر المقاس المطلوب لعرض كارت الصنف</p>
+                    </div>
+                </div>
+                <button type="button" class="close-modal" onclick="closeLedgerSizePicker()">&times;</button>
+            </div>
+            <div id="sizePickerBody" class="filter-picker-body"></div>
         </div>
     </div>
         <!-- ============ MOVEMENT DETAILS MODAL ============ -->
