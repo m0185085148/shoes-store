@@ -5153,6 +5153,7 @@ function openReport(key) {
         customers: 'reportCustomers',
         products: 'reportProducts',
         inventory: 'reportInventory',
+        itemLedger: 'reportItemLedger',
         status: 'reportStatus',
         exchange: 'reportExchange'
     };
@@ -5169,6 +5170,7 @@ function openReport(key) {
         customers: 'تقرير العملاء',
         products: 'أداء المنتجات',
         inventory: 'حركة المخزون',
+        itemLedger: 'كارت الصنف',
         status: 'حالات الطلبات',
         exchange: 'الاستبدال والاسترجاع'
     };
@@ -5197,6 +5199,7 @@ function loadReportByKey(key) {
     else if (key === 'customers') loadCustomersReport();
     else if (key === 'products') loadProductsReport();
     else if (key === 'inventory') loadInventoryReport();
+    else if (key === 'itemLedger') loadItemLedgerReport();
     else if (key === 'status') loadStatusReport();
     else if (key === 'exchange') loadExchangeReport();
 }
@@ -6685,14 +6688,35 @@ function removeMultiImage(mode, index) {
 
 // ✅ Global exports
 window.removeMultiImage = removeMultiImage;
+// ========================================
+// 79.5 ITEM LEDGER STATE
+// ========================================
+
+let pickerMode = "inventory"; // "inventory" | "ledger"
+
+let ledgerReportData = {
+    productId: null,
+    openingBalance: 0,
+    rows: [],
+    totalIn: 0,
+    totalOut: 0,
+    closingBalance: 0
+};
+
+let ledgerFilters = {
+    productId: null,
+    from: null,
+    to: null,
+    preset: "month"
+};
 
 // ========================================
 // 79. PRODUCT PICKER (لل تقارير)
 // ========================================
-
 let selectedPickerProductId = null;
+function openProductPicker(mode = "inventory") {
+    pickerMode = mode;
 
-function openProductPicker() {
     const modal = document.getElementById("productPickerModal");
     if (!modal) return;
 
@@ -6706,6 +6730,10 @@ function openProductPicker() {
     if (nameInput) nameInput.value = "";
 
     modal.classList.add("open");
+}
+
+function openLedgerProductPicker() {
+    openProductPicker("ledger");
 }
 
 function closeProductPicker() {
@@ -6744,8 +6772,8 @@ function renderProductPickerList(skuQuery, nameQuery) {
         return;
     }
 
-    // ✅ خيار "الكل"
-    const clearBtn = `
+    // ✅ خيار "الكل" — يظهر في وضع المخزون بس
+    const clearBtn = pickerMode === "ledger" ? "" : `
         <div class="product-picker-item-clear" onclick="selectPickerProduct(null)">
             <i class="fa-solid fa-rotate-left"></i>
             عرض كل المنتجات
@@ -6767,6 +6795,28 @@ function renderProductPickerList(skuQuery, nameQuery) {
 function selectPickerProduct(productId) {
     selectedPickerProductId = productId;
 
+    // ✅ لو في وضع كارت الصنف
+    if (pickerMode === "ledger") {
+        const labelEl = document.getElementById("ledgerProductPickerLabel");
+        const btnEl = document.getElementById("ledgerProductPickerBtn");
+
+        if (productId === null) {
+            if (labelEl) labelEl.textContent = "اختر منتج...";
+            if (btnEl) btnEl.classList.remove("active");
+            ledgerFilters.productId = null;
+        } else {
+            const product = adminProducts.find(p => Number(p.id) === Number(productId));
+            if (labelEl) labelEl.textContent = product?.name || `#${productId}`;
+            if (btnEl) btnEl.classList.add("active");
+            ledgerFilters.productId = productId;
+        }
+
+        closeProductPicker();
+        loadItemLedgerReport();
+        return;
+    }
+
+    // ✅ الافتراضي: وضع المخزون
     const labelEl = document.getElementById("invProductPickerLabel");
     const btnEl = document.getElementById("invProductPickerBtn");
 
@@ -7611,6 +7661,478 @@ function showProductSalesDetails(productId) {
 window.showDiscountDetails = showDiscountDetails;
 window.closeDiscountDetailsModal = closeDiscountDetailsModal;
 window.showProductSalesDetails = showProductSalesDetails;
+// ========================================
+// 84. ITEM LEDGER (كارت الصنف)
+// ========================================
+
+// ✅ Presets للتواريخ
+function setLedgerPreset(preset, btnEl) {
+    document.querySelectorAll("#reportItemLedger .preset-chip").forEach(b => b.classList.remove('active'));
+    btnEl?.classList.add('active');
+
+    ledgerFilters.preset = preset;
+
+    const r = _getPresetRange(preset);
+    ledgerFilters.from = r.from;
+    ledgerFilters.to = r.to;
+
+    const fromEl = document.getElementById("ledgerDateFrom");
+    const toEl = document.getElementById("ledgerDateTo");
+    if (fromEl) fromEl.value = r.from ? r.from.toISOString().slice(0, 10) : '';
+    if (toEl) toEl.value = r.to ? r.to.toISOString().slice(0, 10) : '';
+
+    loadItemLedgerReport();
+}
+
+// ✅ الدالة الرئيسية
+async function loadItemLedgerReport() {
+    const listEl = document.getElementById("ledgerList");
+    if (!listEl) return;
+
+    // ✅ نقرا التواريخ من الحقول
+    const fromEl = document.getElementById("ledgerDateFrom");
+    const toEl = document.getElementById("ledgerDateTo");
+
+    const fromStr = fromEl?.value || '';
+    const toStr = toEl?.value || '';
+
+    ledgerFilters.from = fromStr ? new Date(fromStr + 'T00:00:00') : null;
+    ledgerFilters.to = toStr ? new Date(toStr + 'T23:59:59') : null;
+
+    // ✅ لو مفيش منتج مختار
+    if (!ledgerFilters.productId) {
+        listEl.innerHTML = `<tr><td colspan="9" style="text-align:center;padding:40px;color:#94a3b8;">
+            <i class="fa-solid fa-box-open" style="font-size:32px;display:block;margin-bottom:10px;opacity:.5;"></i>
+            اختر منتج لعرض كارت الصنف
+        </td></tr>`;
+
+        // ✅ نصفّر الـ KPIs والصندوق
+        const set = (id, v) => { const e = document.getElementById(id); if (e) e.textContent = v; };
+        set("ledgerKpiIn", "0");
+        set("ledgerKpiOut", "0");
+        set("ledgerKpiClosing", "0");
+        set("ledgerOpeningValue", "0");
+        set("ledgerCount", "0 حركة");
+
+        const totalsEl = document.getElementById("ledgerTotals");
+        if (totalsEl) totalsEl.innerHTML = "";
+
+        return;
+    }
+
+    listEl.innerHTML = `<tr><td colspan="9" style="text-align:center;padding:30px;color:#94a3b8;">جاري التحميل...</td></tr>`;
+
+    try {
+        const client = getSupabaseClient();
+        if (!client) return;
+
+        const productId = ledgerFilters.productId;
+
+        // ✅ نجيب كل حركات المنتج مرتبة بالتاريخ
+        const { data: allMovements, error } = await client
+            .from("inventory_movements")
+            .select("*")
+            .eq("product_id", productId)
+            .order("created_at", { ascending: true });
+
+        if (error) throw error;
+
+        const movements = allMovements || [];
+
+        // ✅ نحسب الرصيد الافتتاحي (الحركات قبل تاريخ "من")
+        let openingBalance = 0;
+        const filteredMovements = [];
+
+        movements.forEach(m => {
+            const mDate = new Date(m.created_at);
+
+            if (ledgerFilters.from && mDate < ledgerFilters.from) {
+                // ✅ دي حركات قبل الفترة → تتحسب في الرصيد الافتتاحي
+                openingBalance += Number(m.quantity || 0);
+            } else if (ledgerFilters.to && mDate > ledgerFilters.to) {
+                // ✅ بعد الفترة → نتجاهلها
+                return;
+            } else {
+                // ✅ داخل الفترة
+                filteredMovements.push(m);
+            }
+        });
+
+        // ✅ نحسب الرصيد بعد كل حركة
+        let runningBalance = openingBalance;
+        let totalIn = 0;
+        let totalOut = 0;
+
+        const rows = filteredMovements.map((m, i) => {
+            const qty = Number(m.quantity || 0);
+            runningBalance += qty;
+
+            if (qty > 0) totalIn += qty;
+            else totalOut += Math.abs(qty);
+
+            return {
+                ...m,
+                index: i + 1,
+                runningBalance,
+                qtyIn: qty > 0 ? qty : 0,
+                qtyOut: qty < 0 ? Math.abs(qty) : 0
+            };
+        });
+
+        // ✅ نحفظ في الـ state
+        ledgerReportData = {
+            productId,
+            openingBalance,
+            rows,
+            totalIn,
+            totalOut,
+            closingBalance: runningBalance
+        };
+
+        // ✅ نحدّث الـ KPIs
+        const set = (id, v) => { const e = document.getElementById(id); if (e) e.textContent = v; };
+        set("ledgerKpiIn", totalIn.toLocaleString("en-US"));
+        set("ledgerKpiOut", totalOut.toLocaleString("en-US"));
+        set("ledgerKpiClosing", runningBalance.toLocaleString("en-US"));
+
+        // ✅ نحدّث صندوق الرصيد الافتتاحي
+        set("ledgerOpeningValue", openingBalance.toLocaleString("en-US"));
+
+        const noteEl = document.getElementById("ledgerOpeningNote");
+        if (noteEl) {
+            if (ledgerFilters.from) {
+                const d = ledgerFilters.from.toLocaleDateString("ar-EG-u-nu-latn", {
+                    day: "numeric", month: "short", year: "numeric"
+                });
+                noteEl.textContent = `قبل ${d}`;
+            } else {
+                noteEl.textContent = "قبل بداية الفترة المحددة";
+            }
+        }
+
+        // ✅ نحدّث العدد
+        set("ledgerCount", `${rows.length} حركة`);
+
+        // ✅ نعرض الجدول
+        renderItemLedgerTable();
+
+    } catch (err) {
+        console.error("Item Ledger Error:", err);
+        listEl.innerHTML = `<tr><td colspan="9" style="text-align:center;padding:30px;color:#dc2626;font-weight:700;">حدث خطأ: ${escapeAdminHTML(err.message)}</td></tr>`;
+    }
+}
+
+// ✅ عرض الجدول
+function renderItemLedgerTable() {
+    const listEl = document.getElementById("ledgerList");
+    const totalsEl = document.getElementById("ledgerTotals");
+    if (!listEl) return;
+
+    const rows = ledgerReportData.rows || [];
+
+    if (!rows.length) {
+        listEl.innerHTML = `<tr><td colspan="9" style="text-align:center;padding:40px;color:#94a3b8;">
+            <i class="fa-solid fa-inbox" style="font-size:32px;display:block;margin-bottom:10px;opacity:.5;"></i>
+            لا توجد حركات في الفترة المحددة
+        </td></tr>`;
+        if (totalsEl) totalsEl.innerHTML = "";
+        return;
+    }
+
+    // ✅ خريطة الأنواع
+    const typeInfo = {
+        initial:          { label: "رصيد افتتاحي",   bg: "#f3e8ff", color: "#7c3aed", icon: "fa-flag" },
+        purchase:         { label: "استلام محلي",    bg: "#dcfce7", color: "#16a34a", icon: "fa-truck-ramp-box" },
+        sale:             { label: "تسليم عميل",     bg: "#dbeafe", color: "#2563eb", icon: "fa-cart-shopping" },
+        return:           { label: "مرتجع من عميل",  bg: "#fed7aa", color: "#c2410c", icon: "fa-rotate-left" },
+        adjustment_plus:  { label: "تسوية إضافة",    bg: "#dcfce7", color: "#16a34a", icon: "fa-plus" },
+        adjustment_minus: { label: "تسوية خصم",      bg: "#fee2e2", color: "#dc2626", icon: "fa-minus" },
+        damage:           { label: "تلف",            bg: "#fee2e2", color: "#dc2626", icon: "fa-triangle-exclamation" },
+        // ✅ للحركات القديمة اللي نوعها adjustment بس
+        adjustment:       { label: "تسوية",           bg: "#fef3c7", color: "#d97706", icon: "fa-sliders" }
+    };
+
+    listEl.innerHTML = rows.map(r => {
+        const info = typeInfo[r.movement_type] || {
+            label: r.movement_type || "غير محدد",
+            bg: "#f1f5f9", color: "#475569", icon: "fa-circle-info"
+        };
+
+        const dateStr = formatDate(r.created_at);
+
+        // ✅ رقم المسند
+        const docNum = r.document_number || "—";
+
+        // ✅ المستفيد
+        let beneficiary = "—";
+        if (r.beneficiary_name) {
+            beneficiary = r.beneficiary_name;
+        } else if (r.reference_type === "order" && r.reference_id) {
+            beneficiary = `طلب #${r.reference_id}`;
+        } else if (r.performed_by_username) {
+            beneficiary = r.performed_by_username;
+        }
+
+        return `
+            <tr>
+                <td style="color:#94a3b8;font-weight:800;">${r.index}</td>
+                <td>
+                    <span style="font-family:monospace;font-size:12px;background:#f1f5f9;padding:3px 8px;border-radius:6px;font-weight:800;color:#334155;">
+                        ${escapeAdminHTML(docNum)}
+                    </span>
+                </td>
+                <td class="date-cell" style="font-size:12px;">${dateStr}</td>
+                <td>
+                    <span style="display:inline-flex;align-items:center;gap:6px;padding:4px 10px;border-radius:8px;font-size:11px;font-weight:800;background:${info.bg};color:${info.color};">
+                        <i class="fa-solid ${info.icon}"></i>
+                        ${escapeAdminHTML(info.label)}
+                    </span>
+                </td>
+                <td style="font-size:12px;color:#475569;font-weight:700;">${escapeAdminHTML(beneficiary)}</td>
+                <td style="text-align:center;font-weight:800;color:#16a34a;font-size:14px;">
+                    ${r.qtyIn > 0 ? "+" + r.qtyIn : "—"}
+                </td>
+                <td style="text-align:center;font-weight:800;color:#dc2626;font-size:14px;">
+                    ${r.qtyOut > 0 ? "-" + r.qtyOut : "—"}
+                </td>
+                <td style="text-align:center;font-weight:800;color:#111;font-size:14px;background:#fafbfc;">
+                    ${r.runningBalance}
+                </td>
+                <td>
+                    <button type="button" class="action-icon-btn preview" onclick="showMovementDetails(${r.index - 1})" title="تفاصيل">
+                        <i class="fa-solid fa-eye"></i>
+                    </button>
+                </td>
+            </tr>
+        `;
+    }).join("");
+
+    // ✅ صف الإجمالي
+    if (totalsEl) {
+        const d = ledgerReportData;
+        totalsEl.innerHTML = `
+            <tr>
+                <td colspan="5" class="totals-label">الإجمالي: ${rows.length} حركة</td>
+                <td class="totals-value" style="text-align:center;color:#16a34a;">+${d.totalIn}</td>
+                <td class="totals-value" style="text-align:center;color:#dc2626;">-${d.totalOut}</td>
+                <td class="totals-value" style="text-align:center;color:#2563eb;font-size:15px;">${d.closingBalance}</td>
+                <td></td>
+            </tr>
+        `;
+    }
+}
+
+// ✅ تفاصيل الحركة
+function showMovementDetails(index) {
+    const row = ledgerReportData.rows[index];
+    if (!row) return;
+
+    const modal = document.getElementById("movementDetailsModal");
+    const body = document.getElementById("movementDetailsBody");
+    const subtitle = document.getElementById("movementDetailsSubtitle");
+    const iconEl = document.getElementById("movementDetailsIcon");
+
+    if (!modal || !body) return;
+
+    // ✅ خريطة الأنواع
+    const typeInfo = {
+        initial:          { label: "رصيد افتتاحي",   bg: "#f3e8ff", color: "#7c3aed", icon: "fa-flag" },
+        purchase:         { label: "استلام محلي",    bg: "#dcfce7", color: "#16a34a", icon: "fa-truck-ramp-box" },
+        sale:             { label: "تسليم عميل",     bg: "#dbeafe", color: "#2563eb", icon: "fa-cart-shopping" },
+        return:           { label: "مرتجع من عميل",  bg: "#fed7aa", color: "#c2410c", icon: "fa-rotate-left" },
+        adjustment_plus:  { label: "تسوية إضافة",    bg: "#dcfce7", color: "#16a34a", icon: "fa-plus" },
+        adjustment_minus: { label: "تسوية خصم",      bg: "#fee2e2", color: "#dc2626", icon: "fa-minus" },
+        damage:           { label: "تلف",            bg: "#fee2e2", color: "#dc2626", icon: "fa-triangle-exclamation" },
+        adjustment:       { label: "تسوية",           bg: "#fef3c7", color: "#d97706", icon: "fa-sliders" }
+    };
+
+    const info = typeInfo[row.movement_type] || {
+        label: row.movement_type || "غير محدد",
+        bg: "#f1f5f9", color: "#475569", icon: "fa-circle-info"
+    };
+
+    if (iconEl) {
+        iconEl.style.background = info.bg;
+        iconEl.style.color = info.color;
+        iconEl.innerHTML = `<i class="fa-solid ${info.icon}"></i>`;
+    }
+
+    if (subtitle) {
+        subtitle.textContent = info.label;
+    }
+
+    // ✅ الصف السابق (للرصيد قبل)
+    const prevBalance = index > 0
+        ? ledgerReportData.rows[index - 1].runningBalance
+        : ledgerReportData.openingBalance;
+
+    const qty = Number(row.quantity || 0);
+    const isPositive = qty > 0;
+
+    body.innerHTML = `
+        <div style="background:${info.bg};border:1.5px solid ${info.color}33;border-radius:12px;padding:18px;margin-bottom:16px;text-align:center;">
+            <div style="font-size:12px;font-weight:800;color:${info.color};margin-bottom:6px;">${escapeAdminHTML(info.label)}</div>
+            <div style="font-size:32px;font-weight:800;color:${info.color};direction:ltr;">
+                ${isPositive ? "+" : ""}${qty}
+            </div>
+        </div>
+
+        <div style="background:#fafbfc;border-radius:10px;padding:6px 14px;margin-bottom:16px;">
+            <div style="display:flex;justify-content:space-between;padding:10px 0;border-bottom:1px solid #f0f0f0;">
+                <span style="font-size:13px;color:#64748b;">رقم المسند</span>
+                <strong style="font-size:13px;font-family:monospace;color:#334155;">${escapeAdminHTML(row.document_number || "—")}</strong>
+            </div>
+            <div style="display:flex;justify-content:space-between;padding:10px 0;border-bottom:1px solid #f0f0f0;">
+                <span style="font-size:13px;color:#64748b;">التاريخ</span>
+                <strong style="font-size:13px;color:#111;">${formatDate(row.created_at)}</strong>
+            </div>
+            ${row.beneficiary_name ? `
+                <div style="display:flex;justify-content:space-between;padding:10px 0;border-bottom:1px solid #f0f0f0;">
+                    <span style="font-size:13px;color:#64748b;">المستفيد</span>
+                    <strong style="font-size:13px;color:#111;">${escapeAdminHTML(row.beneficiary_name)}</strong>
+                </div>
+            ` : ""}
+            ${row.reference_id ? `
+                <div style="display:flex;justify-content:space-between;padding:10px 0;border-bottom:1px solid #f0f0f0;">
+                    <span style="font-size:13px;color:#64748b;">المرجع</span>
+                    <strong style="font-size:13px;color:#8b5cf6;">#${escapeAdminHTML(row.reference_id)}</strong>
+                </div>
+            ` : ""}
+            ${row.performed_by_username ? `
+                <div style="display:flex;justify-content:space-between;padding:10px 0;">
+                    <span style="font-size:13px;color:#64748b;">بواسطة</span>
+                    <strong style="font-size:13px;color:#111;">${escapeAdminHTML(row.performed_by_username)}</strong>
+                </div>
+            ` : ""}
+        </div>
+
+        <div style="display:grid;grid-template-columns:1fr auto 1fr;gap:12px;align-items:center;padding:16px;background:#f8fafc;border-radius:12px;margin-bottom:16px;">
+            <div style="text-align:center;">
+                <div style="font-size:11px;color:#64748b;font-weight:700;margin-bottom:4px;">قبل</div>
+                <div style="font-size:22px;font-weight:800;color:#64748b;">${prevBalance}</div>
+            </div>
+            <i class="fa-solid fa-arrow-left" style="color:#94a3b8;font-size:18px;"></i>
+            <div style="text-align:center;">
+                <div style="font-size:11px;color:#64748b;font-weight:700;margin-bottom:4px;">بعد</div>
+                <div style="font-size:22px;font-weight:800;color:${isPositive ? '#16a34a' : '#dc2626'};">${row.runningBalance}</div>
+            </div>
+        </div>
+
+        ${row.reason ? `
+            <div style="background:#fffbeb;border:1px solid #fcd34d;border-radius:10px;padding:12px 14px;margin-bottom:12px;">
+                <div style="font-size:11px;font-weight:800;color:#92400e;margin-bottom:4px;">
+                    <i class="fa-solid fa-circle-info"></i> السبب
+                </div>
+                <div style="font-size:13px;color:#78350f;line-height:1.6;">${escapeAdminHTML(row.reason)}</div>
+            </div>
+        ` : ""}
+
+        ${row.notes ? `
+            <div style="background:#eff6ff;border:1px solid #93c5fd;border-radius:10px;padding:12px 14px;">
+                <div style="font-size:11px;font-weight:800;color:#1e40af;margin-bottom:4px;">
+                    <i class="fa-solid fa-note-sticky"></i> ملاحظات
+                </div>
+                <div style="font-size:13px;color:#1e3a8a;line-height:1.6;">${escapeAdminHTML(row.notes)}</div>
+            </div>
+        ` : ""}
+    `;
+
+    modal.classList.add("open");
+}
+
+function closeMovementDetails() {
+    document.getElementById("movementDetailsModal")?.classList.remove("open");
+}
+
+// ✅ تصدير CSV
+function exportItemLedgerCSV() {
+    if (!ledgerReportData.productId || !ledgerReportData.rows.length) {
+        alert("لا توجد بيانات للتصدير");
+        return;
+    }
+
+    const product = adminProducts.find(p => Number(p.id) === Number(ledgerReportData.productId));
+    const productName = product?.name || `#${ledgerReportData.productId}`;
+
+    const typeLabels = {
+        initial: "رصيد افتتاحي",
+        purchase: "استلام محلي",
+        sale: "تسليم عميل",
+        return: "مرتجع من عميل",
+        adjustment_plus: "تسوية إضافة",
+        adjustment_minus: "تسوية خصم",
+        damage: "تلف",
+        adjustment: "تسوية"
+    };
+
+    // ✅ رأس الملف
+    const headers = [
+        "#",
+        "Document Number",
+        "Date",
+        "Type",
+        "Beneficiary",
+        "In",
+        "Out",
+        "Balance",
+        "Reason",
+        "Notes"
+    ];
+
+    // ✅ صف الرصيد الافتتاحي كأول صف
+    const openingRow = [
+        "0",
+        "—",
+        "—",
+        "الرصيد الافتتاحي",
+        "—",
+        "—",
+        "—",
+        ledgerReportData.openingBalance,
+        "قبل بداية الفترة",
+        ""
+    ];
+
+    const dataRows = ledgerReportData.rows.map(r => [
+        r.index,
+        r.document_number || "",
+        formatDateForCSV(r.created_at),
+        typeLabels[r.movement_type] || r.movement_type,
+        r.beneficiary_name || (r.reference_id ? `Order #${r.reference_id}` : ""),
+        r.qtyIn || 0,
+        r.qtyOut || 0,
+        r.runningBalance,
+        r.reason || "",
+        r.notes || ""
+    ]);
+
+    // ✅ صف الإجمالي
+    const totalsRow = [
+        "الإجمالي",
+        "",
+        "",
+        "",
+        "",
+        ledgerReportData.totalIn,
+        ledgerReportData.totalOut,
+        ledgerReportData.closingBalance,
+        "",
+        ""
+    ];
+
+    const csvRows = [headers, openingRow, ...dataRows, totalsRow];
+
+    downloadCSV(csvRows, `item-ledger-${productName}-${Date.now()}.csv`);
+}
+
+// ✅ Exports
+window.setLedgerPreset = setLedgerPreset;
+window.loadItemLedgerReport = loadItemLedgerReport;
+window.renderItemLedgerTable = renderItemLedgerTable;
+window.showMovementDetails = showMovementDetails;
+window.closeMovementDetails = closeMovementDetails;
+window.exportItemLedgerCSV = exportItemLedgerCSV;
+window.openLedgerProductPicker = openLedgerProductPicker;
 window.confirmInstaPayPayment = confirmInstaPayPayment;
 // ========================================
 // SHIP CONFIRM MODAL

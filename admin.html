@@ -791,6 +791,17 @@
                         </div>
                     </div>
 
+                                        <div class="report-home-card" onclick="openReport('itemLedger')">
+                        <div class="rhc-icon" style="background:#f0fdf4;color:#16a34a;">
+                            <i class="fa-solid fa-book"></i>
+                        </div>
+                        <div class="rhc-content">
+                            <h4>كارت الصنف</h4>
+                            <p>كل حركات صنف مع الرصيد بعد كل حركة</p>
+                            <span class="rhc-tag" style="background:#f0fdf4;color:#16a34a;">المخزون</span>
+                        </div>
+                    </div>
+
                     <div class="report-home-card" onclick="openReport('inventory')">
                         <div class="rhc-icon" style="background:#cffafe;color:#0891b2;">
                             <i class="fa-solid fa-warehouse"></i>
@@ -1441,7 +1452,124 @@
                     </div>
                 </div>
             </div>
+            <!-- ============ ITEM LEDGER (كارت الصنف) ============ -->
+            <div class="report-panel" id="reportItemLedger">
+                <div class="report-panel-header">
+                    <button class="report-back-btn" onclick="backToReportsHome()">
+                        <i class="fa-solid fa-arrow-right"></i>
+                        رجوع للتقارير
+                    </button>
+                    <h2><i class="fa-solid fa-book"></i> كارت الصنف</h2>
+                    <div></div>
+                </div>
 
+                <!-- ✅ الفلاتر -->
+                <div class="report-filter-bar">
+                    <div class="report-filter-group" style="flex:1;min-width:220px;">
+                        <label><i class="fa-solid fa-box"></i> المنتج *</label>
+                        <button type="button" class="product-picker-btn" id="ledgerProductPickerBtn" onclick="openLedgerProductPicker()">
+                            <span id="ledgerProductPickerLabel">اختر منتج...</span>
+                            <i class="fa-solid fa-chevron-down"></i>
+                        </button>
+                    </div>
+                    <div class="report-filter-group">
+                        <label><i class="fa-solid fa-calendar"></i> من تاريخ *</label>
+                        <input type="date" id="ledgerDateFrom">
+                    </div>
+                    <div class="report-filter-group">
+                        <label><i class="fa-solid fa-calendar"></i> إلى تاريخ *</label>
+                        <input type="date" id="ledgerDateTo">
+                    </div>
+                    <div class="report-preset-chips">
+                        <button class="preset-chip" onclick="setLedgerPreset('week', this)">آخر 7 أيام</button>
+                        <button class="preset-chip active" onclick="setLedgerPreset('month', this)">هذا الشهر</button>
+                        <button class="preset-chip" onclick="setLedgerPreset('all', this)">الكل</button>
+                    </div>
+                    <div class="report-filter-actions">
+                        <button class="btn-apply-filter" onclick="loadItemLedgerReport()">
+                            <i class="fa-solid fa-filter"></i> تطبيق
+                        </button>
+                        <button class="btn-export" onclick="exportItemLedgerCSV()">
+                            <i class="fa-solid fa-file-csv"></i> CSV
+                        </button>
+                    </div>
+                </div>
+
+                <!-- ✅ KPIs (3 بس) -->
+                <div class="report-kpis">
+                    <div class="kpi-card">
+                        <div class="kpi-icon" style="background:#dcfce7;color:#16a34a;">
+                            <i class="fa-solid fa-arrow-up"></i>
+                        </div>
+                        <div class="kpi-data">
+                            <h3 id="ledgerKpiIn">0</h3>
+                            <p>إجمالي الدخول</p>
+                        </div>
+                    </div>
+                    <div class="kpi-card">
+                        <div class="kpi-icon" style="background:#fee2e2;color:#dc2626;">
+                            <i class="fa-solid fa-arrow-down"></i>
+                        </div>
+                        <div class="kpi-data">
+                            <h3 id="ledgerKpiOut">0</h3>
+                            <p>إجمالي الخروج</p>
+                        </div>
+                    </div>
+                    <div class="kpi-card">
+                        <div class="kpi-icon" style="background:#f3e8ff;color:#8b5cf6;">
+                            <i class="fa-solid fa-cubes"></i>
+                        </div>
+                        <div class="kpi-data">
+                            <h3 id="ledgerKpiClosing">0</h3>
+                            <p>الرصيد النهائي</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ✅ ✅ ✅ صندوق الرصيد الافتتاحي (فوق الجدول) -->
+                <div class="ledger-opening-box" id="ledgerOpeningBox">
+                    <div class="ledger-opening-icon">
+                        <i class="fa-solid fa-flag-checkered"></i>
+                    </div>
+                    <div class="ledger-opening-content">
+                        <span class="ledger-opening-label">الرصيد الافتتاحي</span>
+                        <strong class="ledger-opening-value" id="ledgerOpeningValue">0</strong>
+                        <small class="ledger-opening-note" id="ledgerOpeningNote">قبل بداية الفترة المحددة</small>
+                    </div>
+                </div>
+
+                <!-- ✅ الجدول -->
+                <div class="panel">
+                    <div class="panel-header">
+                        <span class="panel-title">
+                            <i class="fa-solid fa-list"></i>
+                            تفاصيل الحركات
+                        </span>
+                        <span class="report-count" id="ledgerCount">0 حركة</span>
+                    </div>
+                    <div class="table-wrap">
+                        <table class="products-table orders-table-modern">
+                            <thead>
+                                <tr>
+                                    <th style="width:50px;">#</th>
+                                    <th style="width:130px;">رقم المسند</th>
+                                    <th style="width:120px;">التاريخ</th>
+                                    <th style="width:130px;">العملية</th>
+                                    <th style="width:140px;">المستفيد</th>
+                                    <th style="width:80px;">داخل</th>
+                                    <th style="width:80px;">خارج</th>
+                                    <th style="width:90px;">الرصيد</th>
+                                    <th style="width:60px;">تفاصيل</th>
+                                </tr>
+                            </thead>
+                            <tbody id="ledgerList">
+                                <tr><td colspan="9" style="text-align:center;padding:30px;color:#94a3b8;">جاري التحميل...</td></tr>
+                            </tbody>
+                            <tfoot id="ledgerTotals"></tfoot>
+                        </table>
+                    </div>
+                </div>
+            </div>
             <!-- ============ INVENTORY MOVEMENTS ============ -->
             <div class="report-panel" id="reportInventory">
                 <div class="report-panel-header">
@@ -2374,6 +2502,29 @@
             </div>
 
             <div id="filterPickerBody" class="filter-picker-body"></div>
+        </div>
+    </div>
+        <!-- ============ MOVEMENT DETAILS MODAL ============ -->
+    <div class="modal" id="movementDetailsModal">
+        <div class="modal-content" style="max-width:560px;">
+            <div class="modal-header">
+                <div class="modal-title-group">
+                    <div class="modal-icon" id="movementDetailsIcon" style="background:#f0fdf4;color:#16a34a;">
+                        <i class="fa-solid fa-arrows-turn-right"></i>
+                    </div>
+                    <div>
+                        <h2>تفاصيل الحركة</h2>
+                        <p id="movementDetailsSubtitle" style="font-size:13px;color:#888;margin-top:2px;"></p>
+                    </div>
+                </div>
+                <button type="button" class="close-modal" onclick="closeMovementDetails()">&times;</button>
+            </div>
+            <div id="movementDetailsBody"></div>
+            <div class="modal-actions">
+                <button type="button" class="btn-secondary-modal" onclick="closeMovementDetails()" style="width:100%;">
+                    إغلاق
+                </button>
+            </div>
         </div>
     </div>
     <!-- ============ SHIP CONFIRM MODAL ============ -->
