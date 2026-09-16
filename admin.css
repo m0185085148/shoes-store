@@ -1231,6 +1231,7 @@ body {
 .movement-type-tab[data-type="purchase"].active { background: #16a34a; border-color: #16a34a; }
 .movement-type-tab[data-type="damage"].active { background: #dc2626; border-color: #dc2626; }
 .movement-type-tab[data-type="adjustment"].active { background: #2563eb; border-color: #2563eb; }
+.movement-type-tab[data-type="return"].active { background: #f97316; border-color: #f97316; }
 
 /* =========================================
    SIZES QUANTITIES GRID (Add/Edit Product)

@@ -2309,10 +2309,13 @@
                     <i class="fa-solid fa-plus"></i> شراء
                 </button>
                 <button type="button" class="movement-type-tab" data-type="adjustment" onclick="selectMovementType('adjustment', this)">
-                    <i class="fa-solid fa-sliders"></i> تعديل
+                    <i class="fa-solid fa-sliders"></i> تسوية
                 </button>
                 <button type="button" class="movement-type-tab" data-type="damage" onclick="selectMovementType('damage', this)">
                     <i class="fa-solid fa-triangle-exclamation"></i> تلف
+                </button>
+                <button type="button" class="movement-type-tab" data-type="return" onclick="selectMovementType('return', this)">
+                    <i class="fa-solid fa-rotate-left"></i> مرتجع
                 </button>
             </div>
 
@@ -2335,8 +2338,15 @@
                 </div>
 
                 <div class="form-group">
-                    <label for="adjustReason">السبب *</label>
-                    <input type="text" id="adjustReason" required placeholder="مثال: دفعة جديدة من المورد">
+                    <label for="adjustReasonSelect">السبب *</label>
+                    <select id="adjustReasonSelect" required onchange="onAdjustReasonChange()">
+                        <option value="">اختر السبب</option>
+                    </select>
+                </div>
+
+                <div class="form-group" id="adjustReasonCustomGroup" style="display:none;">
+                    <label for="adjustReasonCustom">اكتب السبب *</label>
+                    <input type="text" id="adjustReasonCustom" placeholder="اكتب السبب هنا...">
                 </div>
 
                 <div class="form-group">

@@ -3184,7 +3184,79 @@ function renderMovements() {
         `;
     }).join("");
 }
+// ========================================
+// ADJUST REASON OPTIONS (جديد)
+// ========================================
 
+const ADJUST_REASON_OPTIONS = {
+    purchase: [
+        "دفعة جديدة من المورد",
+        "إعادة تعبئة مخزون",
+        "تعويض مورد",
+        "سبب آخر"
+    ],
+    adjustment: [
+        "تسوية جرد",
+        "تصحيح خطأ في التسجيل",
+        "مرتجع من عميل (يدوي)",
+        "سبب آخر"
+    ],
+    damage: [
+        "تلف في المخزن",
+        "تلف في النقل",
+        "عيب مصنعي",
+        "سبب آخر"
+    ],
+    return: [
+        "استرجاع من عميل",
+        "استرجاع من شركة الشحن",
+        "سبب آخر"
+    ]
+};
+
+// ✅ تعبئة قائمة الأسباب حسب نوع الحركة
+function populateAdjustReasonOptions(type) {
+    const select = document.getElementById("adjustReasonSelect");
+    const customGroup = document.getElementById("adjustReasonCustomGroup");
+    const customInput = document.getElementById("adjustReasonCustom");
+    
+    if (!select) return;
+    
+    const options = ADJUST_REASON_OPTIONS[type] || [];
+    
+    select.innerHTML = '<option value="">اختر السبب</option>' +
+        options.map(o => 
+            `<option value="${escapeAdminHTML(o)}">${escapeAdminHTML(o)}</option>`
+        ).join("");
+    
+    if (customGroup) customGroup.style.display = "none";
+    if (customInput) {
+        customInput.value = "";
+        customInput.required = false;
+    }
+}
+
+// ✅ التعامل مع اختيار "سبب آخر"
+function onAdjustReasonChange() {
+    const select = document.getElementById("adjustReasonSelect");
+    const customGroup = document.getElementById("adjustReasonCustomGroup");
+    const customInput = document.getElementById("adjustReasonCustom");
+    
+    if (!select || !customGroup || !customInput) return;
+    
+    if (select.value === "سبب آخر") {
+        customGroup.style.display = "block";
+        customInput.required = true;
+        customInput.focus();
+    } else {
+        customGroup.style.display = "none";
+        customInput.required = false;
+        customInput.value = "";
+    }
+}
+
+window.populateAdjustReasonOptions = populateAdjustReasonOptions;
+window.onAdjustReasonChange = onAdjustReasonChange;
 // ========================================
 // 44. ADJUST STOCK MODAL
 // ========================================
