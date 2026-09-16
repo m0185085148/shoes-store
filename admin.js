@@ -5222,6 +5222,10 @@ function _getPresetRange(preset) {
         const f = new Date(now.getFullYear(), now.getMonth(), 1);
         return { from: sod(f), to: eod(now) };
     }
+    if (preset === "year") {
+        const f = new Date(now.getFullYear(), 0, 1);
+        return { from: sod(f), to: eod(now) };
+    }
     return { from: null, to: null };
 }
 
@@ -6707,7 +6711,7 @@ let ledgerFilters = {
     productId: null,
     from: null,
     to: null,
-    preset: "month"
+    preset: "year"
 };
 
 // ========================================
@@ -6804,11 +6808,13 @@ function selectPickerProduct(productId) {
             if (labelEl) labelEl.textContent = "اختر منتج...";
             if (btnEl) btnEl.classList.remove("active");
             ledgerFilters.productId = null;
+            populateLedgerSizes(null);
         } else {
             const product = adminProducts.find(p => Number(p.id) === Number(productId));
             if (labelEl) labelEl.textContent = product?.name || `#${productId}`;
             if (btnEl) btnEl.classList.add("active");
             ledgerFilters.productId = productId;
+            populateLedgerSizes(productId);
         }
 
         closeProductPicker();
@@ -7684,29 +7690,87 @@ function setLedgerPreset(preset, btnEl) {
     loadItemLedgerReport();
 }
 
+// ✅ تعبئة قائمة المقاسات
+function populateLedgerSizes(productId) {
+    const select = document.getElementById("ledgerSizeSelect");
+    if (!select) return;
+
+    if (!productId) {
+        select.innerHTML = '<option value="">اختر المقاس...</option>';
+        return;
+    }
+
+    const productSizes = getProductSizes(productId)
+        .sort((a, b) => Number(a.size) - Number(b.size));
+
+    select.innerHTML = '<option value="">اختر المقاس...</option>' +
+        productSizes.map(s => `<option value="${escapeAdminHTML(s.size)}">${escapeAdminHTML(s.size)}</option>`).join("");
+}
+
+// ✅ تعيين التواريخ الافتراضية (من أول السنة لحد اليوم)
+function initLedgerDefaults() {
+    const r = _getPresetRange("year");
+    ledgerFilters.preset = "year";
+    ledgerFilters.from = r.from;
+    ledgerFilters.to = r.to;
+
+    const fromEl = document.getElementById("ledgerDateFrom");
+    const toEl = document.getElementById("ledgerDateTo");
+
+    if (fromEl && r.from) fromEl.value = r.from.toISOString().slice(0, 10);
+    if (toEl && r.to) toEl.value = r.to.toISOString().slice(0, 10);
+}
+
+// ✅ الدالة الرئيسية
 // ✅ الدالة الرئيسية
 async function loadItemLedgerReport() {
     const listEl = document.getElementById("ledgerList");
     if (!listEl) return;
 
+    // ✅ لو التواريخ فاضية → نطبق preset "هذه السنة"
+    const fromElCheck = document.getElementById("ledgerDateFrom");
+    const toElCheck = document.getElementById("ledgerDateTo");
+
+    if ((!fromElCheck?.value || !toElCheck?.value) && !ledgerFilters.from) {
+        initLedgerDefaults();
+    }
+
     // ✅ نقرا التواريخ من الحقول
-    const fromEl = document.getElementById("ledgerDateFrom");
-    const toEl = document.getElementById("ledgerDateTo");
-
-    const fromStr = fromEl?.value || '';
-    const toStr = toEl?.value || '';
-
+    const fromStr = fromElCheck?.value || '';
+    const toStr = toElCheck?.value || '';
     ledgerFilters.from = fromStr ? new Date(fromStr + 'T00:00:00') : null;
     ledgerFilters.to = toStr ? new Date(toStr + 'T23:59:59') : null;
 
-    // ✅ لو مفيش منتج مختار
+    // ✅ لو مفيش منتج
     if (!ledgerFilters.productId) {
         listEl.innerHTML = `<tr><td colspan="9" style="text-align:center;padding:40px;color:#94a3b8;">
             <i class="fa-solid fa-box-open" style="font-size:32px;display:block;margin-bottom:10px;opacity:.5;"></i>
             اختر منتج لعرض كارت الصنف
         </td></tr>`;
 
-        // ✅ نصفّر الـ KPIs والصندوق
+        const set = (id, v) => { const e = document.getElementById(id); if (e) e.textContent = v; };
+        set("ledgerKpiIn", "0");
+        set("ledgerKpiOut", "0");
+        set("ledgerKpiClosing", "0");
+        set("ledgerOpeningValue", "0");
+        set("ledgerCount", "0 حركة");
+
+        const totalsEl = document.getElementById("ledgerTotals");
+        if (totalsEl) totalsEl.innerHTML = "";
+
+        return;
+    }
+
+    // ✅ لو مفيش مقاس
+    const sizeEl = document.getElementById("ledgerSizeSelect");
+    const selectedSize = sizeEl?.value || "";
+
+    if (!selectedSize) {
+        listEl.innerHTML = `<tr><td colspan="9" style="text-align:center;padding:40px;color:#94a3b8;">
+            <i class="fa-solid fa-shoe-prints" style="font-size:32px;display:block;margin-bottom:10px;opacity:.5;"></i>
+            اختر المقاس لعرض كارت الصنف
+        </td></tr>`;
+
         const set = (id, v) => { const e = document.getElementById(id); if (e) e.textContent = v; };
         set("ledgerKpiIn", "0");
         set("ledgerKpiOut", "0");
@@ -7728,11 +7792,12 @@ async function loadItemLedgerReport() {
 
         const productId = ledgerFilters.productId;
 
-        // ✅ نجيب كل حركات المنتج مرتبة بالتاريخ
+        // ✅ نجيب حركات المنتج + المقاس المحدد
         const { data: allMovements, error } = await client
             .from("inventory_movements")
             .select("*")
             .eq("product_id", productId)
+            .eq("size", selectedSize)
             .order("created_at", { ascending: true });
 
         if (error) throw error;
@@ -7747,7 +7812,7 @@ async function loadItemLedgerReport() {
             const mDate = new Date(m.created_at);
 
             if (ledgerFilters.from && mDate < ledgerFilters.from) {
-                // ✅ دي حركات قبل الفترة → تتحسب في الرصيد الافتتاحي
+                // ✅ قبل الفترة → في الرصيد الافتتاحي
                 openingBalance += Number(m.quantity || 0);
             } else if (ledgerFilters.to && mDate > ledgerFilters.to) {
                 // ✅ بعد الفترة → نتجاهلها
@@ -7782,6 +7847,7 @@ async function loadItemLedgerReport() {
         // ✅ نحفظ في الـ state
         ledgerReportData = {
             productId,
+            size: selectedSize,
             openingBalance,
             rows,
             totalIn,
@@ -7794,8 +7860,6 @@ async function loadItemLedgerReport() {
         set("ledgerKpiIn", totalIn.toLocaleString("en-US"));
         set("ledgerKpiOut", totalOut.toLocaleString("en-US"));
         set("ledgerKpiClosing", runningBalance.toLocaleString("en-US"));
-
-        // ✅ نحدّث صندوق الرصيد الافتتاحي
         set("ledgerOpeningValue", openingBalance.toLocaleString("en-US"));
 
         const noteEl = document.getElementById("ledgerOpeningNote");
@@ -7804,13 +7868,12 @@ async function loadItemLedgerReport() {
                 const d = ledgerFilters.from.toLocaleDateString("ar-EG-u-nu-latn", {
                     day: "numeric", month: "short", year: "numeric"
                 });
-                noteEl.textContent = `قبل ${d}`;
+                noteEl.textContent = `قبل ${d} - مقاس ${selectedSize}`;
             } else {
-                noteEl.textContent = "قبل بداية الفترة المحددة";
+                noteEl.textContent = `مقاس ${selectedSize}`;
             }
         }
 
-        // ✅ نحدّث العدد
         set("ledgerCount", `${rows.length} حركة`);
 
         // ✅ نعرض الجدول
@@ -8133,6 +8196,8 @@ window.showMovementDetails = showMovementDetails;
 window.closeMovementDetails = closeMovementDetails;
 window.exportItemLedgerCSV = exportItemLedgerCSV;
 window.openLedgerProductPicker = openLedgerProductPicker;
+window.initLedgerDefaults = initLedgerDefaults;
+window.populateLedgerSizes = populateLedgerSizes;
 window.confirmInstaPayPayment = confirmInstaPayPayment;
 // ========================================
 // SHIP CONFIRM MODAL
