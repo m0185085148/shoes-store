@@ -3296,8 +3296,10 @@ function openAdjustStockModal(productId) {
     document.getElementById("adjustQuantityLabel").textContent = "الكمية المضافة *";
     document.getElementById("adjustQuantity").value = "";
     document.getElementById("adjustQuantity").min = "1";
-    document.getElementById("adjustReason").value = "";
     document.getElementById("adjustNotes").value = "";
+
+    // ✅ نحمّل أسباب "شراء" افتراضيًا
+    populateAdjustReasonOptions("purchase");
 
     updateAdjustPreview();
 
@@ -3328,10 +3330,16 @@ function selectMovementType(type, btnEl) {
     } else if (type === "damage") {
         label.textContent = "الكمية التالفة *";
         input.min = "1";
+    } else if (type === "return") {
+        label.textContent = "الكمية المسترجعة *";
+        input.min = "1";
     } else {
         label.textContent = "الكمية (موجب = إضافة، سالب = خصم) *";
         input.min = "";
     }
+
+    // ✅ نحدّث قائمة الأسباب حسب النوع
+    populateAdjustReasonOptions(type);
 
     updateAdjustPreview();
 }
@@ -3352,9 +3360,13 @@ function updateAdjustPreview() {
     let change = 0;
 
     if (!isNaN(qtyVal)) {
-        if (currentAdjustType === "purchase") change = Math.abs(qtyVal);
-        else if (currentAdjustType === "damage") change = -Math.abs(qtyVal);
-        else change = qtyVal;
+        if (currentAdjustType === "purchase" || currentAdjustType === "return") {
+            change = Math.abs(qtyVal); // ✅ إضافة (شراء أو مرتجع)
+        } else if (currentAdjustType === "damage") {
+            change = -Math.abs(qtyVal); // ✅ خصم (تلف)
+        } else {
+            change = qtyVal; // ✅ تسوية (بإشارته)
+        }
     }
 
     const newVal = Math.max(0, current + change);
@@ -3387,8 +3399,16 @@ if (adjustStockForm) {
         const size = document.getElementById("adjustSizeSelect")?.value;
         const type = currentAdjustType;
         const qtyVal = parseInt(adjustQuantity.value || "0", 10);
-        const reason = adjustReason.value.trim();
         const notes = adjustNotes.value.trim();
+
+        // ✅ قراءة السبب من القائمة
+        const reasonSelect = document.getElementById("adjustReasonSelect");
+        const reasonCustom = document.getElementById("adjustReasonCustom");
+        let reason = reasonSelect?.value?.trim() || "";
+
+        if (reason === "سبب آخر") {
+            reason = reasonCustom?.value?.trim() || "";
+        }
 
         if (!size) {
             alert("اختر المقاس");
@@ -3406,7 +3426,7 @@ if (adjustStockForm) {
         }
 
         let change = 0;
-        if (type === "purchase") change = Math.abs(qtyVal);
+        if (type === "purchase" || type === "return") change = Math.abs(qtyVal);
         else if (type === "damage") change = -Math.abs(qtyVal);
         else change = qtyVal;
 
