@@ -1543,10 +1543,12 @@ function updateOrderFilterCounts() {
         const s = o.status;
         if (counts[s] !== undefined) counts[s]++;
 
-        if (["exchange_requested", "exchange_received", "exchange_shipped", "exchanged"].includes(s)) {
+        // ✅ استبدال: نستثني "exchanged" لأنه حالة نهائية
+        if (["exchange_requested", "exchange_received", "exchange_shipped"].includes(s)) {
             counts.exchange++;
         }
-        if (["return_requested", "return_received", "refunded"].includes(s)) {
+        // ✅ استرجاع: نستثني "refunded" لأنه حالة نهائية
+        if (["return_requested", "return_received"].includes(s)) {
             counts.return++;
         }
     });
