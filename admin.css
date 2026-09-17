@@ -6298,3 +6298,211 @@ body {
 .filter-chip-count[data-empty="true"] {
     display: none;
 }
+/* =========================================
+   BATCH PURCHASE STYLES
+   ========================================= */
+
+.batch-header {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 16px;
+    background: linear-gradient(135deg, #ecfdf5, #d1fae5);
+    border: 1.5px solid #86efac;
+    border-radius: 14px;
+    margin-bottom: 18px;
+}
+
+.batch-header > i {
+    width: 48px;
+    height: 48px;
+    border-radius: 12px;
+    background: linear-gradient(135deg, #16a34a, #15803d);
+    color: #fff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 20px;
+    flex-shrink: 0;
+}
+
+.batch-header h4 {
+    font-size: 15px;
+    font-weight: 800;
+    color: #065f46;
+    margin-bottom: 4px;
+}
+
+.batch-header p {
+    font-size: 12px;
+    color: #047857;
+    font-weight: 600;
+}
+
+.batch-table-wrap {
+    border: 1.5px solid #e2e8f0;
+    border-radius: 12px;
+    overflow: hidden;
+    margin-bottom: 16px;
+    max-height: 380px;
+    overflow-y: auto;
+}
+
+.batch-table {
+    width: 100%;
+    border-collapse: collapse;
+    background: #fff;
+}
+
+.batch-table thead {
+    position: sticky;
+    top: 0;
+    z-index: 2;
+}
+
+.batch-table thead th {
+    padding: 10px 12px;
+    background: #f8fafc;
+    border-bottom: 2px solid #e2e8f0;
+    font-size: 11px;
+    font-weight: 800;
+    color: #475569;
+    text-align: right;
+    letter-spacing: 0.3px;
+}
+
+.batch-table tbody tr {
+    border-bottom: 1px solid #f0f0f0;
+    transition: all 0.15s ease;
+}
+
+.batch-table tbody tr:last-child {
+    border-bottom: 0;
+}
+
+.batch-table tbody tr:hover {
+    background: #fafbfc;
+}
+
+.batch-table tbody tr:has(.batch-size-check:checked) {
+    background: #f0fdf4;
+}
+
+.batch-table td {
+    padding: 10px 12px;
+    font-size: 13px;
+    vertical-align: middle;
+}
+
+.batch-size-check {
+    width: 20px;
+    height: 20px;
+    accent-color: #16a34a;
+    cursor: pointer;
+}
+
+.batch-qty-input {
+    width: 90px;
+    padding: 8px 10px;
+    border: 1.5px solid #e2e8f0;
+    border-radius: 8px;
+    font-family: inherit;
+    font-size: 14px;
+    font-weight: 800;
+    text-align: center;
+    outline: none;
+    transition: all 0.2s ease;
+    background: #fff;
+}
+
+.batch-qty-input:focus {
+    border-color: #16a34a;
+    box-shadow: 0 0 0 3px rgba(22, 163, 74, 0.1);
+}
+
+.batch-qty-input:disabled {
+    background: #f3f4f6;
+    color: #cbd5e1;
+    cursor: not-allowed;
+}
+
+.batch-summary {
+    padding: 12px 16px;
+    background: #f8fafc;
+    border-radius: 12px;
+    margin-bottom: 16px;
+}
+
+.batch-summary-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 14px;
+    font-weight: 700;
+    color: #334155;
+}
+
+.batch-summary-row strong {
+    font-size: 20px;
+    font-weight: 800;
+    color: #16a34a;
+}
+
+.batch-unit-price-box {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 14px 18px;
+    background: linear-gradient(135deg, #f0f9ff, #dbeafe);
+    border: 1.5px solid #93c5fd;
+    border-radius: 12px;
+    margin-bottom: 16px;
+    animation: fadeIn 0.3s ease;
+}
+
+.batch-unit-price-box span {
+    font-size: 13px;
+    font-weight: 800;
+    color: #1e40af;
+}
+
+.batch-unit-price-box strong {
+    font-size: 22px;
+    font-weight: 800;
+    color: #2563eb;
+    direction: ltr;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(-4px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+/* ✅ responsive */
+@media (max-width: 600px) {
+    .batch-table-wrap {
+        max-height: 300px;
+    }
+    
+    .batch-qty-input {
+        width: 70px;
+        padding: 6px 8px;
+        font-size: 13px;
+    }
+    
+    .batch-table thead th,
+    .batch-table td {
+        padding: 8px;
+        font-size: 12px;
+    }
+    
+    .batch-unit-price-box strong {
+        font-size: 18px;
+    }
+}
+
+/* ✅ لون تاب شراء دفعة */
+.movement-type-tab[data-type="purchase_batch"].active {
+    background: linear-gradient(135deg, #16a34a, #15803d);
+    border-color: #16a34a;
+}

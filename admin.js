@@ -3284,6 +3284,286 @@ function onAdjustReasonChange() {
 window.populateAdjustReasonOptions = populateAdjustReasonOptions;
 window.onAdjustReasonChange = onAdjustReasonChange;
 // ========================================
+// BATCH PURCHASE (جديد)
+// ========================================
+
+// ✅ رندر جدول المقاسات
+function renderBatchSizesTable() {
+    const body = document.getElementById("batchSizesBody");
+    if (!body || !currentAdjustProduct) return;
+
+    const sizes = getProductSizes(currentAdjustProduct.id)
+        .sort((a, b) => Number(a.size) - Number(b.size));
+
+    if (!sizes.length) {
+        body.innerHTML = `
+            <tr>
+                <td colspan="4" style="text-align:center;padding:20px;color:#94a3b8;">
+                    لا توجد مقاسات لهذا المنتج
+                </td>
+            </tr>
+        `;
+        return;
+    }
+
+    body.innerHTML = sizes.map(s => {
+        const stock = Number(s.stock || 0);
+        const reserved = Number(s.reserved || 0);
+        const available = Math.max(0, stock - reserved);
+
+        return `
+            <tr data-size="${escapeAdminHTML(s.size)}">
+                <td>
+                    <input type="checkbox" class="batch-size-check" 
+                        data-size="${escapeAdminHTML(s.size)}"
+                        onchange="onBatchSizeToggle(this)">
+                </td>
+                <td>
+                    <div style="font-weight:800;font-size:16px;color:#111;">
+                        ${escapeAdminHTML(s.size)}
+                    </div>
+                    <div style="font-size:10px;color:#94a3b8;font-weight:700;margin-top:2px;">
+                        الحالي: ${available}
+                    </div>
+                </td>
+                <td>
+                    <input type="number" 
+                        class="batch-qty-input" 
+                        data-size="${escapeAdminHTML(s.size)}"
+                        min="0" step="1" value="0"
+                        disabled
+                        oninput="updateBatchPreview()">
+                </td>
+                <td>
+                    <span class="batch-row-unit-price" data-size="${escapeAdminHTML(s.size)}">—</span>
+                </td>
+            </tr>
+        `;
+    }).join("");
+
+    updateBatchPreview();
+}
+
+// ✅ عند تفعيل/إلغاء checkbox
+function onBatchSizeToggle(checkbox) {
+    const size = checkbox.dataset.size;
+    const row = checkbox.closest("tr");
+    const qtyInput = row?.querySelector(".batch-qty-input");
+
+    if (!qtyInput) return;
+
+    if (checkbox.checked) {
+        qtyInput.disabled = false;
+        qtyInput.value = "1";
+        qtyInput.focus();
+        qtyInput.select();
+    } else {
+        qtyInput.disabled = true;
+        qtyInput.value = "0";
+    }
+
+    updateBatchPreview();
+}
+
+// ✅ تحديث الحسابات اللحظية
+function updateBatchPreview() {
+    const rows = document.querySelectorAll("#batchSizesBody tr");
+    let totalQty = 0;
+
+    rows.forEach(row => {
+        const checkbox = row.querySelector(".batch-size-check");
+        const qtyInput = row.querySelector(".batch-qty-input");
+        const priceEl = row.querySelector(".batch-row-unit-price");
+
+        if (!checkbox || !qtyInput || !priceEl) return;
+
+        if (checkbox.checked) {
+            const qty = parseInt(qtyInput.value || "0", 10) || 0;
+            if (qty > 0) {
+                totalQty += qty;
+            }
+        }
+    });
+
+    // تحديث إجمالي القطع
+    const qtyEl = document.getElementById("batchTotalQty");
+    if (qtyEl) qtyEl.textContent = totalQty;
+
+    // حساب سعر القطعة
+    const totalPriceInput = document.getElementById("batchTotalPrice");
+    const totalPrice = Number(totalPriceInput?.value || 0);
+    const unitPriceBox = document.getElementById("batchUnitPriceBox");
+    const unitPriceEl = document.getElementById("batchUnitPrice");
+
+    let unitPrice = 0;
+    if (totalQty > 0 && totalPrice > 0) {
+        unitPrice = totalPrice / totalQty;
+
+        if (unitPriceBox) unitPriceBox.style.display = "flex";
+        if (unitPriceEl) {
+            // ✅ العرض بـ 2 خانات عشرية، الحساب بالقيمة الكاملة
+            unitPriceEl.textContent = `${unitPrice.toFixed(2)} ج`;
+        }
+    } else {
+        if (unitPriceBox) unitPriceBox.style.display = "none";
+    }
+
+    // تحديث سعر القطعة في كل صف
+    rows.forEach(row => {
+        const checkbox = row.querySelector(".batch-size-check");
+        const qtyInput = row.querySelector(".batch-qty-input");
+        const priceEl = row.querySelector(".batch-row-unit-price");
+
+        if (!checkbox || !qtyInput || !priceEl) return;
+
+        if (checkbox.checked && totalQty > 0 && totalPrice > 0) {
+            const qty = parseInt(qtyInput.value || "0", 10) || 0;
+            if (qty > 0) {
+                const rowTotal = unitPrice * qty;
+                priceEl.innerHTML = `
+                    <div style="font-weight:800;color:#16a34a;font-size:14px;">
+                        ${unitPrice.toFixed(2)} ج
+                    </div>
+                    <div style="font-size:10px;color:#94a3b8;font-weight:700;margin-top:2px;">
+                        إجمالي: ${rowTotal.toFixed(2)} ج
+                    </div>
+                `;
+            } else {
+                priceEl.textContent = "—";
+            }
+        } else {
+            priceEl.textContent = "—";
+        }
+    });
+}
+
+// ✅ التعامل مع "سبب آخر" في الدفعة
+function onBatchReasonChange() {
+    const select = document.getElementById("batchReasonSelect");
+    const customGroup = document.getElementById("batchReasonCustomGroup");
+    const customInput = document.getElementById("batchReasonCustom");
+
+    if (!select || !customGroup || !customInput) return;
+
+    if (select.value === "سبب آخر") {
+        customGroup.style.display = "block";
+        customInput.required = true;
+        customInput.focus();
+    } else {
+        customGroup.style.display = "none";
+        customInput.required = false;
+        customInput.value = "";
+    }
+}
+
+// ✅ حفظ الدفعة
+async function saveBatchPurchase() {
+    if (!currentAdjustProduct) return;
+
+    const client = getSupabaseClient();
+    if (!client) return;
+
+    const productId = currentAdjustProduct.id;
+
+    // ✅ جمع المقاسات المختارة
+    const items = [];
+    const rows = document.querySelectorAll("#batchSizesBody tr");
+
+    rows.forEach(row => {
+        const checkbox = row.querySelector(".batch-size-check");
+        const qtyInput = row.querySelector(".batch-qty-input");
+
+        if (!checkbox || !qtyInput) return;
+
+        if (checkbox.checked) {
+            const qty = parseInt(qtyInput.value || "0", 10) || 0;
+            if (qty > 0) {
+                items.push({
+                    size: checkbox.dataset.size,
+                    quantity: qty
+                });
+            }
+        }
+    });
+
+    // ✅ Validation
+    if (!items.length) {
+        alert("اختر مقاس واحد على الأقل واكتب الكمية");
+        return;
+    }
+
+    const totalPrice = Number(document.getElementById("batchTotalPrice")?.value || 0);
+    if (!totalPrice || totalPrice <= 0) {
+        alert("اكتب المبلغ الإجمالي المدفوع");
+        document.getElementById("batchTotalPrice")?.focus();
+        return;
+    }
+
+    // ✅ السبب
+    const reasonSelect = document.getElementById("batchReasonSelect");
+    const reasonCustom = document.getElementById("batchReasonCustom");
+    let reason = reasonSelect?.value?.trim() || "";
+
+    if (reason === "سبب آخر") {
+        reason = reasonCustom?.value?.trim() || "";
+    }
+
+    if (!reason) {
+        alert("اختر السبب");
+        return;
+    }
+
+    const notes = document.getElementById("batchNotes")?.value?.trim() || "";
+
+    // ✅ تأكيد
+    const totalQty = items.reduce((s, i) => s + i.quantity, 0);
+    const unitPrice = totalPrice / totalQty;
+
+    const confirmed = confirm(
+        `هل تريد تأكيد شراء ${totalQty} قطعة بمبلغ ${totalPrice.toLocaleString("en-US")} ج؟\n\n` +
+        `سعر القطعة: ${unitPrice.toFixed(2)} ج`
+    );
+
+    if (!confirmed) return;
+
+    // ✅ التنفيذ
+    const btn = document.getElementById("saveBatchBtn");
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> جاري الحفظ...';
+
+    try {
+        const { data, error } = await client.rpc("purchase_batch", {
+            p_product_id: productId,
+            p_items: items,
+            p_total_price: totalPrice,
+            p_reason: reason,
+            p_notes: notes || null
+        });
+
+        if (error) throw error;
+        if (!data?.success) throw new Error("فشل الحفظ");
+
+        showToast(`تم شراء ${data.total_quantity} قطعة بسعر قطعة ${Number(data.unit_cost).toFixed(2)} ج ✅`);
+
+        closeAdjustStockModalFn();
+
+        await loadAdminProducts();
+        await loadInventory();
+        await loadMovements();
+    } catch (error) {
+        console.error("Batch Purchase Error:", error);
+        alert("فشل الحفظ:\n\n" + error.message);
+    } finally {
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fa-solid fa-check"></i> تأكيد الشراء';
+    }
+}
+
+window.onBatchSizeToggle = onBatchSizeToggle;
+window.updateBatchPreview = updateBatchPreview;
+window.onBatchReasonChange = onBatchReasonChange;
+window.saveBatchPurchase = saveBatchPurchase;
+// ========================================
 // 44. ADJUST STOCK MODAL
 // ========================================
 
@@ -3304,6 +3584,12 @@ function openAdjustStockModal(productId) {
 
     document.getElementById("adjustProductId").value = product.id;
     document.getElementById("adjustMovementType").value = "purchase";
+
+    // ✅ إظهار الفورم العادي + إخفاء الدفعة (افتراضيًا)
+    const singleForm = document.getElementById("adjustStockForm");
+    const batchForm = document.getElementById("batchPurchaseForm");
+    if (singleForm) singleForm.style.display = "block";
+    if (batchForm) batchForm.style.display = "none";
 
     const sizeSelect = document.getElementById("adjustSizeSelect");
     const productSizes = getProductSizes(product.id)
@@ -3427,10 +3713,43 @@ function selectMovementType(type, btnEl) {
         }
     }
 
-    // ✅ نحدّث قائمة الأسباب حسب النوع
-    populateAdjustReasonOptions(type);
+    // ✅ إظهار/إخفاء قسم شراء دفعة
+    const batchForm = document.getElementById("batchPurchaseForm");
+    const singleForm = document.getElementById("adjustStockForm");
 
-    updateAdjustPreview();
+    if (type === "purchase_batch") {
+        // إخفاء الفورم العادي + إظهار الدفعة
+        if (singleForm) singleForm.style.display = "none";
+        if (batchForm) batchForm.style.display = "block";
+
+        // رندر الجدول
+        renderBatchSizesTable();
+
+        // تصفير المبلغ
+        const priceInput = document.getElementById("batchTotalPrice");
+        if (priceInput) priceInput.value = "";
+
+        const reasonSelect = document.getElementById("batchReasonSelect");
+        if (reasonSelect) reasonSelect.value = "";
+
+        const reasonCustomGroup = document.getElementById("batchReasonCustomGroup");
+        if (reasonCustomGroup) reasonCustomGroup.style.display = "none";
+
+        const notesField = document.getElementById("batchNotes");
+        if (notesField) notesField.value = "";
+
+        const unitPriceBox = document.getElementById("batchUnitPriceBox");
+        if (unitPriceBox) unitPriceBox.style.display = "none";
+    } else {
+        // إظهار الفورم العادي + إخفاء الدفعة
+        if (singleForm) singleForm.style.display = "block";
+        if (batchForm) batchForm.style.display = "none";
+
+        // ✅ نحدّث قائمة الأسباب حسب النوع
+        populateAdjustReasonOptions(type);
+
+        updateAdjustPreview();
+    }
 }
 
 function updateAdjustPreview() {
@@ -9045,3 +9364,5 @@ window.confirmShipOrder = confirmShipOrder;
 
 // ✅ ربط زر تأكيد الشحن
 document.getElementById("shipConfirmBtn")?.addEventListener("click", confirmShipOrder);
+// ✅ ربط زر حفظ الدفعة
+document.getElementById("saveBatchBtn")?.addEventListener("click", saveBatchPurchase);
