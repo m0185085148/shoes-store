@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>لوحة التحكم - STEP Store</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800&display=swap" rel="stylesheet">
     <!-- ✅ Flatpickr for custom date format -->
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
@@ -2312,7 +2313,13 @@
         <div class="modal-content modal-large">
             <div class="modal-header">
                 <h2>تفاصيل الطلب</h2>
-                <button type="button" class="close-modal" id="closeOrderModal">&times;</button>
+                <div class="modal-header-actions">
+                    <button type="button" class="print-invoice-btn" id="printOrderInvoiceBtn" onclick="printOrderInvoice()" style="display:none;">
+                        <i class="fa-solid fa-print"></i>
+                        طباعة الفاتورة
+                    </button>
+                    <button type="button" class="close-modal" id="closeOrderModal">&times;</button>
+                </div>
             </div>
             <div id="orderModalDetails" style="font-size:14px;line-height:1.8;"></div>
         </div>
@@ -2760,6 +2767,160 @@
                     إلغاء
                 </button>
             </div>
+        </div>
+    </div>
+
+        <!-- ============ INVOICE PRINT AREA ============ -->
+    <div id="invoicePrintArea" aria-hidden="true">
+        <div class="invoice-page">
+            
+            <!-- Header -->
+            <div class="invoice-header">
+                <div class="invoice-header-right">
+                    <div class="invoice-logo">STEP</div>
+                    <div class="invoice-tagline">متجر أحذية عصرية</div>
+                </div>
+                <div class="invoice-header-left">
+                    <div class="invoice-title">فاتورة</div>
+                    <div class="invoice-meta">
+                        <div class="invoice-meta-row">
+                            <span>رقم الطلب:</span>
+                            <strong id="invOrderId">#0</strong>
+                        </div>
+                        <div class="invoice-meta-row">
+                            <span>التاريخ:</span>
+                            <strong id="invOrderDate">-</strong>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Divider -->
+            <div class="invoice-divider"></div>
+
+            <!-- Info Grid: Customer + Store -->
+            <div class="invoice-info-grid">
+                <div class="invoice-info-block">
+                    <h4>
+                        <i class="fa-solid fa-user"></i>
+                        بيانات العميل
+                    </h4>
+                    <div class="invoice-info-row">
+                        <span>الاسم:</span>
+                        <strong id="invCustomerName">-</strong>
+                    </div>
+                    <div class="invoice-info-row">
+                        <span>الهاتف:</span>
+                        <strong id="invCustomerPhone" style="direction:ltr;">-</strong>
+                    </div>
+                    <div class="invoice-info-row">
+                        <span>المحافظة:</span>
+                        <strong id="invGovernorate">-</strong>
+                    </div>
+                    <div class="invoice-info-row">
+                        <span>العنوان:</span>
+                        <strong id="invAddress" class="invoice-address">-</strong>
+                    </div>
+                </div>
+
+                <div class="invoice-info-block">
+                    <h4>
+                        <i class="fa-solid fa-store"></i>
+                        بيانات المتجر
+                    </h4>
+                    <div class="invoice-info-row">
+                        <span>المتجر:</span>
+                        <strong>STEP Store</strong>
+                    </div>
+                    <div class="invoice-info-row">
+                        <span>واتساب:</span>
+                        <strong style="direction:ltr;">+20 112 091 5594</strong>
+                    </div>
+                    <div class="invoice-info-row">
+                        <span>الإيميل:</span>
+                        <strong style="direction:ltr;font-size:11px;">STEP.STORE.EG@gmail.com</strong>
+                    </div>
+                    <div class="invoice-info-row">
+                        <span>الموقع:</span>
+                        <strong style="direction:ltr;font-size:11px;">shoes-store-egypt.vercel.app</strong>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Items Table -->
+            <div class="invoice-items-section">
+                <h4 class="invoice-section-title">
+                    <i class="fa-solid fa-box"></i>
+                    المنتجات
+                </h4>
+                <table class="invoice-items-table">
+                    <thead>
+                        <tr>
+                            <th style="width:40px;">#</th>
+                            <th>المنتج</th>
+                            <th style="width:80px;">المقاس</th>
+                            <th style="width:70px;">الكمية</th>
+                            <th style="width:100px;">السعر</th>
+                            <th style="width:110px;">الإجمالي</th>
+                        </tr>
+                    </thead>
+                    <tbody id="invItemsBody"></tbody>
+                </table>
+            </div>
+
+            <!-- Summary -->
+            <div class="invoice-summary-wrap">
+                <div class="invoice-summary">
+                    <div class="invoice-summary-row">
+                        <span>المنتجات</span>
+                        <strong id="invSubtotal">0 ج</strong>
+                    </div>
+                    <div class="invoice-summary-row">
+                        <span>الشحن</span>
+                        <strong id="invShipping">-</strong>
+                    </div>
+                    <div class="invoice-summary-row total">
+                        <span>الإجمالي النهائي</span>
+                        <strong id="invTotal">0 ج</strong>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Payment Method -->
+            <div class="invoice-payment-box">
+                <div class="invoice-payment-icon">
+                    <i class="fa-solid fa-credit-card"></i>
+                </div>
+                <div class="invoice-payment-info">
+                    <span>طريقة الدفع</span>
+                    <strong id="invPayment">-</strong>
+                </div>
+            </div>
+
+            <!-- Footer -->
+            <div class="invoice-footer">
+                <div class="invoice-qr-box">
+                    <div id="invQRCode"></div>
+                    <span>امسح للـتتبع</span>
+                </div>
+                <div class="invoice-footer-text">
+                    <p class="invoice-thanks">شكرًا لتسوقك من STEP Store 🎉</p>
+                    <p class="invoice-contact">
+                        <i class="fa-brands fa-whatsapp"></i>
+                        +20 112 091 5594
+                    </p>
+                    <p class="invoice-contact">
+                        <i class="fa-solid fa-envelope"></i>
+                        STEP.STORE.EG@gmail.com
+                    </p>
+                </div>
+            </div>
+
+            <!-- Bottom Line -->
+            <div class="invoice-bottom">
+                هذه الفاتورة إلكترونية صادرة من متجر STEP - لا تحتاج إلى توقيع
+            </div>
+
         </div>
     </div>
 

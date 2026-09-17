@@ -158,6 +158,7 @@ let currentExchangeOrder = null;
 let currentExchangeReceivedOrder = null;
 let currentAdjustProduct = null;
 let currentAdjustType = "purchase";
+let currentInvoiceOrder = null;
 
 // ✅ الحالات اللي بتُحسب كمبيعات
 const SOLD_STATUSES = [
@@ -2167,6 +2168,11 @@ function viewOrderDetails(orderId) {
 
         </div>
     `;
+
+    // ✅ نظهر زر الطباعة
+    currentInvoiceOrder = order;
+    const printBtn = document.getElementById("printOrderInvoiceBtn");
+    if (printBtn) printBtn.style.display = "inline-flex";
 
     orderModal.classList.add("open");
 }
@@ -6799,8 +6805,14 @@ function showCustomerDetails(key) {
         return `<div class="order-detail-item" style="cursor:pointer;" onclick="viewOrderDetails(${Number(o.id)})"><div class="order-detail-info"><h4>طلب #${escapeAdminHTML(o.id)}</h4><div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:6px;">${getStatusBadge(o.status)}<span class="payment-badge ${cls}"><i class="fa-solid ${m.icon}"></i> ${escapeAdminHTML(m.text)}</span></div><div style="font-size:12px;color:#64748b;margin-top:8px;">${formatDate(o.created_at)}</div></div><div class="order-detail-price">${Number(o.total_amount || 0).toLocaleString("en-US")} ج</div></div>`;
     }).join("");
 
-    const aov = c.ordersCount > 0 ? c.totalSpent / c.ordersCount : 0;
+        const aov = c.ordersCount > 0 ? c.totalSpent / c.ordersCount : 0;
     orderModalDetails.innerHTML = `<h3 style="margin-bottom:14px;"><i class="fa-solid fa-user"></i> ملف العميل</h3><div style="background:#f8fafc;padding:16px;border-radius:12px;margin-bottom:18px;line-height:1.9;"><div><strong>الاسم:</strong> ${escapeAdminHTML(c.name)}</div><div><strong>الهاتف:</strong> <span style="direction:ltr;display:inline-block;">${escapeAdminHTML(c.phone)}</span></div><div><strong>عدد الطلبات:</strong> ${c.ordersCount}</div><div><strong>إجمالي الشراء:</strong> <span style="color:#16a34a;font-weight:800;">${c.totalSpent.toLocaleString("en-US")} ج.م</span></div><div><strong>متوسط الطلب:</strong> ${Math.round(aov).toLocaleString("en-US")} ج.م</div><div><strong>أول طلب:</strong> ${formatDate(c.firstOrderAt)}</div><div><strong>آخر طلب:</strong> ${formatDate(c.lastOrderAt)}</div>${c.isVIP ? `<div style="margin-top:8px;"><span class="vip-badge"><i class="fa-solid fa-crown"></i> عميل VIP</span></div>` : ""}</div><h4 style="margin-bottom:10px;"><i class="fa-solid fa-box"></i> سجل الطلبات (${c.ordersCount})</h4>${ordersHTML}`;
+
+    // ✅ نخفي زر الطباعة (لأن ده ملف عميل مش طلب)
+    currentInvoiceOrder = null;
+    const printBtn = document.getElementById("printOrderInvoiceBtn");
+    if (printBtn) printBtn.style.display = "none";
+
     orderModal.classList.add("open");
 }
 
@@ -9449,3 +9461,27 @@ document.getElementById("saveBatchBtn")?.addEventListener("click", saveBatchPurc
 
 // ✅ ربط زر إلغاء الدفعة
 document.getElementById("cancelBatchBtn")?.addEventListener("click", closeAdjustStockModalFn);
+
+// ========================================
+// PRINT ORDER INVOICE
+// ========================================
+
+function printOrderInvoice() {
+    if (!currentInvoiceOrder) {
+        alert("لا يوجد طلب لطباعته");
+        return;
+    }
+
+    const order = currentInvoiceOrder;
+    // ... (باقي الكود اللي بعتهولي)
+
+
+    ...
+}
+
+function closeInvoicePreview() {
+    document.getElementById("invoicePrintArea")?.classList.remove("show");
+}
+
+window.printOrderInvoice = printOrderInvoice;
+window.closeInvoicePreview = closeInvoicePreview;
