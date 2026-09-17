@@ -58,6 +58,15 @@
                 </a>
             </li>
 
+            <li class="nav-item" id="tabNavCustomers">
+                <a href="javascript:void(0)" onclick="switchTab('customers')">
+                    <div class="nav-item-content">
+                        <i class="fa-solid fa-users"></i>
+                        <span>العملاء</span>
+                    </div>
+                </a>
+            </li>
+
             <li class="nav-item" id="tabNavProducts">
                 <a href="javascript:void(0)" onclick="switchTab('products')">
                     <div class="nav-item-content">
@@ -515,6 +524,135 @@
                     </div>
                 </div>
             </div>
+        </div>
+
+        <!-- ============ CUSTOMERS ============ -->
+        <div id="viewCustomers" class="tab-content">
+
+            <!-- Page Header Stats -->
+            <div class="page-header-bar">
+                <div class="page-header-stats">
+                    <div class="mini-stat">
+                        <i class="fa-solid fa-users" style="color:#8b5cf6;"></i>
+                        <div>
+                            <strong id="custStatTotal">0</strong>
+                            <span>إجمالي العملاء</span>
+                        </div>
+                    </div>
+                    <div class="mini-stat">
+                        <i class="fa-solid fa-crown" style="color:#f59e0b;"></i>
+                        <div>
+                            <strong id="custStatVip">0</strong>
+                            <span>عملاء VIP</span>
+                        </div>
+                    </div>
+                    <div class="mini-stat">
+                        <i class="fa-solid fa-user-plus" style="color:#2563eb;"></i>
+                        <div>
+                            <strong id="custStatNew">0</strong>
+                            <span>جدد</span>
+                        </div>
+                    </div>
+                    <div class="mini-stat">
+                        <i class="fa-solid fa-repeat" style="color:#16a34a;"></i>
+                        <div>
+                            <strong id="custStatRepeat">0</strong>
+                            <span>متكررين</span>
+                        </div>
+                    </div>
+                </div>
+
+                <button type="button" class="btn-add-product" id="refreshCustomersBtn" onclick="loadCustomersScreen()">
+                    <i class="fa-solid fa-rotate"></i>
+                    تحديث البيانات
+                </button>
+            </div>
+
+            <!-- Toolbar: Search + Filters -->
+            <div class="customers-toolbar">
+
+                <!-- Search -->
+                <div class="customers-search-wrapper">
+                    <i class="fa-solid fa-magnifying-glass"></i>
+                    <input type="text" id="custSearchInput" placeholder="ابحث بالاسم أو رقم الهاتف...">
+                    <button type="button" class="cust-search-clear" id="custSearchClear" style="display:none;" onclick="clearCustomerSearch()">
+                        <i class="fa-solid fa-xmark"></i>
+                    </button>
+                </div>
+
+                <!-- Filter Chips -->
+                <div class="customers-filter-chips">
+                    <button class="cust-filter-chip active" data-filter="all" onclick="filterCustomers('all', this)">
+                        <i class="fa-solid fa-users"></i>
+                        <span>الكل</span>
+                        <span class="chip-count" id="chipCountAll">0</span>
+                    </button>
+                    <button class="cust-filter-chip" data-filter="vip" onclick="filterCustomers('vip', this)">
+                        <i class="fa-solid fa-crown"></i>
+                        <span>VIP</span>
+                        <span class="chip-count" id="chipCountVip">0</span>
+                    </button>
+                    <button class="cust-filter-chip" data-filter="new" onclick="filterCustomers('new', this)">
+                        <i class="fa-solid fa-user-plus"></i>
+                        <span>جدد</span>
+                        <span class="chip-count" id="chipCountNew">0</span>
+                    </button>
+                    <button class="cust-filter-chip" data-filter="repeat" onclick="filterCustomers('repeat', this)">
+                        <i class="fa-solid fa-repeat"></i>
+                        <span>متكررين</span>
+                        <span class="chip-count" id="chipCountRepeat">0</span>
+                    </button>
+                    <button class="cust-filter-chip" data-filter="inactive" onclick="filterCustomers('inactive', this)">
+                        <i class="fa-solid fa-moon"></i>
+                        <span>خاملين</span>
+                        <span class="chip-count" id="chipCountInactive">0</span>
+                    </button>
+                    <button class="cust-filter-chip" data-filter="blocked" onclick="filterCustomers('blocked', this)">
+                        <i class="fa-solid fa-ban"></i>
+                        <span>محظورين</span>
+                        <span class="chip-count" id="chipCountBlocked">0</span>
+                    </button>
+                </div>
+
+            </div>
+
+            <!-- Customers Table -->
+            <div class="panel">
+                <div class="panel-header">
+                    <span class="panel-title">
+                        <i class="fa-solid fa-address-book"></i>
+                        قائمة العملاء
+                    </span>
+                    <span class="report-count" id="custCountLabel">0 عميل</span>
+                </div>
+
+                <div class="table-wrap">
+                    <table class="products-table orders-table-modern">
+                        <thead>
+                            <tr>
+                                <th style="width:50px;">#</th>
+                                <th>العميل</th>
+                                <th style="width:130px;">الهاتف</th>
+                                <th style="width:120px;">المحافظة</th>
+                                <th style="width:90px;">الطلبات</th>
+                                <th style="width:140px;">إجمالي الشراء</th>
+                                <th style="width:130px;">آخر طلب</th>
+                                <th style="width:110px;">التصنيف</th>
+                                <th style="width:170px;">إجراءات</th>
+                            </tr>
+                        </thead>
+                        <tbody id="customersAdminList">
+                            <tr>
+                                <td colspan="9" style="text-align:center;padding:40px;color:#94a3b8;">
+                                    <i class="fa-solid fa-spinner fa-spin" style="font-size:24px;display:block;margin-bottom:10px;"></i>
+                                    جاري التحميل...
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
         </div>
 
         <!-- ============ PRODUCTS ============ -->
@@ -2322,6 +2460,79 @@
                 </div>
             </div>
             <div id="orderModalDetails" style="font-size:14px;line-height:1.8;"></div>
+        </div>
+    </div>
+
+    <!-- ============ CUSTOMER FILE MODAL ============ -->
+    <div class="modal" id="customerFileModal">
+        <div class="modal-content modal-large">
+            <div class="modal-header">
+                <div class="modal-title-group">
+                    <div class="modal-icon" style="background:#f3e8ff;color:#8b5cf6;">
+                        <i class="fa-solid fa-user"></i>
+                    </div>
+                    <div>
+                        <h2 id="custFileTitle">ملف العميل</h2>
+                        <p id="custFileSubtitle" style="font-size:13px;color:#888;margin-top:2px;">
+                            بيانات كاملة + سجل الطلبات
+                        </p>
+                    </div>
+                </div>
+                <button type="button" class="close-modal" onclick="closeCustomerFileModal()">&times;</button>
+            </div>
+
+            <div id="customerFileBody"></div>
+        </div>
+    </div>
+
+    <!-- ============ ADD CUSTOMER NOTE MODAL ============ -->
+    <div class="modal" id="addCustomerNoteModal">
+        <div class="modal-content" style="max-width:520px;">
+            <div class="modal-header">
+                <div class="modal-title-group">
+                    <div class="modal-icon" style="background:#fef3c7;color:#d97706;">
+                        <i class="fa-solid fa-note-sticky"></i>
+                    </div>
+                    <div>
+                        <h2>إضافة ملاحظة</h2>
+                        <p style="font-size:13px;color:#888;margin-top:2px;">
+                            اكتب ملاحظة داخلية عن العميل
+                        </p>
+                    </div>
+                </div>
+                <button type="button" class="close-modal" onclick="closeAddCustomerNoteModal()">&times;</button>
+            </div>
+
+            <form id="addCustomerNoteForm">
+                <input type="hidden" id="noteCustomerId">
+                <input type="hidden" id="noteCustomerPhone">
+
+                <div class="form-group">
+                    <label for="noteTagSelect">التصنيف (اختياري)</label>
+                    <select id="noteTagSelect">
+                        <option value="">بدون تصنيف</option>
+                        <option value="vip">⭐ عميل VIP</option>
+                        <option value="watch">👁️ للمراقبة</option>
+                        <option value="blocked">🚫 محظور</option>
+                        <option value="normal">👤 عميل عادي</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label for="noteText">الملاحظة *</label>
+                    <textarea id="noteText" rows="4" required placeholder="مثال: دائمًا بيطلب مقاس 42 / بيتأخر في الدفع..."></textarea>
+                </div>
+
+                <div class="modal-actions">
+                    <button type="submit" class="btn-primary-modal" id="saveCustomerNoteBtn">
+                        <i class="fa-solid fa-check"></i>
+                        حفظ الملاحظة
+                    </button>
+                    <button type="button" class="btn-secondary-modal" onclick="closeAddCustomerNoteModal()">
+                        إلغاء
+                    </button>
+                </div>
+            </form>
         </div>
     </div>
 
