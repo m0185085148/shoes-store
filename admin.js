@@ -9473,12 +9473,127 @@ function printOrderInvoice() {
     }
 
     const order = currentInvoiceOrder;
-    // ... (باقي الكود اللي بعتهولي)
+    const items = Array.isArray(order.items) ? order.items : [];
 
+    // ✅ نحضّر بيانات الفاتورة
+    document.getElementById("invOrderId").textContent = `#${order.id}`;
+    document.getElementById("invOrderDate").textContent = formatDate(order.created_at);
 
-    ...
+    // بيانات العميل
+    document.getElementById("invCustomerName").textContent = order.customer_name || "-";
+    document.getElementById("invCustomerPhone").textContent = order.customer_phone || "-";
+    document.getElementById("invGovernorate").textContent = order.governorate || "-";
+    document.getElementById("invAddress").textContent = order.customer_address || "-";
+
+    // ✅ المنتجات
+    const itemsBody = document.getElementById("invItemsBody");
+    itemsBody.innerHTML = items.map((item, index) => {
+        const qty = Number(item.quantity || 1);
+        const price = Number(item.price || 0);
+        const lineTotal = price * qty;
+
+        return `
+            <tr>
+                <td>${index + 1}</td>
+                <td class="invoice-item-name">${escapeAdminHTML(item.name || "منتج")}</td>
+                <td>
+                    <span class="invoice-item-size">${escapeAdminHTML(item.size || "-")}</span>
+                </td>
+                <td class="invoice-item-qty">${qty}</td>
+                <td class="invoice-item-price">${price.toLocaleString("en-US")} ج</td>
+                <td class="invoice-item-total">${lineTotal.toLocaleString("en-US")} ج</td>
+            </tr>
+        `;
+    }).join("");
+
+    // ✅ الحساب
+    const itemsTotal = items.reduce((sum, it) => {
+        return sum + (Number(it.price) * Number(it.quantity));
+    }, 0);
+
+    const shipping = Number(order.shipping_cost || 0);
+    const total = Number(order.total_amount || 0);
+
+    document.getElementById("invSubtotal").textContent = `${itemsTotal.toLocaleString("en-US")} ج`;
+
+    const shipEl = document.getElementById("invShipping");
+    if (shipping === 0) {
+        shipEl.textContent = "مجاني 🎉";
+        shipEl.style.color = "#16a34a";
+    } else {
+        shipEl.textContent = `${shipping.toLocaleString("en-US")} ج`;
+        shipEl.style.color = "#111";
+    }
+
+    document.getElementById("invTotal").textContent = `${total.toLocaleString("en-US")} ج`;
+
+    // ✅ طريقة الدفع
+    const paymentText = order.payment_method === "instapay"
+        ? "InstaPay (تحويل فوري)"
+        : "كاش عند الاستلام";
+
+    document.getElementById("invPayment").textContent = paymentText;
+
+    // ✅ توليد QR Code
+    const qrContainer = document.getElementById("invQRCode");
+    if (qrContainer) {
+        qrContainer.innerHTML = "";
+
+        const trackUrl = order.customer_phone
+            ? getTrackingUrl(order.id, order.customer_phone)
+            : null;
+
+        if (trackUrl && typeof QRCode !== "undefined") {
+            try {
+                new QRCode(qrContainer, {
+                    text: trackUrl,
+                    width: 110,
+                    height: 110,
+                    colorDark: "#111827",
+                    colorLight: "#ffffff",
+                    correctLevel: QRCode.CorrectLevel.H
+                });
+            } catch (err) {
+                console.warn("QR Code generation failed:", err);
+                qrContainer.innerHTML = `
+                    <div style="width:110px;height:110px;background:#f1f5f9;display:flex;align-items:center;justify-content:center;color:#94a3b8;font-size:11px;border-radius:8px;">
+                        QR
+                    </div>
+                `;
+            }
+        } else {
+            qrContainer.innerHTML = `
+                <div style="width:110px;height:110px;background:#f1f5f9;display:flex;align-items:center;justify-content:center;color:#94a3b8;font-size:11px;border-radius:8px;">
+                    QR
+                </div>
+            `;
+        }
+    }
+
+    // ✅ نظهر الـ invoice print area
+    const invoiceArea = document.getElementById("invoicePrintArea");
+    if (!invoiceArea) return;
+
+    invoiceArea.classList.add("show");
+
+    // ✅ نستنى لحظة عشان QR Code يترسم
+    setTimeout(() => {
+        window.print();
+
+        // ✅ نرجع نخفي بعد ما نطبع
+        setTimeout(() => {
+            invoiceArea.classList.remove("show");
+        }, 500);
+    }, 400);
 }
 
+// ✅ دالة إغلاق (اختيارية للـ preview)
+function closeInvoicePreview() {
+    document.getElementById("invoicePrintArea")?.classList.remove("show");
+}
+
+window.printOrderInvoice = printOrderInvoice;
+window.closeInvoicePreview = closeInvoicePreview;
 function closeInvoicePreview() {
     document.getElementById("invoicePrintArea")?.classList.remove("show");
 }
