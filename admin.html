@@ -1922,22 +1922,28 @@
 
                     <div class="form-row">
                         <div class="form-group">
-                            <label for="price">السعر الحالي *</label>
+                            <label for="price">سعر البيع للعميل *</label>
                             <input type="number" id="price" min="0" step="0.01" required placeholder="0">
                         </div>
                         <div class="form-group">
-                            <label for="oldPrice">السعر القديم</label>
-                            <input type="number" id="oldPrice" min="0" step="0.01" placeholder="0">
+                            <label for="purchasePrice">سعر الشراء (التكلفة) *</label>
+                            <input type="number" id="purchasePrice" min="0" step="0.01" required placeholder="0">
                         </div>
                     </div>
 
-                    <div class="form-group">
-                        <label for="badge">الشارة</label>
-                        <select id="badge">
-                            <option value="">بدون شارة</option>
-                            <option value="جديد">جديد</option>
-                            <option value="خصم">خصم</option>
-                        </select>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="oldPrice">السعر القديم (قبل الخصم)</label>
+                            <input type="number" id="oldPrice" min="0" step="0.01" placeholder="0">
+                        </div>
+                        <div class="form-group">
+                            <label for="badge">الشارة</label>
+                            <select id="badge">
+                                <option value="">بدون شارة</option>
+                                <option value="جديد">جديد</option>
+                                <option value="خصم">خصم</option>
+                            </select>
+                        </div>
                     </div>
                 </div>
 
@@ -2116,22 +2122,28 @@
 
                     <div class="form-row">
                         <div class="form-group">
-                            <label for="editPrice">السعر الحالي *</label>
+                            <label for="editPrice">سعر البيع للعميل *</label>
                             <input type="number" id="editPrice" min="0" step="0.01" required>
                         </div>
                         <div class="form-group">
-                            <label for="editOldPrice">السعر القديم</label>
-                            <input type="number" id="editOldPrice" min="0" step="0.01">
+                            <label for="editPurchasePrice">سعر الشراء (التكلفة) *</label>
+                            <input type="number" id="editPurchasePrice" min="0" step="0.01" required>
                         </div>
                     </div>
 
-                    <div class="form-group">
-                        <label for="editBadge">الشارة</label>
-                        <select id="editBadge">
-                            <option value="">بدون شارة</option>
-                            <option value="جديد">جديد</option>
-                            <option value="خصم">خصم</option>
-                        </select>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="editOldPrice">السعر القديم (قبل الخصم)</label>
+                            <input type="number" id="editOldPrice" min="0" step="0.01">
+                        </div>
+                        <div class="form-group">
+                            <label for="editBadge">الشارة</label>
+                            <select id="editBadge">
+                                <option value="">بدون شارة</option>
+                                <option value="جديد">جديد</option>
+                                <option value="خصم">خصم</option>
+                            </select>
+                        </div>
                     </div>
                 </div>
 
