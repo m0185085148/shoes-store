@@ -463,6 +463,52 @@ function updateTotalPreview(mode = "add") {
 
     preview.textContent = total;
 }
+// ========================================
+// PROFIT MARGIN CALCULATOR
+// ========================================
+
+function calculateProfitMargin(mode) {
+    const priceId = mode === "edit" ? "editPrice" : "price";
+    const purchaseId = mode === "edit" ? "editPurchasePrice" : "purchasePrice";
+    const boxId = mode === "edit" ? "editProfitMarginBox" : "addProfitMarginBox";
+    const valueId = mode === "edit" ? "editProfitValue" : "addProfitValue";
+    const percentId = mode === "edit" ? "editProfitPercent" : "addProfitPercent";
+
+    const price = Number(document.getElementById(priceId)?.value || 0);
+    const purchase = Number(document.getElementById(purchaseId)?.value || 0);
+
+    const box = document.getElementById(boxId);
+    const valueEl = document.getElementById(valueId);
+    const percentEl = document.getElementById(percentId);
+
+    if (!box || !valueEl || !percentEl) return;
+
+    // لو فيه قيمة ناقصة → نخفي الصندوق
+    if (price <= 0 || purchase <= 0) {
+        box.style.display = "none";
+        return;
+    }
+
+    const profit = price - purchase;
+    const percent = (profit / price) * 100;
+
+    box.style.display = "flex";
+    valueEl.textContent = `${profit.toFixed(2)} ج`;
+    percentEl.textContent = `${percent.toFixed(1)}%`;
+
+    // ✅ تلوين حسب الربح
+    box.classList.remove("positive", "negative", "neutral");
+
+    if (profit > 0) {
+        box.classList.add("positive");
+    } else if (profit < 0) {
+        box.classList.add("negative");
+    } else {
+        box.classList.add("neutral");
+    }
+}
+
+window.calculateProfitMargin = calculateProfitMargin;
 
 // ========================================
 // 14. TIME HELPERS
@@ -1085,6 +1131,11 @@ function setupAddProductModal() {
         clearImageUpload("add");
         addImagesList = [];
         renderMultiImageGrid("add");
+
+        // ✅ نخفي صندوق الهامش (لسه مفيش قيم)
+        const box = document.getElementById("addProfitMarginBox");
+        if (box) box.style.display = "none";
+
         addProductModal?.classList.add("open");
     });
 
@@ -1102,6 +1153,12 @@ function setupAddProductModal() {
     document.querySelectorAll("#editSizesGrid .size-qty-input").forEach(input => {
         input.addEventListener("input", () => updateTotalPreview("edit"));
     });
+
+    // ✅ ربط حساب الهامش
+    document.getElementById("price")?.addEventListener("input", () => calculateProfitMargin("add"));
+    document.getElementById("purchasePrice")?.addEventListener("input", () => calculateProfitMargin("add"));
+    document.getElementById("editPrice")?.addEventListener("input", () => calculateProfitMargin("edit"));
+    document.getElementById("editPurchasePrice")?.addEventListener("input", () => calculateProfitMargin("edit"));
 }
 
 // ========================================
@@ -2326,13 +2383,18 @@ function renderAdminProducts() {
                     <div class="action-btns-group">
                         <button type="button" class="action-icon-btn edit"
                             onclick="prepareEditProduct(${Number(product.id)})"
-                            title="تعديل">
+                            title="تعديل المنتج">
                             <i class="fa-solid fa-pen"></i>
                         </button>
                         <button type="button" class="action-icon-btn stock"
                             onclick="openAdjustStockModal(${Number(product.id)})"
                             title="تعديل المخزون">
                             <i class="fa-solid fa-cubes"></i>
+                        </button>
+                        <button type="button" class="action-icon-btn batch-purchase"
+                            onclick="openBatchPurchaseModal(${Number(product.id)})"
+                            title="شراء دفعة من المورد">
+                            <i class="fa-solid fa-boxes-stacked"></i>
                         </button>
                         <button type="button" class="action-icon-btn delete"
                             onclick="prepareDeleteProduct(${Number(product.id)})"
@@ -2523,6 +2585,9 @@ function prepareEditProduct(productId) {
     // ✅ تحميل الصور الإضافية
     editImagesList = parseImagesArray(product.images);
     renderMultiImageGrid("edit");
+
+    // ✅ حساب الهامش
+    calculateProfitMargin("edit");
 
     editModal.classList.add("open");
 }
@@ -3638,6 +3703,21 @@ function openAdjustStockModal(productId) {
 
     adjustStockModal.classList.add("open");
 }
+// ✅ فتح مودال المخزون على تاب شراء دفعة مباشرة
+function openBatchPurchaseModal(productId) {
+    // نفتح مودال المخزون عادي الأول
+    openAdjustStockModal(productId);
+
+    // بعدين نضغط على تاب "شراء دفعة"
+    setTimeout(() => {
+        const batchTab = document.querySelector('.movement-type-tab[data-type="purchase_batch"]');
+        if (batchTab) {
+            batchTab.click();
+        }
+    }, 50);
+}
+
+window.openBatchPurchaseModal = openBatchPurchaseModal;
 
 function closeAdjustStockModalFn() {
     adjustStockModal?.classList.remove("open");
