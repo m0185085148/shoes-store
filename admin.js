@@ -2407,6 +2407,7 @@ function getProductSnapshot(product) {
         id: product.id,
         name: product.name || "",
         price: Number(product.price || 0),
+        purchase_price: Number(product.purchase_price || 0),
         old_price: product.old_price == null ? null : Number(product.old_price),
         badge: product.badge || null,
         sizes: parseSizes(product.sizes),
@@ -2448,6 +2449,7 @@ function getEditProductData() {
     return {
         name: editName?.value.trim() || "",
         price: Number(editPrice?.value || 0),
+        purchase_price: Number(document.getElementById("editPurchasePrice")?.value || 0),
         old_price: editOldPrice?.value === "" ? null : Number(editOldPrice.value),
         badge: editBadge?.value.trim() || null,
         sizes: sizesWithQty.map(s => s.size),
@@ -2485,6 +2487,13 @@ function prepareEditProduct(productId) {
     editProductId.value = product.id;
     editName.value = product.name || "";
     editPrice.value = product.price ?? "";
+
+    // ✅ سعر الشراء
+    const purchasePriceField = document.getElementById("editPurchasePrice");
+    if (purchasePriceField) {
+        purchasePriceField.value = product.purchase_price ?? "";
+    }
+
     editOldPrice.value = product.old_price ?? "";
     editBadge.value = normalizeBadge(product.badge);
     editDescription.value = product.description || "";
@@ -2659,6 +2668,7 @@ if (editProductForm) {
                     .update({
                         name: newData.name,
                         price: newData.price,
+                        purchase_price: newData.purchase_price || 0,
                         old_price: newData.old_price,
                         badge: newData.badge,
                         sizes: newData.sizes,
@@ -2768,6 +2778,7 @@ if (addProductForm) {
 
         const name = addName?.value.trim() || "";
         const price = Number(addPrice?.value || 0);
+        const purchasePrice = Number(document.getElementById("purchasePrice")?.value || 0);
         const sizesWithQty = getSizesWithQuantities("sizesGrid");
         const sizes = sizesWithQty.map(s => s.size);
         const totalStock = sizesWithQty.reduce((sum, s) => sum + Number(s.quantity || 0), 0);
@@ -2775,6 +2786,20 @@ if (addProductForm) {
         if (!name || !Number.isFinite(price) || price <= 0) {
             alert("يرجى التأكد من إدخال البيانات الصحيحة");
             return;
+        }
+
+        if (!Number.isFinite(purchasePrice) || purchasePrice <= 0) {
+            alert("يرجى إدخال سعر الشراء (التكلفة) بشكل صحيح");
+            return;
+        }
+
+        if (purchasePrice >= price) {
+            const ok = confirm(
+                "⚠️ تنبيه: سعر الشراء أكبر من أو يساوي سعر البيع!\n\n" +
+                "ده معناه إنك مش هتكسب أي ربح من المنتج ده.\n\n" +
+                "هل تريد المتابعة؟"
+            );
+            if (!ok) return;
         }
 
         if (sizes.length === 0) {
@@ -2801,6 +2826,7 @@ if (addProductForm) {
                 sku: newSku,
                 barcode: newBarcode,
                 price,
+                purchase_price: purchasePrice,
                 old_price: addOldPrice?.value === "" ? null : Number(addOldPrice.value),
                 badge: addBadge?.value.trim() || null,
                 sizes: sizes,
@@ -3829,6 +3855,7 @@ async function approveChangeRequest(requestId, fromModal = false) {
                 .update({
                     name: newData.name || "",
                     price: Number(newData.price || 0),
+                    purchase_price: Number(newData.purchase_price || 0),
                     old_price: newData.old_price == null ? null : Number(newData.old_price),
                     badge: newData.badge || null,
                     sizes: Array.isArray(newData.sizes) ? newData.sizes : [],
