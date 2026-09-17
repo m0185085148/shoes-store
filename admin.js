@@ -3324,8 +3324,29 @@ function openAdjustStockModal(productId) {
     document.getElementById("adjustQuantity").min = "1";
     document.getElementById("adjustNotes").value = "";
 
+    // ✅ تنظيف حقل سعر الشراء
+    const costInput = document.getElementById("adjustUnitCost");
+    if (costInput) {
+        costInput.value = "";
+        costInput.required = false;
+    }
+
+    // ✅ إخفاء الحقل افتراضيًا (هنظهره في selectMovementType)
+    const costGroup = document.getElementById("adjustUnitCostGroup");
+    if (costGroup) costGroup.style.display = "none";
+
     // ✅ نحمّل أسباب "شراء" افتراضيًا
     populateAdjustReasonOptions("purchase");
+
+    // ✅ نظهر حقل سعر الشراء (لأن الافتراضي "شراء")
+    if (currentAdjustProduct) {
+        const product = getProductById(currentAdjustProduct.id);
+        if (product?.purchase_price && Number(product.purchase_price) > 0 && costInput) {
+            costInput.value = product.purchase_price;
+        }
+        if (costGroup) costGroup.style.display = "block";
+        if (costInput) costInput.required = true;
+    }
 
     updateAdjustPreview();
 
@@ -3362,6 +3383,48 @@ function selectMovementType(type, btnEl) {
     } else {
         label.textContent = "الكمية (موجب = إضافة، سالب = خصم) *";
         input.min = "";
+    }
+
+    // ✅ إظهار/إخفاء حقل سعر الشراء
+    const unitCostGroup = document.getElementById("adjustUnitCostGroup");
+    const unitCostInput = document.getElementById("adjustUnitCost");
+    const unitCostLabel = document.getElementById("adjustUnitCostLabel");
+
+    if (unitCostGroup && unitCostInput && unitCostLabel) {
+        if (type === "purchase") {
+            // شراء → إجباري
+            unitCostGroup.style.display = "block";
+            unitCostInput.required = true;
+            unitCostLabel.textContent = "سعر الشراء للوحدة *";
+            unitCostInput.value = "";
+
+            // ✅ نملأه تلقائيًا من purchase_price بتاع المنتج لو موجود
+            if (currentAdjustProduct) {
+                const product = getProductById(currentAdjustProduct.id);
+                if (product?.purchase_price && Number(product.purchase_price) > 0) {
+                    unitCostInput.value = product.purchase_price;
+                }
+            }
+        } else if (type === "return") {
+            // مرتجع → اختياري
+            unitCostGroup.style.display = "block";
+            unitCostInput.required = false;
+            unitCostLabel.textContent = "سعر الشراء للوحدة (اختياري)";
+            unitCostInput.value = "";
+
+            // ✅ نملأه من purchase_price برضو
+            if (currentAdjustProduct) {
+                const product = getProductById(currentAdjustProduct.id);
+                if (product?.purchase_price && Number(product.purchase_price) > 0) {
+                    unitCostInput.value = product.purchase_price;
+                }
+            }
+        } else {
+            // تسوية أو تلف → مخفي
+            unitCostGroup.style.display = "none";
+            unitCostInput.required = false;
+            unitCostInput.value = "";
+        }
     }
 
     // ✅ نحدّث قائمة الأسباب حسب النوع
@@ -3436,6 +3499,23 @@ if (adjustStockForm) {
             reason = reasonCustom?.value?.trim() || "";
         }
 
+        // ✅ قراءة سعر الشراء (لو النوع شراء أو مرتجع)
+        let unitCost = null;
+        if (type === "purchase" || type === "return") {
+            const costInput = document.getElementById("adjustUnitCost");
+            const costVal = Number(costInput?.value || 0);
+
+            if (type === "purchase" && costVal <= 0) {
+                alert("اكتب سعر الشراء للوحدة");
+                costInput?.focus();
+                return;
+            }
+
+            if (costVal > 0) {
+                unitCost = costVal;
+            }
+        }
+
         if (!size) {
             alert("اختر المقاس");
             return;
@@ -3467,7 +3547,8 @@ if (adjustStockForm) {
                 p_quantity_change: change,
                 p_movement_type: type,
                 p_reason: reason,
-                p_notes: notes || null
+                p_notes: notes || null,
+                p_unit_cost: unitCost
             });
 
             if (error) throw error;

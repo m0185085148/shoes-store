@@ -2340,6 +2340,17 @@
                     <input type="number" id="adjustQuantity" required min="1" step="1" placeholder="0">
                 </div>
 
+                <div class="form-group" id="adjustUnitCostGroup" style="display:none;">
+                    <label for="adjustUnitCost" id="adjustUnitCostLabel">
+                        سعر الشراء للوحدة *
+                    </label>
+                    <input type="number" id="adjustUnitCost" min="0" step="0.01" placeholder="0">
+                    <small style="display:block;margin-top:6px;color:#64748b;font-size:12px;font-weight:600;">
+                        <i class="fa-solid fa-info-circle"></i>
+                        ده السعر اللي اشتريت بيه القطعة عشان نحسب الأرباح
+                    </small>
+                </div>
+
                 <div class="adjust-preview">
                     <div style="font-size:12px;color:#666;">الرصيد الحالي</div>
                     <div class="from-to">
