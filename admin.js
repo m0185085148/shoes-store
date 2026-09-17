@@ -9446,3 +9446,6 @@ window.confirmShipOrder = confirmShipOrder;
 document.getElementById("shipConfirmBtn")?.addEventListener("click", confirmShipOrder);
 // ✅ ربط زر حفظ الدفعة
 document.getElementById("saveBatchBtn")?.addEventListener("click", saveBatchPurchase);
+
+// ✅ ربط زر إلغاء الدفعة
+document.getElementById("cancelBatchBtn")?.addEventListener("click", closeAdjustStockModalFn);
