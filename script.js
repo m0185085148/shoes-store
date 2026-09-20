@@ -23,6 +23,7 @@ let currentProductId = null;
 let detailsQuantity = 1;
 let detailsSelectedSize = null;
 let currentCustomer = null;
+let productReviewStats = {}; // { productId: { avg, count } }
 
 try {
     cart = JSON.parse(localStorage.getItem('myCart')) || [];
@@ -264,14 +265,18 @@ async function fetchProducts() {
     }
 
     try {
-        const [productsRes, sizesRes] = await Promise.all([
+        const [productsRes, sizesRes, reviewsRes] = await Promise.all([
             supabaseClient
                 .from('products')
                 .select('*')
                 .order('id', { ascending: false }),
             supabaseClient
                 .from('product_sizes')
-                .select('product_id, size, stock, reserved')
+                .select('product_id, size, stock, reserved'),
+            supabaseClient
+                .from('product_reviews')
+                .select('product_id, rating')
+                .eq('status', 'approved')
         ]);
 
         if (productsRes.error) {
@@ -280,6 +285,7 @@ async function fetchProducts() {
             return;
         }
 
+        // ✅ الخريطة الأساسية للمقاسات
         const sizesMap = {};
         (sizesRes.data || []).forEach(row => {
             const pid = Number(row.product_id);
@@ -288,6 +294,25 @@ async function fetchProducts() {
             sizesMap[pid][String(row.size)] = available;
         });
 
+        // ✅ حساب متوسط التقييمات لكل منتج
+        const reviewsMap = {};
+        (reviewsRes.data || []).forEach(r => {
+            const pid = Number(r.product_id);
+            if (!reviewsMap[pid]) reviewsMap[pid] = { sum: 0, count: 0 };
+            reviewsMap[pid].sum += Number(r.rating || 0);
+            reviewsMap[pid].count++;
+        });
+
+        productReviewStats = {};
+        Object.keys(reviewsMap).forEach(pid => {
+            const { sum, count } = reviewsMap[pid];
+            productReviewStats[pid] = {
+                avg: count > 0 ? sum / count : 0,
+                count
+            };
+        });
+
+        // ✅ نجهز المنتجات
         products = (productsRes.data || []).map(p => ({
             ...normalizeProduct(p),
             stockBySize: sizesMap[Number(p.id)] || {}
@@ -310,6 +335,46 @@ async function fetchProducts() {
 // ========================================
 // 9. HOME GRID
 // ========================================
+// ✅ توليد نجوم التقييم الحقيقية
+function renderRatingStars(productId) {
+    const stats = productReviewStats[Number(productId)];
+
+    // لو مفيش مراجعات
+    if (!stats || stats.count === 0) {
+        return `
+            <div class="product-rating-empty">
+                <i class="fa-regular fa-star"></i>
+                <span>لا توجد مراجعات</span>
+            </div>
+        `;
+    }
+
+    const avg = stats.avg;
+    const fullStars = Math.floor(avg);
+    const hasHalf = (avg - fullStars) >= 0.5;
+    const emptyStars = 5 - fullStars - (hasHalf ? 1 : 0);
+
+    let starsHTML = "";
+
+    for (let i = 0; i < fullStars; i++) {
+        starsHTML += `<i class="fa-solid fa-star"></i>`;
+    }
+    if (hasHalf) {
+        starsHTML += `<i class="fa-solid fa-star-half-stroke"></i>`;
+    }
+    for (let i = 0; i < emptyStars; i++) {
+        starsHTML += `<i class="fa-regular fa-star"></i>`;
+    }
+
+    return `
+        <div class="product-rating">
+            <div class="product-rating-stars">${starsHTML}</div>
+            <span class="product-rating-text">
+                ${avg.toFixed(1)} (${stats.count})
+            </span>
+        </div>
+    `;
+}
 
 function productCardHTML(product) {
     const badgeClass = getBadgeClass(product.badge);
@@ -362,7 +427,7 @@ function productCardHTML(product) {
                 <a href="product.html?id=${product.id}">
                     <h3>${escapeHTML(product.name)}</h3>
                 </a>
-                <div class="product-rating">★★★★★</div>
+                ${renderRatingStars(product.id)}
                 <div class="price-box">
                     <span class="product-price">${formatPrice(product.price)} جنيه</span>
                     ${product.oldPrice ? `
@@ -465,6 +530,44 @@ function buildGalleryHTML(product) {
     `;
 }
 
+// ✅ نجوم التقييم في صفحة المنتج
+function renderDetailsRating(productId) {
+    const stats = productReviewStats[Number(productId)];
+
+    if (!stats || stats.count === 0) {
+        return `
+            <div class="details-rating details-rating-empty">
+                <i class="fa-regular fa-star"></i>
+                <span>لا توجد مراجعات بعد — كن أول من يقيّم</span>
+            </div>
+        `;
+    }
+
+    const avg = stats.avg;
+    const fullStars = Math.floor(avg);
+    const hasHalf = (avg - fullStars) >= 0.5;
+    const emptyStars = 5 - fullStars - (hasHalf ? 1 : 0);
+
+    let starsHTML = "";
+    for (let i = 0; i < fullStars; i++) {
+        starsHTML += `<i class="fa-solid fa-star"></i>`;
+    }
+    if (hasHalf) {
+        starsHTML += `<i class="fa-solid fa-star-half-stroke"></i>`;
+    }
+    for (let i = 0; i < emptyStars; i++) {
+        starsHTML += `<i class="fa-regular fa-star"></i>`;
+    }
+
+    return `
+        <div class="details-rating">
+            <div class="details-rating-stars">${starsHTML}</div>
+            <span class="details-rating-score">${avg.toFixed(1)}</span>
+            <span class="details-rating-count">(${stats.count} مراجعة)</span>
+        </div>
+    `;
+}
+
 function renderProductDetails() {
     if (!productDetailsEl) return;
 
@@ -508,9 +611,8 @@ function renderProductDetails() {
             <div class="product-details-info">
                 <h1>${escapeHTML(product.name)}</h1>
 
-                <div class="details-rating">
-                    <span>★★★★★</span>
-                    <span>(5.0)</span>
+                <div class="details-rating-wrapper" id="detailsRatingWrapper">
+                    ${renderDetailsRating(product.id)}
                 </div>
 
                 <div class="details-price">
@@ -1586,6 +1688,20 @@ async function loadProductReviews(productId) {
         if (error) throw error;
 
         currentReviews = data || [];
+
+        // ✅ نحدّث الإحصائيات
+        const total = currentReviews.length;
+        const sum = currentReviews.reduce((s, r) => s + Number(r.rating || 0), 0);
+        productReviewStats[Number(productId)] = {
+            avg: total > 0 ? sum / total : 0,
+            count: total
+        };
+
+        // ✅ نحدّث نجوم صفحة المنتج
+        const wrapper = document.getElementById("detailsRatingWrapper");
+        if (wrapper) {
+            wrapper.innerHTML = renderDetailsRating(productId);
+        }
 
         renderReviewsSummary();
         renderReviewsList();

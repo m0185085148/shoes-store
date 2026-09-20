@@ -5360,6 +5360,26 @@ function showExchangeOrders() {
 
     switchTab('orders');
 }
+function showPendingReviews() {
+    closeNotificationsDropdown();
+
+    postLoadCallback = () => {
+        adminReviewsFilter = "pending";
+
+        document.querySelectorAll(".reviews-filter-chip").forEach(b => {
+            b.classList.remove("active");
+            if (b.dataset.filter === "pending") {
+                b.classList.add("active");
+            }
+        });
+
+        renderAdminReviews();
+    };
+
+    switchTab('reviews');
+}
+
+window.showPendingReviews = showPendingReviews;
 // ========================================
 // 54. SMART ALERTS
 // ========================================
@@ -5440,6 +5460,18 @@ function renderSmartAlerts(lowStockCount) {
             icon: "fa-user-check",
             text: `${pendingApprovals} ${pendingApprovals === 1 ? "طلب موافقة" : "طلبات موافقة"} من الموظفين`,
             action: "switchTab('approvals')",
+            actionText: "مراجعة"
+        });
+    }
+
+    // ✅ مراجعات بانتظار الموافقة
+    const pendingReviews = adminReviews.filter(r => r.status === "pending").length;
+    if (pendingReviews > 0) {
+        alerts.push({
+            type: "info",
+            icon: "fa-star",
+            text: `${pendingReviews} ${pendingReviews === 1 ? "مراجعة جديدة" : "مراجعات جديدة"} بانتظار الموافقة`,
+            action: "showPendingReviews()",
             actionText: "مراجعة"
         });
     }
@@ -5901,12 +5933,18 @@ function startAutoRefresh() {
     autoRefreshInterval = setInterval(async () => {
         if (!isAdminDashboard() || !currentAdmin) return;
 
-        // ✅ نحدّث الطلبات والتنبيهات كل دقيقة
         try {
+            // ✅ 1) نحرر الطلبات المنتهية أولاً
+            await autoReleaseStaleOrders();
+
+            // ✅ 2) نحدّث الطلبات + التنبيهات
             await loadAdminOrders();
             await loadApprovalRequests();
 
-            // ✅ لو المستخدم على شاشة المخزون، نحدّثها كمان
+            // ✅ 3) نحدّث المراجعات (عشان الإشعارات والشارة)
+            await loadAdminReviews();
+
+            // ✅ 4) لو المستخدم على شاشة المخزون، نحدّثها كمان
             const currentTab = document.querySelector(".tab-content.active")?.id;
             if (currentTab === "viewInventory") {
                 await loadAdminProducts();
