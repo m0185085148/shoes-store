@@ -153,6 +153,18 @@
                     </a>
                 </li>
 
+                <li class="nav-item" id="tabNavTreasury"
+                    data-nav-key="treasury"
+                    data-nav-color="#10b981"
+                    data-search="الخزينة treasury cash money محفظة خزنة">
+                    <a href="javascript:void(0)" onclick="switchTab('treasury')">
+                        <div class="nav-item-content">
+                            <i class="fa-solid fa-vault"></i>
+                            <span>الخزينة</span>
+                        </div>
+                    </a>
+                </li>
+
                 <li class="nav-item" id="tabNavReports"
                     data-nav-key="reports"
                     data-nav-color="#ec4899"
@@ -936,6 +948,171 @@
                         <i class="fa-solid fa-spinner fa-spin"></i>
                         <p>جاري التحميل...</p>
                     </div>
+                </div>
+            </div>
+
+        </div>
+
+        <!-- ============ TREASURY ============ -->
+        <div id="viewTreasury" class="tab-content">
+
+            <!-- Wallets Cards -->
+            <div class="treasury-wallets">
+                <div class="treasury-wallet-card wallet-cash">
+                    <div class="treasury-wallet-icon">
+                        <i class="fa-solid fa-money-bill-wave"></i>
+                    </div>
+                    <div class="treasury-wallet-info">
+                        <span>الخزينة النقدية</span>
+                        <strong id="walletCashBalance">0 ج</strong>
+                    </div>
+                    <button type="button" class="treasury-wallet-edit"
+                        onclick="openAdjustWalletModal(1, 'cash')" title="تعديل الرصيد">
+                        <i class="fa-solid fa-pen"></i>
+                    </button>
+                </div>
+
+                <div class="treasury-wallet-card wallet-instapay">
+                    <div class="treasury-wallet-icon">
+                        <i class="fa-solid fa-mobile-screen"></i>
+                    </div>
+                    <div class="treasury-wallet-info">
+                        <span>محفظة إنستاباي</span>
+                        <strong id="walletInstaBalance">0 ج</strong>
+                    </div>
+                    <button type="button" class="treasury-wallet-edit"
+                        onclick="openAdjustWalletModal(2, 'instapay')" title="تعديل الرصيد">
+                        <i class="fa-solid fa-pen"></i>
+                    </button>
+                </div>
+
+                <div class="treasury-wallet-card wallet-total">
+                    <div class="treasury-wallet-icon">
+                        <i class="fa-solid fa-vault"></i>
+                    </div>
+                    <div class="treasury-wallet-info">
+                        <span>إجمالي الرصيد</span>
+                        <strong id="walletTotalBalance">0 ج</strong>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Toolbar -->
+            <div class="treasury-toolbar">
+
+                <!-- Search -->
+                <div class="treasury-search-wrapper">
+                    <i class="fa-solid fa-magnifying-glass"></i>
+                    <input type="text" id="treasurySearchInput" placeholder="ابحث بالمستفيد أو الوصف...">
+                    <button type="button" class="treasury-search-clear" id="treasurySearchClear"
+                        style="display:none;" onclick="clearTreasurySearch()">
+                        <i class="fa-solid fa-xmark"></i>
+                    </button>
+                </div>
+
+                <!-- Type Filter -->
+                <div class="treasury-filter-chips">
+                    <button class="treasury-chip active" data-filter="all" onclick="filterTreasury('all', this)">
+                        <i class="fa-solid fa-list"></i>
+                        <span>الكل</span>
+                        <span class="treasury-chip-count" id="treasuryCountAll">0</span>
+                    </button>
+                    <button class="treasury-chip" data-filter="in" onclick="filterTreasury('in', this)">
+                        <i class="fa-solid fa-arrow-down"></i>
+                        <span>قبض</span>
+                        <span class="treasury-chip-count" id="treasuryCountIn">0</span>
+                    </button>
+                    <button class="treasury-chip" data-filter="out" onclick="filterTreasury('out', this)">
+                        <i class="fa-solid fa-arrow-up"></i>
+                        <span>صرف</span>
+                        <span class="treasury-chip-count" id="treasuryCountOut">0</span>
+                    </button>
+                </div>
+
+                <!-- Date Filter -->
+                <select class="treasury-date-select" id="treasuryDateFilter" onchange="filterTreasuryByDate(this.value)">
+                    <option value="today">اليوم</option>
+                    <option value="week">آخر 7 أيام</option>
+                    <option value="month" selected>هذا الشهر</option>
+                    <option value="all">كل الفترات</option>
+                </select>
+
+                <!-- Add Button -->
+                <button type="button" class="btn-add-product" onclick="openAddTransactionModal()">
+                    <i class="fa-solid fa-plus"></i>
+                    عملية جديدة
+                </button>
+            </div>
+
+            <!-- Stats Bar -->
+            <div class="treasury-stats-bar">
+                <div class="treasury-stat">
+                    <span class="treasury-stat-label">
+                        <i class="fa-solid fa-arrow-down" style="color:#16a34a;"></i>
+                        إجمالي القبض
+                    </span>
+                    <strong id="treasuryStatIn" style="color:#16a34a;">0 ج</strong>
+                </div>
+                <div class="treasury-stat">
+                    <span class="treasury-stat-label">
+                        <i class="fa-solid fa-arrow-up" style="color:#dc2626;"></i>
+                        إجمالي الصرف
+                    </span>
+                    <strong id="treasuryStatOut" style="color:#dc2626;">0 ج</strong>
+                </div>
+                <div class="treasury-stat">
+                    <span class="treasury-stat-label">
+                        <i class="fa-solid fa-calculator" style="color:#8b5cf6;"></i>
+                        صافي الحركة
+                    </span>
+                    <strong id="treasuryStatNet" style="color:#8b5cf6;">0 ج</strong>
+                </div>
+                <div class="treasury-stat">
+                    <span class="treasury-stat-label">
+                        <i class="fa-solid fa-list" style="color:#64748b;"></i>
+                        عدد الحركات
+                    </span>
+                    <strong id="treasuryStatCount" style="color:#111;">0</strong>
+                </div>
+            </div>
+
+            <!-- Transactions Table -->
+            <div class="panel">
+                <div class="panel-header">
+                    <span class="panel-title">
+                        <i class="fa-solid fa-receipt"></i>
+                        سجل الحركات
+                    </span>
+                    <button type="button" class="btn-export" onclick="exportTreasuryCSV()">
+                        <i class="fa-solid fa-file-csv"></i>
+                        CSV
+                    </button>
+                </div>
+
+                <div class="table-wrap">
+                    <table class="products-table orders-table-modern">
+                        <thead>
+                            <tr>
+                                <th style="width:60px;">#</th>
+                                <th style="width:130px;">التاريخ</th>
+                                <th style="width:100px;">النوع</th>
+                                <th style="width:120px;">المحفظة</th>
+                                <th style="width:130px;">المستفيد</th>
+                                <th>الوصف</th>
+                                <th style="width:120px;">المبلغ</th>
+                                <th style="width:130px;">بواسطة</th>
+                                <th style="width:70px;">تفاصيل</th>
+                            </tr>
+                        </thead>
+                        <tbody id="treasuryList">
+                            <tr>
+                                <td colspan="9" style="text-align:center;padding:40px;color:#94a3b8;">
+                                    <i class="fa-solid fa-spinner fa-spin" style="font-size:24px;display:block;margin-bottom:10px;"></i>
+                                    جاري التحميل...
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
                 </div>
             </div>
 
@@ -2815,6 +2992,162 @@
                         حفظ الملاحظة
                     </button>
                     <button type="button" class="btn-secondary-modal" onclick="closeAddCustomerNoteModal()">
+                        إلغاء
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- ============ ADD TRANSACTION MODAL ============ -->
+    <div class="modal" id="addTransactionModal">
+        <div class="modal-content" style="max-width:520px;">
+            <div class="modal-header">
+                <div class="modal-title-group">
+                    <div class="modal-icon" id="transactionModalIcon"
+                        style="background:#dcfce7;color:#16a34a;">
+                        <i class="fa-solid fa-plus"></i>
+                    </div>
+                    <div>
+                        <h2 id="transactionModalTitle">عملية جديدة</h2>
+                        <p style="font-size:13px;color:#888;margin-top:2px;">
+                            سجّل حركة قبض أو صرف
+                        </p>
+                    </div>
+                </div>
+                <button type="button" class="close-modal" onclick="closeAddTransactionModal()">&times;</button>
+            </div>
+
+            <form id="addTransactionForm">
+
+                <!-- Type Selector -->
+                <div class="transaction-type-selector">
+                    <button type="button" class="transaction-type-btn active" data-type="in"
+                        onclick="selectTransactionType('in', this)">
+                        <i class="fa-solid fa-arrow-down"></i>
+                        <span>قبض</span>
+                    </button>
+                    <button type="button" class="transaction-type-btn" data-type="out"
+                        onclick="selectTransactionType('out', this)">
+                        <i class="fa-solid fa-arrow-up"></i>
+                        <span>صرف</span>
+                    </button>
+                </div>
+                <input type="hidden" id="transactionType" value="in">
+
+                <!-- Wallet -->
+                <div class="form-group">
+                    <label for="transactionWallet">المحفظة *</label>
+                    <select id="transactionWallet" required>
+                        <option value="1">الخزينة النقدية</option>
+                        <option value="2">محفظة إنستاباي</option>
+                    </select>
+                </div>
+
+                <!-- Amount -->
+                <div class="form-group">
+                    <label for="transactionAmount">المبلغ *</label>
+                    <input type="number" id="transactionAmount" min="0.01" step="0.01"
+                        required placeholder="0">
+                </div>
+
+                <!-- Beneficiary -->
+                <div class="form-group">
+                    <label for="transactionBeneficiaryType">نوع المستفيد</label>
+                    <select id="transactionBeneficiaryType" onchange="onBeneficiaryTypeChange()">
+                        <option value="">— اختر —</option>
+                        <option value="supplier">🏭 مورد</option>
+                        <option value="entity">🏢 جهة (إيجار، خدمات)</option>
+                        <option value="employee">👤 موظف (راتب)</option>
+                        <option value="partner">🤝 شريك</option>
+                        <option value="customer">🧑 عميل</option>
+                        <option value="other">📌 أخرى</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label for="transactionBeneficiaryName">اسم المستفيد</label>
+                    <input type="text" id="transactionBeneficiaryName"
+                        placeholder="مثال: محمد المورد" maxlength="100">
+                </div>
+
+                <!-- Notes -->
+                <div class="form-group">
+                    <label for="transactionNotes">الوصف / الملاحظات</label>
+                    <textarea id="transactionNotes" rows="3"
+                        placeholder="مثال: دفع فاتورة إيجار سبتمبر..." maxlength="500"></textarea>
+                </div>
+
+                <div class="modal-actions">
+                    <button type="submit" class="btn-primary-modal" id="saveTransactionBtn">
+                        <i class="fa-solid fa-check"></i>
+                        حفظ الحركة
+                    </button>
+                    <button type="button" class="btn-secondary-modal" onclick="closeAddTransactionModal()">
+                        إلغاء
+                    </button>
+                </div>
+
+            </form>
+        </div>
+    </div>
+
+    <!-- ============ ADJUST WALLET MODAL ============ -->
+    <div class="modal" id="adjustWalletModal">
+        <div class="modal-content" style="max-width:460px;">
+            <div class="modal-header">
+                <div class="modal-title-group">
+                    <div class="modal-icon" style="background:#fef3c7;color:#d97706;">
+                        <i class="fa-solid fa-sliders"></i>
+                    </div>
+                    <div>
+                        <h2>تعديل رصيد المحفظة</h2>
+                        <p style="font-size:13px;color:#888;margin-top:2px;">
+                            لضبط الرصيد الفعلي
+                        </p>
+                    </div>
+                </div>
+                <button type="button" class="close-modal" onclick="closeAdjustWalletModal()">&times;</button>
+            </div>
+
+            <div id="adjustWalletInfo" style="margin-bottom:16px;padding:14px;background:#f9fafb;border-radius:10px;">
+                <div style="font-size:13px;color:#64748b;font-weight:700;margin-bottom:6px;">
+                    المحفظة الحالية
+                </div>
+                <div style="font-size:18px;font-weight:800;color:#111;" id="adjustWalletName">-</div>
+                <div style="font-size:13px;color:#64748b;font-weight:700;margin-top:8px;">
+                    الرصيد الحالي: 
+                    <strong style="color:#16a34a;font-size:16px;direction:ltr;" id="adjustWalletCurrent">0 ج</strong>
+                </div>
+            </div>
+
+            <form id="adjustWalletForm">
+                <input type="hidden" id="adjustWalletId">
+                <input type="hidden" id="adjustWalletType">
+
+                <div class="form-group">
+                    <label for="adjustWalletNewBalance">الرصيد الجديد *</label>
+                    <input type="number" id="adjustWalletNewBalance" step="0.01" required
+                        placeholder="0">
+                    <small style="display:block;margin-top:6px;color:#64748b;font-size:12px;font-weight:600;">
+                        <i class="fa-solid fa-info-circle"></i>
+                        اكتب الرصيد الفعلي اللي موجود دلوقتي في الخزينة
+                    </small>
+                </div>
+
+                <div class="form-group">
+                    <label for="adjustWalletReason">السبب *</label>
+                    <input type="text" id="adjustWalletReason" required
+                        placeholder="مثال: تسوية الرصيد بعد جرد"
+                        maxlength="200">
+                </div>
+
+                <div class="modal-actions">
+                    <button type="submit" class="btn-primary-modal" id="saveWalletAdjustBtn">
+                        <i class="fa-solid fa-check"></i>
+                        تأكيد التعديل
+                    </button>
+                    <button type="button" class="btn-secondary-modal" onclick="closeAdjustWalletModal()">
                         إلغاء
                     </button>
                 </div>
