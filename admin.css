@@ -8724,3 +8724,222 @@ body {
         display: none;
     }
 }
+/* =========================================
+   MODERN NOTIFICATION BADGES
+   ========================================= */
+
+.sidebar .nav-item .tab-badge {
+    /* ✅ التنسيق الأساسي */
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    min-width: 26px;
+    height: 22px;
+    padding: 0 8px;
+    border-radius: 11px;
+
+    /* ✅ الخط */
+    font-family: inherit;
+    font-size: 11px;
+    font-weight: 800;
+    line-height: 1;
+    letter-spacing: 0.3px;
+
+    /* ✅ الألوان الافتراضية (ديناميكية حسب النوع) */
+    background: linear-gradient(135deg, #ef4444, #dc2626);
+    color: #fff;
+
+    /* ✅ الظل + الحدود */
+    box-shadow:
+        0 0 0 2px rgba(15, 23, 42, 0.9),
+        0 2px 8px rgba(239, 68, 68, 0.4);
+
+    /* ✅ الانتقالات */
+    transition: all 0.25s cubic-bezier(.2,.8,.2,1);
+
+    /* ✅ منع الانكماش */
+    flex-shrink: 0;
+    position: relative;
+}
+
+/* ✅ نقطة النبض (pulse dot) */
+.sidebar .nav-item .tab-badge.danger::before {
+    content: "";
+    position: absolute;
+    top: -2px;
+    right: -2px;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: #ef4444;
+    box-shadow: 0 0 0 2px rgba(15, 23, 42, 0.9);
+    animation: badgePulse 1.8s infinite;
+}
+
+/* ✅ الأنواع المختلفة */
+.sidebar .nav-item .tab-badge.danger {
+    background: linear-gradient(135deg, #ef4444, #dc2626);
+    box-shadow:
+        0 0 0 2px rgba(15, 23, 42, 0.9),
+        0 2px 8px rgba(239, 68, 68, 0.4);
+}
+
+.sidebar .nav-item .tab-badge.warning {
+    background: linear-gradient(135deg, #fbbf24, #d97706);
+    color: #78350f;
+    box-shadow:
+        0 0 0 2px rgba(15, 23, 42, 0.9),
+        0 2px 8px rgba(251, 191, 36, 0.4);
+}
+
+/* ✅ Warning مش بياخد pulse dot (أقل إلحاح) */
+.sidebar .nav-item .tab-badge.warning::before {
+    display: none;
+}
+
+/* ✅ Hover effect */
+.sidebar .nav-item a:hover .tab-badge {
+    transform: scale(1.1);
+}
+
+.sidebar .nav-item.active .tab-badge {
+    transform: scale(1.05);
+    box-shadow:
+        0 0 0 2px rgba(255, 255, 255, 0.3),
+        0 3px 10px rgba(0, 0, 0, 0.3);
+}
+
+/* ✅ نبض */
+@keyframes badgePulse {
+    0%, 100% {
+        transform: scale(1);
+        opacity: 1;
+    }
+    50% {
+        transform: scale(1.4);
+        opacity: 0.6;
+    }
+}
+
+/* =========================================
+   NOTIFICATIONS BELL (تحسين شكل الجرس)
+   ========================================= */
+
+.notifications-badge {
+    position: absolute;
+    top: -5px;
+    left: -5px;
+    min-width: 22px;
+    height: 22px;
+    border-radius: 11px;
+    padding: 0 7px;
+
+    background: linear-gradient(135deg, #ef4444, #dc2626);
+    color: #fff;
+    font-size: 11px;
+    font-weight: 800;
+    line-height: 1;
+    letter-spacing: 0.3px;
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    border: 2px solid #fff;
+    box-shadow:
+        0 2px 8px rgba(239, 68, 68, 0.4);
+
+    /* ✅ نبض حقيقي */
+    animation: bellPulse 2s infinite;
+}
+
+@keyframes bellPulse {
+    0%, 100% {
+        transform: scale(1);
+        box-shadow:
+            0 2px 8px rgba(239, 68, 68, 0.4),
+            0 0 0 0 rgba(239, 68, 68, 0.6);
+    }
+    50% {
+        transform: scale(1.05);
+        box-shadow:
+            0 2px 12px rgba(239, 68, 68, 0.5),
+            0 0 0 8px rgba(239, 68, 68, 0);
+    }
+}
+
+.notifications-btn:hover .notifications-badge {
+    transform: scale(1.15);
+}
+
+/* =========================================
+   COLLAPSED SIDEBAR — شارات مصغّرة
+   ========================================= */
+
+.sidebar.collapsed .nav-item {
+    position: relative;
+}
+
+.sidebar.collapsed .nav-item .tab-badge {
+    position: absolute;
+    top: 4px;
+    left: 4px;
+    min-width: 10px;
+    height: 10px;
+    padding: 0;
+    font-size: 0;
+    border-radius: 50%;
+    border: 2px solid #111827;
+    box-shadow: none;
+    animation: none;
+}
+
+.sidebar.collapsed .nav-item .tab-badge.danger {
+    background: #ef4444;
+}
+
+.sidebar.collapsed .nav-item .tab-badge.warning {
+    background: #fbbf24;
+}
+
+.sidebar.collapsed .nav-item .tab-badge::before {
+    display: none;
+}
+
+/* =========================================
+   MOBILE — الشارات بحجم عادي
+   ========================================= */
+
+@media (max-width: 1100px) {
+    .sidebar .nav-item .tab-badge {
+        min-width: 26px;
+        height: 22px;
+        padding: 0 8px;
+        font-size: 11px;
+        position: static;
+        border-radius: 11px;
+        border: 0;
+        box-shadow:
+            0 0 0 2px rgba(15, 23, 42, 0.9),
+            0 2px 8px rgba(239, 68, 68, 0.4);
+    }
+
+    .sidebar.collapsed .nav-item .tab-badge {
+        position: static;
+        min-width: 26px;
+        height: 22px;
+        padding: 0 8px;
+        font-size: 11px;
+        border-radius: 11px;
+        border: 0;
+        box-shadow:
+            0 0 0 2px rgba(15, 23, 42, 0.9),
+            0 2px 8px rgba(239, 68, 68, 0.4);
+        animation: none;
+    }
+
+    .sidebar .nav-item .tab-badge.danger::before {
+        display: none;
+    }
+}
