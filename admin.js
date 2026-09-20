@@ -10869,3 +10869,277 @@ window.openReviewReplyModal = openReviewReplyModal;
 window.closeReviewReplyModal = closeReviewReplyModal;
 window.saveReviewReply = saveReviewReply;
 window.deleteReviewReply = deleteReviewReply;
+// ========================================
+// SIDEBAR V2 (Collapse + Search + Favorites)
+// ========================================
+
+const SIDEBAR_COLLAPSED_KEY = "sidebarCollapsed";
+const SIDEBAR_FAVS_KEY = "sidebarFavorites";
+
+// ✅ طي / فتح الـ Sidebar
+function toggleSidebarCollapse() {
+    const sidebar = document.getElementById("sidebar");
+    if (!sidebar) return;
+
+    sidebar.classList.toggle("collapsed");
+    const isCollapsed = sidebar.classList.contains("collapsed");
+
+    try {
+        localStorage.setItem(SIDEBAR_COLLAPSED_KEY, isCollapsed ? "1" : "0");
+    } catch (e) {}
+}
+
+// ✅ استرجاع الحالة المحفوظة
+function restoreSidebarState() {
+    if (window.innerWidth <= 1100) {
+        document.getElementById("sidebar")?.classList.remove("collapsed");
+        return;
+    }
+
+    try {
+        if (localStorage.getItem(SIDEBAR_COLLAPSED_KEY) === "1") {
+            document.getElementById("sidebar")?.classList.add("collapsed");
+        }
+    } catch (e) {}
+}
+
+// ✅ مراقبة حجم الشاشة
+window.addEventListener("resize", () => {
+    const sidebar = document.getElementById("sidebar");
+    if (!sidebar) return;
+
+    if (window.innerWidth <= 1100) {
+        sidebar.classList.remove("collapsed");
+    } else {
+        restoreSidebarState();
+    }
+});
+
+// ========================================
+// SIDEBAR SEARCH
+// ========================================
+
+function setupSidebarSearch() {
+    const input = document.getElementById("sidebarSearchInput");
+    const clearBtn = document.getElementById("sidebarSearchClear");
+    if (!input) return;
+
+    let timer;
+    input.addEventListener("input", (e) => {
+        const val = e.target.value;
+        if (clearBtn) clearBtn.style.display = val ? "flex" : "none";
+
+        clearTimeout(timer);
+        timer = setTimeout(() => filterSidebarNav(val), 150);
+    });
+}
+
+function filterSidebarNav(query) {
+    const q = String(query || "").trim().toLowerCase();
+    const items = document.querySelectorAll("#mainNavMenu .nav-item");
+
+    items.forEach(item => {
+        if (!q) {
+            item.style.display = "";
+            return;
+        }
+
+        const searchText = String(item.dataset.search || "").toLowerCase();
+        item.style.display = searchText.includes(q) ? "" : "none";
+    });
+
+    // نحدّث حالة قسم المفضلة
+    renderSidebarFavorites();
+}
+
+function clearSidebarSearch() {
+    const input = document.getElementById("sidebarSearchInput");
+    const clearBtn = document.getElementById("sidebarSearchClear");
+
+    if (input) input.value = "";
+    if (clearBtn) clearBtn.style.display = "none";
+
+    filterSidebarNav("");
+}
+
+// ========================================
+// SIDEBAR FAVORITES
+// ========================================
+
+function getSidebarFavorites() {
+    try {
+        const raw = localStorage.getItem(SIDEBAR_FAVS_KEY);
+        return raw ? JSON.parse(raw) : [];
+    } catch (e) {
+        return [];
+    }
+}
+
+function saveSidebarFavorites(list) {
+    try {
+        localStorage.setItem(SIDEBAR_FAVS_KEY, JSON.stringify(list));
+    } catch (e) {}
+}
+
+function toggleFavorite(e, key) {
+    if (e) {
+        e.preventDefault();
+        e.stopPropagation();
+    }
+
+    if (!key) return;
+
+    let favorites = getSidebarFavorites();
+
+    if (favorites.includes(key)) {
+        favorites = favorites.filter(k => k !== key);
+        showToast("تم إزالة العنصر من المفضلة");
+    } else {
+        favorites.push(key);
+        showToast("تم إضافة العنصر للمفضلة ⭐");
+    }
+
+    saveSidebarFavorites(favorites);
+
+    renderSidebarFavorites();
+    updateFavoriteStars();
+}
+
+function updateFavoriteStars() {
+    const favorites = getSidebarFavorites();
+
+    document.querySelectorAll("#mainNavMenu .nav-item").forEach(item => {
+        const key = item.dataset.navKey;
+        if (!key) return;
+
+        const btn = item.querySelector(".nav-fav-btn");
+        if (!btn) return;
+
+        const icon = btn.querySelector("i");
+        const isFav = favorites.includes(key);
+
+        item.classList.toggle("is-favorite", isFav);
+
+        if (icon) {
+            icon.className = isFav ? "fa-solid fa-star" : "fa-regular fa-star";
+        }
+
+        btn.title = isFav ? "إزالة من المفضلة" : "إضافة للمفضلة";
+    });
+}
+
+function renderSidebarFavorites() {
+    const favWrapper = document.getElementById("sidebarFavorites");
+    const menuEl = document.getElementById("favoritesMenu");
+    if (!favWrapper || !menuEl) return;
+
+    const favorites = getSidebarFavorites();
+
+    // ✅ لو مفيش مفضلة، اخفي القسم
+    if (!favorites.length) {
+        favWrapper.style.display = "none";
+        menuEl.innerHTML = "";
+        return;
+    }
+
+    // ✅ لو فيه بحث، نخفي المفضلة عشان منلخبطش
+    const searchInput = document.getElementById("sidebarSearchInput");
+    const searchVal = searchInput?.value?.trim() || "";
+    if (searchVal) {
+        favWrapper.style.display = "none";
+        return;
+    }
+
+    favWrapper.style.display = "";
+
+    // ✅ نبني الـ clones
+    const clones = [];
+
+    favorites.forEach(key => {
+        const original = document.querySelector(`#mainNavMenu .nav-item[data-nav-key="${key}"]`);
+        if (!original) return;
+
+        const clone = original.cloneNode(true);
+        clone.removeAttribute("id");
+        clone.classList.add("favorite-clone");
+        clone.style.display = ""; // نضمن إنه ظاهر
+
+        // ✅ نربط زر المفضلة في الكلون
+        const btn = clone.querySelector(".nav-fav-btn");
+        if (btn) {
+            btn.onclick = (e) => toggleFavorite(e, key);
+        }
+
+        clones.push(clone);
+    });
+
+    menuEl.innerHTML = "";
+    clones.forEach(c => menuEl.appendChild(c));
+}
+
+// ✅ نزامن الـ active state للمفضلة
+function syncFavoritesActiveState() {
+    const activeOriginal = document.querySelector('#mainNavMenu .nav-item.active');
+    const key = activeOriginal?.dataset.navKey;
+
+    document.querySelectorAll("#favoritesMenu .nav-item").forEach(item => {
+        item.classList.toggle("active", item.dataset.navKey === key);
+    });
+}
+
+// ✅ إضافة زر المفضلة لكل عنصر + ألوان
+function injectSidebarFeatures() {
+    const items = document.querySelectorAll("#mainNavMenu .nav-item");
+
+    items.forEach(item => {
+        const key = item.dataset.navKey;
+        if (!key) return;
+
+        // ✅ نضيف زر المفضلة لو مش موجود
+        const link = item.querySelector("a");
+        if (link && !link.querySelector(".nav-fav-btn")) {
+            const btn = document.createElement("button");
+            btn.type = "button";
+            btn.className = "nav-fav-btn";
+            btn.title = "إضافة للمفضلة";
+            btn.innerHTML = '<i class="fa-regular fa-star"></i>';
+            btn.addEventListener("click", (e) => toggleFavorite(e, key));
+
+            // ✅ نحطه بعد الـ nav-item-content (على الطرف التاني)
+            link.appendChild(btn);
+        }
+
+        // ✅ نضيف --nav-color
+        if (item.dataset.navColor) {
+            item.style.setProperty("--nav-color", item.dataset.navColor);
+        }
+    });
+}
+
+// ✅ استدعاء كل حاجة عند تحميل الصفحة
+function initSidebarFeatures() {
+    // ✅ نضيف الأزرار والألوان
+    injectSidebarFeatures();
+
+    // ✅ نستعيد حالة الطي
+    restoreSidebarState();
+
+    // ✅ نفعّل البحث
+    setupSidebarSearch();
+
+    // ✅ نعرض المفضلة
+    renderSidebarFavorites();
+    updateFavoriteStars();
+
+    // ✅ نزامن الحالة النشطة
+    setTimeout(syncFavoritesActiveState, 100);
+}
+
+// ✅ Exports
+window.toggleSidebarCollapse = toggleSidebarCollapse;
+window.clearSidebarSearch = clearSidebarSearch;
+window.toggleFavorite = toggleFavorite;
+window.renderSidebarFavorites = renderSidebarFavorites;
+window.updateFavoriteStars = updateFavoriteStars;
+window.syncFavoritesActiveState = syncFavoritesActiveState;
+window.initSidebarFeatures = initSidebarFeatures;
