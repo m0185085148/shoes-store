@@ -6,6 +6,7 @@
     <title>لوحة التحكم - STEP Store</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800&display=swap" rel="stylesheet">
     <!-- ✅ Flatpickr for custom date format -->
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
@@ -448,6 +449,131 @@
                         </div>
                     </div>
                 </div>
+            </div>
+
+            <!-- ============ ROW 4: Sales Chart ============ -->
+            <div class="dashboard-section-title">
+                <i class="fa-solid fa-chart-area"></i>
+                تحليل المبيعات
+            </div>
+
+            <div class="panel dash-chart-panel">
+                <div class="panel-header">
+                    <div>
+                        <span class="panel-title">
+                            <i class="fa-solid fa-chart-line"></i>
+                            مبيعات آخر 14 يوم
+                        </span>
+                        <p class="panel-subtitle">إجمالي المبيعات اليومية بالجنيه المصري</p>
+                    </div>
+                    <div class="dash-chart-stats">
+                        <div class="dash-chart-stat">
+                            <strong id="chartStatTotal">0 ج</strong>
+                            <span>إجمالي الفترة</span>
+                        </div>
+                        <div class="dash-chart-stat">
+                            <strong id="chartStatAvg">0 ج</strong>
+                            <span>المتوسط اليومي</span>
+                        </div>
+                        <div class="dash-chart-stat">
+                            <strong id="chartStatBest">-</strong>
+                            <span>أفضل يوم</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="dash-chart-wrapper">
+                    <canvas id="dashSalesChart"></canvas>
+                </div>
+            </div>
+
+            <!-- ============ ROW 5: Week Comparison + Insights ============ -->
+            <div class="dash-insights-grid">
+
+                <!-- Week Comparison -->
+                <div class="dash-insight-card dash-week-card">
+                    <div class="dash-insight-header">
+                        <div class="dash-insight-icon" style="background: linear-gradient(135deg, #8b5cf6, #7c3aed);">
+                            <i class="fa-solid fa-arrow-trend-up"></i>
+                        </div>
+                        <div>
+                            <h3>مقارنة الأسبوع</h3>
+                            <p>الأسبوع الحالي vs الأسبوع الماضي</p>
+                        </div>
+                    </div>
+
+                    <div class="dash-week-comparison">
+                        <div class="dash-week-box dash-week-current">
+                            <span class="dash-week-label">الأسبوع الحالي</span>
+                            <strong id="weekCurrentValue">0 ج</strong>
+                            <span class="dash-week-orders" id="weekCurrentOrders">0 طلب</span>
+                        </div>
+
+                        <div class="dash-week-box dash-week-previous">
+                            <span class="dash-week-label">الأسبوع الماضي</span>
+                            <strong id="weekPreviousValue">0 ج</strong>
+                            <span class="dash-week-orders" id="weekPreviousOrders">0 طلب</span>
+                        </div>
+                    </div>
+
+                    <div class="dash-week-change" id="weekChangeBox">
+                        <div class="dash-week-change-icon" id="weekChangeIcon">
+                            <i class="fa-solid fa-minus"></i>
+                        </div>
+                        <div class="dash-week-change-info">
+                            <strong id="weekChangeValue">0%</strong>
+                            <span id="weekChangeText">لا يوجد تغيير</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Insights -->
+                <div class="dash-insight-card">
+                    <div class="dash-insight-header">
+                        <div class="dash-insight-icon" style="background: linear-gradient(135deg, #f59e0b, #d97706);">
+                            <i class="fa-solid fa-lightbulb"></i>
+                        </div>
+                        <div>
+                            <h3>معلومات ذكية</h3>
+                            <p>أفضل الأوقات والمحافظات</p>
+                        </div>
+                    </div>
+
+                    <div class="dash-insights-list">
+                        <div class="dash-insight-item">
+                            <div class="dash-insight-item-icon" style="background:#dbeafe;color:#2563eb;">
+                                <i class="fa-solid fa-calendar-day"></i>
+                            </div>
+                            <div class="dash-insight-item-info">
+                                <span>أكثر يوم مبيعًا</span>
+                                <strong id="insightBestDay">-</strong>
+                                <small id="insightBestDayValue">0 ج</small>
+                            </div>
+                        </div>
+
+                        <div class="dash-insight-item">
+                            <div class="dash-insight-item-icon" style="background:#fef3c7;color:#d97706;">
+                                <i class="fa-solid fa-clock"></i>
+                            </div>
+                            <div class="dash-insight-item-info">
+                                <span>أكثر ساعة طلبات</span>
+                                <strong id="insightBestHour">-</strong>
+                                <small id="insightBestHourValue">0 طلب</small>
+                            </div>
+                        </div>
+
+                        <div class="dash-insight-item">
+                            <div class="dash-insight-item-icon" style="background:#dcfce7;color:#16a34a;">
+                                <i class="fa-solid fa-map-location-dot"></i>
+                            </div>
+                            <div class="dash-insight-item-info">
+                                <span>أكثر محافظة</span>
+                                <strong id="insightBestGov">-</strong>
+                                <small id="insightBestGovValue">0%</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
             </div>
         </div>
 
