@@ -953,174 +953,307 @@
 
         </div>
 
-        <!-- ============ TREASURY ============ -->
+                <!-- ============ TREASURY ============ -->
         <div id="viewTreasury" class="tab-content">
 
-            <!-- Wallets Cards -->
-            <div class="treasury-wallets">
-                <div class="treasury-wallet-card wallet-cash">
-                    <div class="treasury-wallet-icon">
-                        <i class="fa-solid fa-money-bill-wave"></i>
-                    </div>
-                    <div class="treasury-wallet-info">
-                        <span>الخزينة النقدية</span>
-                        <strong id="walletCashBalance">0 ج</strong>
-                    </div>
-                    <button type="button" class="treasury-wallet-edit"
-                        onclick="openAdjustWalletModal(1, 'cash')" title="تعديل الرصيد">
-                        <i class="fa-solid fa-pen"></i>
-                    </button>
-                </div>
-
-                <div class="treasury-wallet-card wallet-instapay">
-                    <div class="treasury-wallet-icon">
-                        <i class="fa-solid fa-mobile-screen"></i>
-                    </div>
-                    <div class="treasury-wallet-info">
-                        <span>محفظة إنستاباي</span>
-                        <strong id="walletInstaBalance">0 ج</strong>
-                    </div>
-                    <button type="button" class="treasury-wallet-edit"
-                        onclick="openAdjustWalletModal(2, 'instapay')" title="تعديل الرصيد">
-                        <i class="fa-solid fa-pen"></i>
-                    </button>
-                </div>
-
-                <div class="treasury-wallet-card wallet-total">
-                    <div class="treasury-wallet-icon">
-                        <i class="fa-solid fa-vault"></i>
-                    </div>
-                    <div class="treasury-wallet-info">
-                        <span>إجمالي الرصيد</span>
-                        <strong id="walletTotalBalance">0 ج</strong>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Toolbar -->
-            <div class="treasury-toolbar">
-
-                <!-- Search -->
-                <div class="treasury-search-wrapper">
-                    <i class="fa-solid fa-magnifying-glass"></i>
-                    <input type="text" id="treasurySearchInput" placeholder="ابحث بالمستفيد أو الوصف...">
-                    <button type="button" class="treasury-search-clear" id="treasurySearchClear"
-                        style="display:none;" onclick="clearTreasurySearch()">
-                        <i class="fa-solid fa-xmark"></i>
-                    </button>
-                </div>
-
-                <!-- Type Filter -->
-                <div class="treasury-filter-chips">
-                    <button class="treasury-chip active" data-filter="all" onclick="filterTreasury('all', this)">
-                        <i class="fa-solid fa-list"></i>
-                        <span>الكل</span>
-                        <span class="treasury-chip-count" id="treasuryCountAll">0</span>
-                    </button>
-                    <button class="treasury-chip" data-filter="in" onclick="filterTreasury('in', this)">
-                        <i class="fa-solid fa-arrow-down"></i>
-                        <span>قبض</span>
-                        <span class="treasury-chip-count" id="treasuryCountIn">0</span>
-                    </button>
-                    <button class="treasury-chip" data-filter="out" onclick="filterTreasury('out', this)">
-                        <i class="fa-solid fa-arrow-up"></i>
-                        <span>صرف</span>
-                        <span class="treasury-chip-count" id="treasuryCountOut">0</span>
-                    </button>
-                </div>
-
-                <!-- Date Filter -->
-                <select class="treasury-date-select" id="treasuryDateFilter" onchange="filterTreasuryByDate(this.value)">
-                    <option value="today">اليوم</option>
-                    <option value="week">آخر 7 أيام</option>
-                    <option value="month" selected>هذا الشهر</option>
-                    <option value="all">كل الفترات</option>
-                </select>
-
-                <!-- Add Button -->
-                <button type="button" class="btn-add-product" onclick="openAddTransactionModal()">
-                    <i class="fa-solid fa-plus"></i>
-                    عملية جديدة
+            <!-- Sub-tabs -->
+            <div class="treasury-sub-tabs">
+                <button type="button" class="treasury-sub-tab active"
+                    data-subtab="transactions"
+                    onclick="switchTreasurySubTab('transactions', this)">
+                    <i class="fa-solid fa-list"></i>
+                    <span>الحركات</span>
+                </button>
+                <button type="button" class="treasury-sub-tab"
+                    data-subtab="ledger"
+                    onclick="switchTreasurySubTab('ledger', this)">
+                    <i class="fa-solid fa-book"></i>
+                    <span>كشف الحساب</span>
                 </button>
             </div>
 
-            <!-- Stats Bar -->
-            <div class="treasury-stats-bar">
-                <div class="treasury-stat">
-                    <span class="treasury-stat-label">
-                        <i class="fa-solid fa-arrow-down" style="color:#16a34a;"></i>
-                        إجمالي القبض
-                    </span>
-                    <strong id="treasuryStatIn" style="color:#16a34a;">0 ج</strong>
-                </div>
-                <div class="treasury-stat">
-                    <span class="treasury-stat-label">
-                        <i class="fa-solid fa-arrow-up" style="color:#dc2626;"></i>
-                        إجمالي الصرف
-                    </span>
-                    <strong id="treasuryStatOut" style="color:#dc2626;">0 ج</strong>
-                </div>
-                <div class="treasury-stat">
-                    <span class="treasury-stat-label">
-                        <i class="fa-solid fa-calculator" style="color:#8b5cf6;"></i>
-                        صافي الحركة
-                    </span>
-                    <strong id="treasuryStatNet" style="color:#8b5cf6;">0 ج</strong>
-                </div>
-                <div class="treasury-stat">
-                    <span class="treasury-stat-label">
-                        <i class="fa-solid fa-list" style="color:#64748b;"></i>
-                        عدد الحركات
-                    </span>
-                    <strong id="treasuryStatCount" style="color:#111;">0</strong>
-                </div>
-            </div>
+            <!-- ============ Sub-panel 1: Transactions ============ -->
+            <div class="treasury-sub-panel active" id="treasuryPanelTransactions">
 
-            <!-- Transactions Table -->
-            <div class="panel">
-                <div class="panel-header">
-                    <span class="panel-title">
-                        <i class="fa-solid fa-receipt"></i>
-                        سجل الحركات
-                    </span>
-                    <button type="button" class="btn-export" onclick="exportTreasuryCSV()">
-                        <i class="fa-solid fa-file-csv"></i>
-                        CSV
+                <!-- Wallets Cards -->
+                <div class="treasury-wallets">
+                    <div class="treasury-wallet-card wallet-cash">
+                        <div class="treasury-wallet-icon">
+                            <i class="fa-solid fa-money-bill-wave"></i>
+                        </div>
+                        <div class="treasury-wallet-info">
+                            <span>الخزينة النقدية</span>
+                            <strong id="walletCashBalance">0 ج</strong>
+                        </div>
+                        <button type="button" class="treasury-wallet-edit"
+                            onclick="openAdjustWalletModal(1, 'cash')" title="تعديل الرصيد">
+                            <i class="fa-solid fa-pen"></i>
+                        </button>
+                    </div>
+
+                    <div class="treasury-wallet-card wallet-instapay">
+                        <div class="treasury-wallet-icon">
+                            <i class="fa-solid fa-mobile-screen"></i>
+                        </div>
+                        <div class="treasury-wallet-info">
+                            <span>محفظة إنستاباي</span>
+                            <strong id="walletInstaBalance">0 ج</strong>
+                        </div>
+                        <button type="button" class="treasury-wallet-edit"
+                            onclick="openAdjustWalletModal(2, 'instapay')" title="تعديل الرصيد">
+                            <i class="fa-solid fa-pen"></i>
+                        </button>
+                    </div>
+
+                    <div class="treasury-wallet-card wallet-total">
+                        <div class="treasury-wallet-icon">
+                            <i class="fa-solid fa-vault"></i>
+                        </div>
+                        <div class="treasury-wallet-info">
+                            <span>إجمالي الرصيد</span>
+                            <strong id="walletTotalBalance">0 ج</strong>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Toolbar -->
+                <div class="treasury-toolbar">
+                    <div class="treasury-search-wrapper">
+                        <i class="fa-solid fa-magnifying-glass"></i>
+                        <input type="text" id="treasurySearchInput" placeholder="ابحث بالمستفيد أو الوصف...">
+                        <button type="button" class="treasury-search-clear" id="treasurySearchClear"
+                            style="display:none;" onclick="clearTreasurySearch()">
+                            <i class="fa-solid fa-xmark"></i>
+                        </button>
+                    </div>
+
+                    <div class="treasury-filter-chips">
+                        <button class="treasury-chip active" data-filter="all" onclick="filterTreasury('all', this)">
+                            <i class="fa-solid fa-list"></i>
+                            <span>الكل</span>
+                            <span class="treasury-chip-count" id="treasuryCountAll">0</span>
+                        </button>
+                        <button class="treasury-chip" data-filter="in" onclick="filterTreasury('in', this)">
+                            <i class="fa-solid fa-arrow-down"></i>
+                            <span>قبض</span>
+                            <span class="treasury-chip-count" id="treasuryCountIn">0</span>
+                        </button>
+                        <button class="treasury-chip" data-filter="out" onclick="filterTreasury('out', this)">
+                            <i class="fa-solid fa-arrow-up"></i>
+                            <span>صرف</span>
+                            <span class="treasury-chip-count" id="treasuryCountOut">0</span>
+                        </button>
+                    </div>
+
+                    <select class="treasury-date-select" id="treasuryDateFilter"
+                        onchange="filterTreasuryByDate(this.value)">
+                        <option value="today">اليوم</option>
+                        <option value="week">آخر 7 أيام</option>
+                        <option value="month" selected>هذا الشهر</option>
+                        <option value="all">كل الفترات</option>
+                    </select>
+
+                    <button type="button" class="btn-add-product" onclick="openAddTransactionModal()">
+                        <i class="fa-solid fa-plus"></i>
+                        عملية جديدة
                     </button>
                 </div>
 
-                <div class="table-wrap">
-                    <table class="products-table orders-table-modern">
-                        <thead>
-                            <tr>
-                                <th style="width:60px;">#</th>
-                                <th style="width:130px;">التاريخ</th>
-                                <th style="width:100px;">النوع</th>
-                                <th style="width:120px;">المحفظة</th>
-                                <th style="width:130px;">المستفيد</th>
-                                <th>الوصف</th>
-                                <th style="width:120px;">المبلغ</th>
-                                <th style="width:130px;">بواسطة</th>
-                                <th style="width:70px;">تفاصيل</th>
-                            </tr>
-                        </thead>
-                        <tbody id="treasuryList">
-                            <tr>
-                                <td colspan="9" style="text-align:center;padding:40px;color:#94a3b8;">
-                                    <i class="fa-solid fa-spinner fa-spin" style="font-size:24px;display:block;margin-bottom:10px;"></i>
-                                    جاري التحميل...
-                                </td>
-                            </tr>
-                        </tbody>
-                    </table>
+                <!-- Stats Bar -->
+                <div class="treasury-stats-bar">
+                    <div class="treasury-stat">
+                        <span class="treasury-stat-label">
+                            <i class="fa-solid fa-arrow-down" style="color:#16a34a;"></i>
+                            إجمالي القبض
+                        </span>
+                        <strong id="treasuryStatIn" style="color:#16a34a;">0 ج</strong>
+                    </div>
+                    <div class="treasury-stat">
+                        <span class="treasury-stat-label">
+                            <i class="fa-solid fa-arrow-up" style="color:#dc2626;"></i>
+                            إجمالي الصرف
+                        </span>
+                        <strong id="treasuryStatOut" style="color:#dc2626;">0 ج</strong>
+                    </div>
+                    <div class="treasury-stat">
+                        <span class="treasury-stat-label">
+                            <i class="fa-solid fa-calculator" style="color:#8b5cf6;"></i>
+                            صافي الحركة
+                        </span>
+                        <strong id="treasuryStatNet" style="color:#8b5cf6;">0 ج</strong>
+                    </div>
+                    <div class="treasury-stat">
+                        <span class="treasury-stat-label">
+                            <i class="fa-solid fa-list" style="color:#64748b;"></i>
+                            عدد الحركات
+                        </span>
+                        <strong id="treasuryStatCount" style="color:#111;">0</strong>
+                    </div>
                 </div>
+
+                <!-- Transactions Table -->
+                <div class="panel">
+                    <div class="panel-header">
+                        <span class="panel-title">
+                            <i class="fa-solid fa-receipt"></i>
+                            سجل الحركات
+                        </span>
+                        <button type="button" class="btn-export" onclick="exportTreasuryCSV()">
+                            <i class="fa-solid fa-file-csv"></i>
+                            CSV
+                        </button>
+                    </div>
+
+                    <div class="table-wrap">
+                        <table class="products-table orders-table-modern">
+                            <thead>
+                                <tr>
+                                    <th style="width:60px;">#</th>
+                                    <th style="width:130px;">التاريخ</th>
+                                    <th style="width:100px;">النوع</th>
+                                    <th style="width:120px;">المحفظة</th>
+                                    <th style="width:130px;">المستفيد</th>
+                                    <th>الوصف</th>
+                                    <th style="width:120px;">المبلغ</th>
+                                    <th style="width:130px;">بواسطة</th>
+                                    <th style="width:70px;">تفاصيل</th>
+                                </tr>
+                            </thead>
+                            <tbody id="treasuryList">
+                                <tr>
+                                    <td colspan="9" style="text-align:center;padding:40px;color:#94a3b8;">
+                                        <i class="fa-solid fa-spinner fa-spin" style="font-size:24px;display:block;margin-bottom:10px;"></i>
+                                        جاري التحميل...
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+            </div>
+
+            <!-- ============ Sub-panel 2: Ledger (كشف الحساب) ============ -->
+            <div class="treasury-sub-panel" id="treasuryPanelLedger">
+
+                <!-- Filter Bar -->
+                <div class="ledger-filter-bar">
+                    <div class="ledger-filter-group">
+                        <label for="ledgerWalletSelect">
+                            <i class="fa-solid fa-vault"></i>
+                            الخزينة
+                        </label>
+                        <select id="ledgerWalletSelect" onchange="onLedgerFilterChange()">
+                            <option value="all">كل الخزائن (مجمّع)</option>
+                            <option value="1">الخزينة النقدية</option>
+                            <option value="2">محفظة إنستاباي</option>
+                        </select>
+                    </div>
+
+                    <div class="ledger-filter-group">
+                        <label for="ledgerDateFrom">
+                            <i class="fa-solid fa-calendar"></i>
+                            من تاريخ
+                        </label>
+                        <input type="date" id="ledgerDateFrom" onchange="onLedgerFilterChange()">
+                    </div>
+
+                    <div class="ledger-filter-group">
+                        <label for="ledgerDateTo">
+                            <i class="fa-solid fa-calendar"></i>
+                            إلى تاريخ
+                        </label>
+                        <input type="date" id="ledgerDateTo" onchange="onLedgerFilterChange()">
+                    </div>
+
+                    <div class="ledger-presets">
+                        <button type="button" class="ledger-preset active" data-preset="month"
+                            onclick="setLedgerPreset('month', this)">هذا الشهر</button>
+                        <button type="button" class="ledger-preset" data-preset="week"
+                            onclick="setLedgerPreset('week', this)">آخر 7 أيام</button>
+                        <button type="button" class="ledger-preset" data-preset="year"
+                            onclick="setLedgerPreset('year', this)">هذه السنة</button>
+                        <button type="button" class="ledger-preset" data-preset="all"
+                            onclick="setLedgerPreset('all', this)">الكل</button>
+                    </div>
+
+                    <div class="ledger-filter-actions">
+                        <button type="button" class="btn-apply-filter" onclick="loadTreasuryLedger()">
+                            <i class="fa-solid fa-search"></i>
+                            بحث
+                        </button>
+                        <button type="button" class="btn-export" onclick="exportTreasuryLedgerCSV()">
+                            <i class="fa-solid fa-file-csv"></i>
+                            CSV
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Opening Balance Box -->
+                <div class="ledger-opening-box">
+                    <div class="ledger-opening-icon">
+                        <i class="fa-solid fa-flag-checkered"></i>
+                    </div>
+                    <div class="ledger-opening-content">
+                        <span class="ledger-opening-label">الرصيد الافتتاحي</span>
+                        <strong class="ledger-opening-value" id="ledgerOpeningBalance">0 ج</strong>
+                        <small class="ledger-opening-note" id="ledgerOpeningNote">قبل بداية الفترة</small>
+                    </div>
+                    <div class="ledger-opening-meta">
+                        <div class="ledger-opening-meta-item">
+                            <span>الفترة</span>
+                            <strong id="ledgerPeriodText">—</strong>
+                        </div>
+                        <div class="ledger-opening-meta-item">
+                            <span>عدد الحركات</span>
+                            <strong id="ledgerCountTop">0</strong>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Ledger Table -->
+                <div class="panel">
+                    <div class="panel-header">
+                        <span class="panel-title">
+                            <i class="fa-solid fa-book"></i>
+                            كشف حساب الخزينة
+                        </span>
+                        <span class="report-count" id="ledgerCountLabel">0 حركة</span>
+                    </div>
+
+                    <div class="table-wrap">
+                        <table class="products-table ledger-table">
+                            <thead>
+                                <tr>
+                                    <th style="width:50px;">#</th>
+                                    <th style="width:130px;">المستند</th>
+                                    <th style="width:130px;">التاريخ</th>
+                                    <th style="width:150px;">نوع المستند</th>
+                                    <th>البيان / المستفيد</th>
+                                    <th style="width:120px;">مدين (قبض)</th>
+                                    <th style="width:120px;">دائن (صرف)</th>
+                                    <th style="width:130px;">الرصيد</th>
+                                </tr>
+                            </thead>
+                            <tbody id="ledgerListBody">
+                                <tr>
+                                    <td colspan="8" style="text-align:center;padding:40px;color:#94a3b8;">
+                                        <i class="fa-solid fa-book" style="font-size:32px;display:block;margin-bottom:10px;opacity:0.5;"></i>
+                                        اختر الخزينة والفترة ثم اضغط بحث
+                                    </td>
+                                </tr>
+                            </tbody>
+                            <tfoot id="ledgerTotals"></tfoot>
+                        </table>
+                    </div>
+                </div>
+
             </div>
 
         </div>
 
         <!-- ============ PRODUCTS ============ -->
         <div id="viewProducts" class="tab-content">
-
             <!-- Page Header -->
             <div class="page-header-bar">
                 <div class="page-header-stats">

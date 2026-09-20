@@ -25,6 +25,10 @@ function isAdminDashboard() {
     return Boolean(document.getElementById("adminDashboard"));
 }
 
+function shouldInitAdminApp() {
+    return isLoginPage() || isAdminDashboard();
+}
+
 // ========================================
 // 3. LOGIN ELEMENTS
 // ========================================
@@ -5939,14 +5943,15 @@ if (logoutButton) {
 // ========================================
 
 window.addEventListener("click", function (event) {
-    if (event.target === editModal) closeEditProductModal();
-    if (event.target === orderModal) orderModal.classList.remove("open");
-    if (event.target === approvalModal) closeApprovalRequestModal();
-    if (event.target === adjustStockModal) closeAdjustStockModalFn();
-    if (event.target === addProductModal) {
+    if (event.target === editModal && editModal) closeEditProductModal();
+    if (event.target === orderModal && orderModal) orderModal.classList.remove("open");
+    if (event.target === approvalModal && approvalModal) closeApprovalRequestModal();
+    if (event.target === adjustStockModal && adjustStockModal) closeAdjustStockModalFn();
+    if (event.target === addProductModal && addProductModal) {
         addProductModal.classList.remove("open");
     }
-    if (event.target === document.getElementById("statusReasonModal")) {
+    const statusReasonModal = document.getElementById("statusReasonModal");
+    if (event.target === statusReasonModal && statusReasonModal) {
         closeStatusReasonModal();
     }
 });
@@ -5956,10 +5961,23 @@ window.addEventListener("click", function (event) {
 // ========================================
 
 document.addEventListener("DOMContentLoaded", async function () {
-    if (isLoginPage()) await checkLoginPageSession();
+    if (!shouldInitAdminApp()) return;
+
+    if (isLoginPage()) {
+        await checkLoginPageSession();
+        return;
+    }
+
     if (isAdminDashboard()) {
-        await protectAdminDashboard();
-        setupImageUploads(); // ✅ تهيئة رفع الصور
+        try {
+            await protectAdminDashboard();
+            if (typeof setupImageUploads === "function") {
+                setupImageUploads(); // ✅ تهيئة رفع الصور
+            }
+        } catch (error) {
+            console.error("Admin dashboard init error:", error);
+            window.location.replace("admin-login.html");
+        }
     }
 });
 
@@ -6011,8 +6029,14 @@ function stopAutoRefresh() {
 // ========================================
 
 window.addEventListener("pageshow", async function () {
-    if (isAdminDashboard() && !(await getCurrentAdmin())) {
-        window.location.replace("admin-login.html");
+    if (!isAdminDashboard()) return;
+
+    try {
+        if (!(await getCurrentAdmin())) {
+            window.location.replace("admin-login.html");
+        }
+    } catch (error) {
+        console.warn("Admin pageshow guard error:", error);
     }
 });
 
