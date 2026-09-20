@@ -5666,6 +5666,11 @@ function updateDashboard() {
 
     // ✅ رسم الـ Sparkline
     renderSparkline();
+
+    // ✅ الأقسام الجديدة
+    renderDashboardSalesChart();
+    renderWeekComparison();
+    renderDashboardInsights();
 }
 
 // ========================================
