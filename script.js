@@ -635,6 +635,9 @@ function renderProductDetails() {
     $('detailsMinus').onclick = () => changeDetailsQuantity(-1);
     $('detailsPlus').onclick = () => changeDetailsQuantity(1);
     $('detailsAddBtn').onclick = addDetailsToCart;
+
+    // ✅ نحمّل المراجعات
+    loadProductReviews(product.id);
 }
 
 function selectSizeOption(btn, productId, size) {
@@ -1530,3 +1533,615 @@ function hideInstapayBanner(e) {
 }
 
 window.hideInstapayBanner = hideInstapayBanner;
+// ========================================
+// PRODUCT REVIEWS (CUSTOMER SIDE)
+// ========================================
+
+let currentReviews = [];
+let currentReviewSort = "recent";
+let selectedReviewRating = 0;
+let reviewImagesList = [];
+let reviewCurrentProductId = null;
+let reviewCurrentCustomerPhone = null;
+const MAX_REVIEW_IMAGES = 3;
+const REVIEW_IMAGES_BUCKET = "review-images";
+
+// ✅ تحميل مراجعات المنتج
+async function loadProductReviews(productId) {
+    reviewCurrentProductId = productId;
+
+    const listEl = document.getElementById("reviewsList");
+    const summaryEl = document.getElementById("reviewsSummary");
+    const sectionEl = document.getElementById("productReviewsSection");
+
+    if (!listEl || !sectionEl) return;
+
+    sectionEl.style.display = "block";
+
+    listEl.innerHTML = `
+        <div class="reviews-empty">
+            <i class="fa-solid fa-spinner fa-spin"></i>
+            <p>جاري التحميل...</p>
+        </div>
+    `;
+
+    if (!supabaseClient) {
+        listEl.innerHTML = `
+            <div class="reviews-empty">
+                <i class="fa-solid fa-circle-exclamation"></i>
+                <p>تعذر الاتصال بالبيانات</p>
+            </div>
+        `;
+        return;
+    }
+
+    try {
+        const { data, error } = await supabaseClient
+            .from("product_reviews")
+            .select("*")
+            .eq("product_id", productId)
+            .eq("status", "approved")
+            .order("created_at", { ascending: false });
+
+        if (error) throw error;
+
+        currentReviews = data || [];
+
+        renderReviewsSummary();
+        renderReviewsList();
+        await setupReviewForm(productId);
+
+    } catch (err) {
+        console.error("Load Reviews Error:", err);
+        listEl.innerHTML = `
+            <div class="reviews-empty">
+                <i class="fa-solid fa-circle-exclamation"></i>
+                <p>تعذر تحميل المراجعات</p>
+                <small>${escapeHTML(err.message)}</small>
+            </div>
+        `;
+    }
+}
+
+// ✅ ملخص التقييمات
+function renderReviewsSummary() {
+    const scoreEl = document.getElementById("reviewsAvgScore");
+    const starsEl = document.getElementById("reviewsAvgStars");
+    const countEl = document.getElementById("reviewsCountText");
+
+    if (!scoreEl || !starsEl || !countEl) return;
+
+    const total = currentReviews.length;
+    let avg = 0;
+
+    if (total > 0) {
+        const sum = currentReviews.reduce((s, r) => s + Number(r.rating || 0), 0);
+        avg = sum / total;
+    }
+
+    scoreEl.textContent = total > 0 ? avg.toFixed(1) : "0";
+    countEl.textContent = total > 0
+        ? `${total} ${total === 1 ? "مراجعة" : "مراجعة"}`
+        : "لا توجد مراجعات بعد";
+
+    // ✅ النجوم
+    const stars = starsEl.querySelectorAll("i");
+    stars.forEach((star, i) => {
+        star.classList.remove("filled", "half");
+        const pos = i + 1;
+
+        if (avg >= pos) {
+            star.classList.add("filled");
+        } else if (avg >= pos - 0.5) {
+            star.classList.add("half");
+        }
+    });
+}
+
+// ✅ عرض قائمة المراجعات
+function renderReviewsList() {
+    const listEl = document.getElementById("reviewsList");
+    if (!listEl) return;
+
+    if (!currentReviews.length) {
+        listEl.innerHTML = `
+            <div class="reviews-empty">
+                <i class="fa-solid fa-comments"></i>
+                <p>لا توجد مراجعات بعد</p>
+                <small>كن أول من يشارك تجربته</small>
+            </div>
+        `;
+        return;
+    }
+
+    let sorted = [...currentReviews];
+
+    if (currentReviewSort === "highest") {
+        sorted.sort((a, b) => Number(b.rating) - Number(a.rating));
+    } else if (currentReviewSort === "lowest") {
+        sorted.sort((a, b) => Number(a.rating) - Number(b.rating));
+    } else {
+        sorted.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+    }
+
+    listEl.innerHTML = sorted.map(r => {
+        const initial = String(r.customer_name || "؟").trim().charAt(0).toUpperCase();
+        const rating = Number(r.rating || 0);
+
+        const starsHTML = Array.from({ length: 5 }, (_, i) => {
+            return `<i class="fa-solid fa-star" style="${i < rating ? "color:#f59e0b;" : "color:#cbd5e1;"}"></i>`;
+        }).join("");
+
+        const images = Array.isArray(r.images) ? r.images : [];
+        const imagesHTML = images.length
+            ? `
+                <div class="review-item-images">
+                    ${images.map(img => `
+                        <div class="review-item-image" onclick="openReviewImage('${escapeHTML(img)}')">
+                            <img src="${escapeHTML(img)}" alt="صورة المراجعة" loading="lazy">
+                        </div>
+                    `).join("")}
+                </div>
+            `
+            : "";
+
+        const replyHTML = r.admin_reply
+            ? `
+                <div class="review-item-admin-reply">
+                    <div class="review-admin-reply-header">
+                        <i class="fa-solid fa-reply"></i>
+                        <strong>رد STEP Store</strong>
+                    </div>
+                    <div class="review-admin-reply-text">
+                        ${escapeHTML(r.admin_reply)}
+                    </div>
+                </div>
+            `
+            : "";
+
+        return `
+            <div class="review-item">
+                <div class="review-item-header">
+                    <div class="review-item-avatar">${escapeHTML(initial)}</div>
+                    <div class="review-item-info">
+                        <div class="review-item-name">
+                            <strong>${escapeHTML(r.customer_name || "عميل")}</strong>
+                            <span class="review-verified-badge">
+                                <i class="fa-solid fa-circle-check"></i>
+                                عميل موثّق
+                            </span>
+                        </div>
+                        <div class="review-item-stars">${starsHTML}</div>
+                        <div class="review-item-date">${formatReviewDate(r.created_at)}</div>
+                    </div>
+                </div>
+
+                ${r.review_text ? `
+                    <div class="review-item-text">
+                        ${escapeHTML(r.review_text)}
+                    </div>
+                ` : ""}
+
+                ${imagesHTML}
+                ${replyHTML}
+            </div>
+        `;
+    }).join("");
+}
+
+// ✅ تنسيق التاريخ النسبي
+function formatReviewDate(dateValue) {
+    if (!dateValue) return "-";
+
+    const date = new Date(dateValue);
+    if (isNaN(date.getTime())) return "-";
+
+    const now = new Date();
+    const diffMs = now - date;
+    const diffMin = Math.floor(diffMs / 60000);
+    const diffHr = Math.floor(diffMs / 3600000);
+    const diffDay = Math.floor(diffMs / 86400000);
+
+    if (diffMin < 1) return "الآن";
+    if (diffMin < 60) return `منذ ${diffMin} دقيقة`;
+    if (diffHr < 24) return `منذ ${diffHr} ساعة`;
+    if (diffDay < 7) return `منذ ${diffDay} يوم`;
+    if (diffDay < 30) return `منذ ${Math.floor(diffDay / 7)} أسبوع`;
+
+    return date.toLocaleDateString("ar-EG-u-nu-latn", {
+        year: "numeric",
+        month: "short",
+        day: "numeric"
+    });
+}
+
+// ✅ ترتيب المراجعات
+function sortReviews(sortBy) {
+    currentReviewSort = sortBy || "recent";
+    renderReviewsList();
+}
+
+// ✅ إعداد الفورم (هل يقدر يكتب مراجعة؟)
+async function setupReviewForm(productId) {
+    const formCard = document.getElementById("reviewFormCard");
+    const loginReq = document.getElementById("reviewLoginRequired");
+    const alreadyDone = document.getElementById("reviewAlreadyDone");
+
+    if (!formCard || !loginReq || !alreadyDone) return;
+
+    formCard.style.display = "none";
+    loginReq.style.display = "none";
+    alreadyDone.style.display = "none";
+
+    // ✅ 1) العميل مسجل دخول؟
+    let customer = null;
+
+    try {
+        if (typeof loadCurrentCustomer === "function") {
+            customer = await loadCurrentCustomer();
+        }
+    } catch (e) {
+        console.warn("Customer check failed:", e);
+    }
+
+    if (!customer || !customer.profile?.phone) {
+        loginReq.style.display = "block";
+        return;
+    }
+
+    const phone = String(customer.profile.phone).trim();
+    reviewCurrentCustomerPhone = phone;
+
+    // ✅ 2) اشترى المنتج؟
+    let hasPurchased = false;
+
+    try {
+        const { data: orders } = await supabaseClient
+            .from("orders")
+            .select("id, items, status")
+            .eq("customer_phone", phone)
+            .in("status", ["delivered", "exchanged"]);
+
+        if (orders && orders.length) {
+            hasPurchased = orders.some(o => {
+                const items = Array.isArray(o.items) ? o.items : [];
+                return items.some(it => Number(it.id) === Number(productId));
+            });
+        }
+    } catch (e) {
+        console.warn("Purchase check failed:", e);
+    }
+
+    if (!hasPurchased) {
+        // ✅ مش اشترى → نخفي الفورم، نعرض رسالة عامة
+        formCard.style.display = "none";
+        return;
+    }
+
+    // ✅ 3) عنده مراجعة بالفعل؟
+    try {
+        const { data: existing } = await supabaseClient
+            .from("product_reviews")
+            .select("id, status")
+            .eq("product_id", productId)
+            .eq("customer_phone", phone)
+            .maybeSingle();
+
+        if (existing) {
+            // عنده مراجعة → نخفي الفورم، نعرض "شكراً"
+            alreadyDone.style.display = "block";
+            return;
+        }
+    } catch (e) {
+        console.warn("Existing check failed:", e);
+    }
+
+    // ✅ مفيش مراجعة → نظهر الفورم
+    formCard.style.display = "block";
+
+    // ✅ نملأ البيانات
+    document.getElementById("reviewProductId").value = productId;
+    document.getElementById("reviewCustomerPhone").value = phone;
+    document.getElementById("reviewCustomerName").value =
+        customer.profile.full_name || "";
+
+    // ✅ نصفر التقييم والصور
+    selectedReviewRating = 0;
+    reviewImagesList = [];
+
+    document.querySelectorAll(".review-star-btn").forEach(b => {
+        b.classList.remove("active");
+    });
+
+    const label = document.getElementById("reviewStarsLabel");
+    if (label) {
+        label.textContent = "اختر التقييم";
+        label.classList.remove("filled");
+    }
+
+    document.getElementById("reviewRating").value = "";
+    document.getElementById("reviewText").value = "";
+    document.getElementById("reviewTextCount").textContent = "0";
+
+    renderReviewImagesGrid();
+
+    // ✅ ربط الأحداث (لو مش مربوطة من قبل)
+    if (!formCard.dataset.bound) {
+        bindReviewFormEvents();
+        formCard.dataset.bound = "true";
+    }
+}
+
+// ✅ ربط أحداث الفورم
+function bindReviewFormEvents() {
+    // عداد الأحرف
+    const textEl = document.getElementById("reviewText");
+    const countEl = document.getElementById("reviewTextCount");
+
+    textEl?.addEventListener("input", () => {
+        if (countEl) countEl.textContent = textEl.value.length;
+    });
+
+    // زر إضافة الصور
+    const addBtn = document.getElementById("reviewImageAdd");
+    const fileInput = document.getElementById("reviewImagesInput");
+
+    addBtn?.addEventListener("click", (e) => {
+        e.preventDefault();
+        fileInput?.click();
+    });
+
+    fileInput?.addEventListener("change", async (e) => {
+        const files = Array.from(e.target.files || []);
+        fileInput.value = "";
+        await uploadReviewImages(files);
+    });
+
+    // إرسال الفورم
+    document.getElementById("reviewForm")?.addEventListener("submit", submitReview);
+}
+
+// ✅ اختيار النجوم
+function selectReviewStar(rating) {
+    selectedReviewRating = rating;
+    document.getElementById("reviewRating").value = rating;
+
+    document.querySelectorAll(".review-star-btn").forEach(btn => {
+        const star = Number(btn.dataset.star);
+        btn.classList.toggle("active", star <= rating);
+    });
+
+    const label = document.getElementById("reviewStarsLabel");
+    const labels = {
+        1: "سيئ جدًا 😞",
+        2: "سيئ 😕",
+        3: "مقبول 😐",
+        4: "جيد جدًا 😊",
+        5: "ممتاز! 🤩"
+    };
+
+    if (label) {
+        label.textContent = labels[rating] || "اختر التقييم";
+        label.classList.add("filled");
+    }
+}
+
+// ✅ رفع الصور
+async function uploadReviewImages(files) {
+    if (!files.length) return;
+
+    const remaining = MAX_REVIEW_IMAGES - reviewImagesList.length;
+
+    if (remaining <= 0) {
+        showToast(`الحد الأقصى ${MAX_REVIEW_IMAGES} صور`);
+        return;
+    }
+
+    const toUpload = files.slice(0, remaining);
+
+    if (files.length > remaining) {
+        showToast(`هيتم رفع ${remaining} صور بس`);
+    }
+
+    if (!supabaseClient) return;
+
+    for (const file of toUpload) {
+        if (!file.type.startsWith("image/")) {
+            showToast(`الملف "${file.name}" ليس صورة`);
+            continue;
+        }
+
+        if (file.size > 5 * 1024 * 1024) {
+            showToast(`الصورة "${file.name}" أكبر من 5 ميجا`);
+            continue;
+        }
+
+        const tempId = `temp_${Date.now()}_${Math.random()}`;
+        reviewImagesList.push({ tempId, uploading: true });
+        renderReviewImagesGrid();
+
+        try {
+            const ext = file.name.split(".").pop()?.toLowerCase() || "jpg";
+            const filename = `reviews/${Date.now()}_${Math.random().toString(36).substring(2, 10)}.${ext}`;
+
+            const { data, error } = await supabaseClient.storage
+                .from(REVIEW_IMAGES_BUCKET)
+                .upload(filename, file, {
+                    cacheControl: "3600",
+                    upsert: false
+                });
+
+            if (error) throw error;
+
+            const { data: urlData } = supabaseClient.storage
+                .from(REVIEW_IMAGES_BUCKET)
+                .getPublicUrl(data.path);
+
+            const idx = reviewImagesList.findIndex(x => x.tempId === tempId);
+            if (idx !== -1) {
+                reviewImagesList[idx] = urlData.publicUrl;
+            }
+        } catch (err) {
+            console.error("Upload error:", err);
+            showToast(`فشل رفع "${file.name}"`);
+            const idx = reviewImagesList.findIndex(x => x.tempId === tempId);
+            if (idx !== -1) reviewImagesList.splice(idx, 1);
+        }
+
+        renderReviewImagesGrid();
+    }
+}
+
+// ✅ عرض شبكة الصور
+function renderReviewImagesGrid() {
+    const grid = document.getElementById("reviewImagesGrid");
+    if (!grid) return;
+
+    const itemsHTML = reviewImagesList.map((item, index) => {
+        if (typeof item === "object" && item.uploading) {
+            return `
+                <div class="review-image-item" style="display:flex;align-items:center;justify-content:center;background:#f1f5f9;">
+                    <i class="fa-solid fa-spinner fa-spin" style="color:#8b5cf6;font-size:20px;"></i>
+                </div>
+            `;
+        }
+
+        return `
+            <div class="review-image-item">
+                <img src="${escapeHTML(item)}" alt="">
+                <button type="button" class="review-image-remove" onclick="removeReviewImage(${index})">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+        `;
+    }).join("");
+
+    const canAddMore = reviewImagesList.length < MAX_REVIEW_IMAGES;
+
+    grid.innerHTML = (canAddMore ? `
+        <button type="button" class="review-image-add" id="reviewImageAdd">
+            <i class="fa-solid fa-cloud-arrow-up"></i>
+            <span>أضف صور</span>
+        </button>
+    ` : "") + itemsHTML;
+
+    // ✅ نربط زر الإضافة من جديد (لو لسه موجود)
+    const newAddBtn = document.getElementById("reviewImageAdd");
+    const fileInput = document.getElementById("reviewImagesInput");
+
+    if (newAddBtn && fileInput) {
+        newAddBtn.addEventListener("click", (e) => {
+            e.preventDefault();
+            fileInput.click();
+        });
+    }
+}
+
+// ✅ حذف صورة
+function removeReviewImage(index) {
+    reviewImagesList.splice(index, 1);
+    renderReviewImagesGrid();
+}
+
+// ✅ إرسال المراجعة
+async function submitReview(e) {
+    e.preventDefault();
+
+    const productId = reviewCurrentProductId;
+    const phone = reviewCurrentCustomerPhone;
+
+    if (!productId || !phone) {
+        showReviewFormMessage("حدث خطأ، حاول تاني", "error");
+        return;
+    }
+
+    const name = document.getElementById("reviewCustomerName")?.value.trim() || "";
+    const rating = Number(document.getElementById("reviewRating")?.value || 0);
+    const text = document.getElementById("reviewText")?.value.trim() || "";
+
+    if (!name || name.length < 2) {
+        showReviewFormMessage("اكتب اسمك", "error");
+        return;
+    }
+
+    if (!rating || rating < 1 || rating > 5) {
+        showReviewFormMessage("اختر التقييم", "error");
+        return;
+    }
+
+    if (!text || text.length < 5) {
+        showReviewFormMessage("اكتب مراجعة (5 أحرف على الأقل)", "error");
+        return;
+    }
+
+    // ✅ نفلتر الصور اللي اترفعت فعلاً
+    const uploadedImages = reviewImagesList.filter(x => typeof x === "string");
+
+    const btn = document.getElementById("reviewSubmitBtn");
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> جاري الإرسال...';
+
+    try {
+        const { data, error } = await supabaseClient.rpc("submit_product_review", {
+            p_product_id: productId,
+            p_customer_phone: phone,
+            p_customer_name: name,
+            p_rating: rating,
+            p_review_text: text,
+            p_images: uploadedImages
+        });
+
+        if (error) throw error;
+
+        if (!data?.success) throw new Error("فشل الإرسال");
+
+        showReviewFormMessage("تم إرسال مراجعتك! في انتظار موافقة الإدارة ✅", "success");
+
+        setTimeout(() => {
+            document.getElementById("reviewFormCard").style.display = "none";
+            document.getElementById("reviewAlreadyDone").style.display = "block";
+        }, 2000);
+
+    } catch (err) {
+        console.error("Submit Review Error:", err);
+        showReviewFormMessage(err.message || "فشل الإرسال", "error");
+    } finally {
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fa-solid fa-paper-plane"></i> إرسال المراجعة';
+    }
+}
+
+// ✅ رسائل الفورم
+function showReviewFormMessage(message, type = "error") {
+    const el = document.getElementById("reviewFormMessage");
+    if (!el) return;
+
+    el.textContent = message;
+    el.className = "auth-message";
+
+    if (message) {
+        el.classList.add("show", type);
+    }
+}
+
+// ✅ فتح صورة في نافذة
+function openReviewImage(url) {
+    const w = window.open("", "_blank");
+    if (w) {
+        w.document.write(`
+            <html>
+            <head><title>صورة المراجعة</title></head>
+            <body style="margin:0;background:#111;display:flex;align-items:center;justify-content:center;min-height:100vh;">
+                <img src="${url}" style="max-width:100%;max-height:100vh;object-fit:contain;">
+            </body>
+            </html>
+        `);
+    }
+}
+
+// ✅ Exports
+window.loadProductReviews = loadProductReviews;
+window.sortReviews = sortReviews;
+window.selectReviewStar = selectReviewStar;
+window.removeReviewImage = removeReviewImage;
+window.openReviewImage = openReviewImage;

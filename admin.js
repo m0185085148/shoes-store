@@ -945,6 +945,14 @@ function switchTab(tabId) {
 
         // ✅ تحديث تلقائي
         loadCustomersScreen();
+    } else if (tabId === "reviews") {
+        document.getElementById("viewReviews")?.classList.add("active");
+        document.getElementById("tabNavReviews")?.classList.add("active");
+        title.textContent = "إدارة المراجعات";
+        subtitle.textContent = "مراجعة وتقييم مراجعات العملاء";
+
+        // ✅ تحديث تلقائي
+        loadAdminReviews();
     } else if (tabId === "products") {
         document.getElementById("viewProducts")?.classList.add("active");
         document.getElementById("tabNavProducts")?.classList.add("active");
@@ -10290,3 +10298,536 @@ window.openAddCustomerNoteModal = openAddCustomerNoteModal;
 window.closeAddCustomerNoteModal = closeAddCustomerNoteModal;
 window.deleteCustomerNote = deleteCustomerNote;
 window.sendCustomerWhatsApp = sendCustomerWhatsApp;
+// ========================================
+// ADMIN REVIEWS MANAGEMENT
+// ========================================
+
+let adminReviews = [];
+let adminReviewsFilter = "pending";
+let currentReplyReviewId = null;
+
+// ✅ تحميل المراجعات
+async function loadAdminReviews() {
+    const listEl = document.getElementById("adminReviewsList");
+    if (!listEl) return;
+
+    listEl.innerHTML = `
+        <div class="empty-state">
+            <i class="fa-solid fa-spinner fa-spin"></i>
+            <p>جاري التحميل...</p>
+        </div>
+    `;
+
+    const client = getSupabaseClient();
+    if (!client) return;
+
+    try {
+        const { data, error } = await client
+            .from("product_reviews")
+            .select("*")
+            .order("created_at", { ascending: false });
+
+        if (error) throw error;
+
+        adminReviews = data || [];
+
+        updateAdminReviewsStats();
+        renderAdminReviews();
+        updateSidebarReviewsBadge();
+    } catch (err) {
+        console.error("Load Admin Reviews Error:", err);
+        listEl.innerHTML = `
+            <div class="empty-state" style="color:#dc2626;">
+                <i class="fa-solid fa-circle-exclamation"></i>
+                <p>تعذر تحميل المراجعات</p>
+                <small>${escapeAdminHTML(err.message)}</small>
+            </div>
+        `;
+    }
+}
+
+// ✅ إحصائيات
+function updateAdminReviewsStats() {
+    const total = adminReviews.length;
+    const pending = adminReviews.filter(r => r.status === "pending").length;
+    const approved = adminReviews.filter(r => r.status === "approved").length;
+    const rejected = adminReviews.filter(r => r.status === "rejected").length;
+
+    const approvedRatings = adminReviews.filter(r => r.status === "approved");
+    const avg = approvedRatings.length
+        ? (approvedRatings.reduce((s, r) => s + Number(r.rating || 0), 0) / approvedRatings.length).toFixed(1)
+        : "0";
+
+    const set = (id, val) => {
+        const el = document.getElementById(id);
+        if (el) el.textContent = val;
+    };
+
+    set("revStatTotal", total);
+    set("revStatPending", pending);
+    set("revStatApproved", approved);
+    set("revStatAvg", avg);
+
+    set("revChipPending", pending);
+    set("revChipApproved", approved);
+    set("revChipRejected", rejected);
+    set("revChipAll", total);
+}
+
+// ✅ شارة Sidebar
+function updateSidebarReviewsBadge() {
+    const badge = document.getElementById("sidebarPendingReviewsBadge");
+    if (!badge) return;
+
+    const pending = adminReviews.filter(r => r.status === "pending").length;
+
+    if (pending > 0) {
+        badge.textContent = pending;
+        badge.style.display = "inline-block";
+    } else {
+        badge.style.display = "none";
+    }
+}
+
+// ✅ فلترة
+function filterAdminReviews(status, btnEl) {
+    adminReviewsFilter = status;
+
+    document.querySelectorAll(".reviews-filter-chip").forEach(b => b.classList.remove("active"));
+    btnEl?.classList.add("active");
+
+    renderAdminReviews();
+}
+
+// ✅ عرض القائمة
+function renderAdminReviews() {
+    const listEl = document.getElementById("adminReviewsList");
+    const countEl = document.getElementById("revCountLabel");
+    if (!listEl) return;
+
+    let list = adminReviews;
+
+    if (adminReviewsFilter !== "all") {
+        list = list.filter(r => r.status === adminReviewsFilter);
+    }
+
+    if (countEl) countEl.textContent = `${list.length} مراجعة`;
+
+    if (!list.length) {
+        listEl.innerHTML = `
+            <div class="empty-state">
+                <i class="fa-solid fa-comments"></i>
+                <p>لا توجد مراجعات في هذه القائمة</p>
+            </div>
+        `;
+        return;
+    }
+
+    listEl.innerHTML = list.map(r => {
+        const product = adminProducts.find(p => Number(p.id) === Number(r.product_id));
+        const productName = product?.name || `منتج #${r.product_id}`;
+        const productImage = product?.image || "";
+
+        const initial = String(r.customer_name || "؟").trim().charAt(0).toUpperCase();
+        const rating = Number(r.rating || 0);
+
+        const starsHTML = Array.from({ length: 5 }, (_, i) => {
+            return `<i class="fa-solid fa-star" style="${i < rating ? "color:#f59e0b;" : "color:#cbd5e1;"}"></i>`;
+        }).join("");
+
+        const statusLabels = {
+            pending: { text: "بانتظار الموافقة", icon: "fa-clock" },
+            approved: { text: "معتمدة", icon: "fa-circle-check" },
+            rejected: { text: "مرفوضة", icon: "fa-circle-xmark" }
+        };
+
+        const statusInfo = statusLabels[r.status] || statusLabels.pending;
+
+        const images = Array.isArray(r.images) ? r.images : [];
+        const imagesHTML = images.length
+            ? `
+                <div class="admin-review-images">
+                    ${images.map(img => `
+                        <div class="admin-review-image" onclick="openReviewImage('${escapeAdminHTML(img)}')">
+                            <img src="${escapeAdminHTML(img)}" alt="" loading="lazy">
+                        </div>
+                    `).join("")}
+                </div>
+            `
+            : "";
+
+        const replyHTML = r.admin_reply
+            ? `
+                <div class="admin-review-reply-box">
+                    <div class="admin-review-reply-header">
+                        <i class="fa-solid fa-reply"></i>
+                        <strong>رد الإدارة (${escapeAdminHTML(r.admin_reply_by_username || "أدمن")})</strong>
+                    </div>
+                    <div class="admin-review-reply-text">
+                        ${escapeAdminHTML(r.admin_reply)}
+                    </div>
+                    <div class="admin-review-reply-actions">
+                        <button type="button" class="admin-review-reply-btn edit"
+                            onclick="openReviewReplyModal(${Number(r.id)}, true)">
+                            <i class="fa-solid fa-pen"></i>
+                            تعديل
+                        </button>
+                        <button type="button" class="admin-review-reply-btn delete"
+                            onclick="deleteReviewReply(${Number(r.id)})">
+                            <i class="fa-solid fa-trash"></i>
+                            حذف
+                        </button>
+                    </div>
+                </div>
+            `
+            : "";
+
+        // ✅ الأزرار حسب الحالة
+        let actionsHTML = "";
+
+        if (r.status === "pending") {
+            actionsHTML = `
+                <button type="button" class="admin-review-btn approve"
+                    onclick="approveReview(${Number(r.id)})">
+                    <i class="fa-solid fa-check"></i>
+                    موافقة ونشر
+                </button>
+                <button type="button" class="admin-review-btn reject"
+                    onclick="rejectReview(${Number(r.id)})">
+                    <i class="fa-solid fa-xmark"></i>
+                    رفض
+                </button>
+                <button type="button" class="admin-review-btn delete"
+                    onclick="deleteAdminReview(${Number(r.id)})">
+                    <i class="fa-solid fa-trash"></i>
+                </button>
+            `;
+        } else if (r.status === "approved") {
+            actionsHTML = `
+                ${r.admin_reply
+                    ? ""
+                    : `
+                        <button type="button" class="admin-review-btn reply"
+                            onclick="openReviewReplyModal(${Number(r.id)})">
+                            <i class="fa-solid fa-reply"></i>
+                            إضافة رد
+                        </button>
+                    `
+                }
+                <button type="button" class="admin-review-btn reject"
+                    onclick="rejectReview(${Number(r.id)})">
+                    <i class="fa-solid fa-ban"></i>
+                    إلغاء النشر
+                </button>
+                <button type="button" class="admin-review-btn delete"
+                    onclick="deleteAdminReview(${Number(r.id)})">
+                    <i class="fa-solid fa-trash"></i>
+                </button>
+            `;
+        } else if (r.status === "rejected") {
+            actionsHTML = `
+                <button type="button" class="admin-review-btn approve"
+                    onclick="approveReview(${Number(r.id)})">
+                    <i class="fa-solid fa-check"></i>
+                    موافقة ونشر
+                </button>
+                <button type="button" class="admin-review-btn delete"
+                    onclick="deleteAdminReview(${Number(r.id)})">
+                    <i class="fa-solid fa-trash"></i>
+                </button>
+            `;
+        }
+
+        return `
+            <div class="admin-review-card status-${escapeAdminHTML(r.status)}">
+
+                <div class="admin-review-header">
+                    <div class="admin-review-customer">
+                        <div class="admin-review-avatar">${escapeAdminHTML(initial)}</div>
+                        <div class="admin-review-cust-info">
+                            <strong>${escapeAdminHTML(r.customer_name || "عميل")}</strong>
+                            <small>${escapeAdminHTML(r.customer_phone || "-")}</small>
+                        </div>
+                    </div>
+
+                    <div class="admin-review-product">
+                        <div class="admin-review-product-img"
+                            style="${productImage ? `background-image:url('${escapeAdminHTML(productImage)}');` : ""}"></div>
+                        <div class="admin-review-product-info">
+                            <strong>${escapeAdminHTML(productName)}</strong>
+                            <small>#${r.product_id}</small>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="admin-review-meta">
+                    <div class="admin-review-stars">${starsHTML}</div>
+                    <span class="admin-review-rating-num">${rating}/5</span>
+                    <span class="admin-review-status-badge ${escapeAdminHTML(r.status)}">
+                        <i class="fa-solid ${statusInfo.icon}"></i>
+                        ${statusInfo.text}
+                    </span>
+                    <span class="admin-review-date">${formatDate(r.created_at)}</span>
+                </div>
+
+                ${r.review_text ? `
+                    <div class="admin-review-text">
+                        ${escapeAdminHTML(r.review_text)}
+                    </div>
+                ` : ""}
+
+                ${imagesHTML}
+                ${replyHTML}
+
+                <div class="admin-review-actions">
+                    ${actionsHTML}
+                </div>
+
+            </div>
+        `;
+    }).join("");
+}
+
+// ✅ موافقة
+async function approveReview(reviewId) {
+    const confirmed = confirm("هل تريد الموافقة على هذه المراجعة ونشرها؟");
+    if (!confirmed) return;
+
+    const client = getSupabaseClient();
+    if (!client) return;
+
+    try {
+        const { error } = await client
+            .from("product_reviews")
+            .update({
+                status: "approved",
+                updated_at: new Date().toISOString()
+            })
+            .eq("id", reviewId);
+
+        if (error) throw error;
+
+        showToast("تمت الموافقة ✅");
+        await loadAdminReviews();
+    } catch (err) {
+        console.error("Approve Review Error:", err);
+        alert("فشل الموافقة:\n\n" + err.message);
+    }
+}
+
+// ✅ رفض
+async function rejectReview(reviewId) {
+    const confirmed = confirm("هل تريد رفض هذه المراجعة؟");
+    if (!confirmed) return;
+
+    const client = getSupabaseClient();
+    if (!client) return;
+
+    try {
+        const { error } = await client
+            .from("product_reviews")
+            .update({
+                status: "rejected",
+                updated_at: new Date().toISOString()
+            })
+            .eq("id", reviewId);
+
+        if (error) throw error;
+
+        showToast("تم الرفض");
+        await loadAdminReviews();
+    } catch (err) {
+        console.error("Reject Review Error:", err);
+        alert("فشل الرفض:\n\n" + err.message);
+    }
+}
+
+// ✅ حذف نهائي
+async function deleteAdminReview(reviewId) {
+    const confirmed = confirm(
+        "⚠️ هل تريد حذف هذه المراجعة نهائيًا؟\n\nلا يمكن التراجع عن هذه العملية"
+    );
+    if (!confirmed) return;
+
+    const client = getSupabaseClient();
+    if (!client) return;
+
+    try {
+        const { error } = await client
+            .from("product_reviews")
+            .delete()
+            .eq("id", reviewId);
+
+        if (error) throw error;
+
+        showToast("تم الحذف");
+        await loadAdminReviews();
+    } catch (err) {
+        console.error("Delete Review Error:", err);
+        alert("فشل الحذف:\n\n" + err.message);
+    }
+}
+
+// ✅ فتح مودال الرد
+function openReviewReplyModal(reviewId, isEdit = false) {
+    const review = adminReviews.find(r => Number(r.id) === Number(reviewId));
+    if (!review) return;
+
+    currentReplyReviewId = reviewId;
+
+    // ✅ ننشئ modal ديناميكي
+    let modal = document.getElementById("reviewReplyModal");
+
+    if (!modal) {
+        modal = document.createElement("div");
+        modal.id = "reviewReplyModal";
+        modal.className = "modal";
+        modal.innerHTML = `
+            <div class="modal-content reply-modal" style="max-width:520px;">
+                <div class="modal-header">
+                    <div class="modal-title-group">
+                        <div class="modal-icon" style="background:#f3e8ff;color:#7c3aed;">
+                            <i class="fa-solid fa-reply"></i>
+                        </div>
+                        <div>
+                            <h2 id="reviewReplyTitle">إضافة رد</h2>
+                            <p style="font-size:13px;color:#888;margin-top:2px;">
+                                ردود الإدارة تظهر للجميع مع المراجعة
+                            </p>
+                        </div>
+                    </div>
+                    <button type="button" class="close-modal" onclick="closeReviewReplyModal()">&times;</button>
+                </div>
+
+                <div class="form-group">
+                    <label for="reviewReplyText">الرد *</label>
+                    <textarea id="reviewReplyText" rows="4"
+                        placeholder="شكراً على مراجعتك..."
+                        maxlength="500"></textarea>
+                    <small style="display:block;margin-top:6px;color:#94a3b8;font-size:11px;font-weight:700;">
+                        <span id="reviewReplyCount">0</span> / 500 حرف
+                    </small>
+                </div>
+
+                <div class="modal-actions">
+                    <button type="button" class="btn-primary-modal" onclick="saveReviewReply()">
+                        <i class="fa-solid fa-check"></i>
+                        حفظ الرد
+                    </button>
+                    <button type="button" class="btn-secondary-modal" onclick="closeReviewReplyModal()">
+                        إلغاء
+                    </button>
+                </div>
+            </div>
+        `;
+        document.body.appendChild(modal);
+
+        // عداد الأحرف
+        modal.querySelector("#reviewReplyText")?.addEventListener("input", (e) => {
+            const counter = document.getElementById("reviewReplyCount");
+            if (counter) counter.textContent = e.target.value.length;
+        });
+
+        // إغلاق عند النقر خارج
+        modal.addEventListener("click", (e) => {
+            if (e.target.id === "reviewReplyModal") {
+                closeReviewReplyModal();
+            }
+        });
+    }
+
+    // ✅ نملأ البيانات
+    const titleEl = document.getElementById("reviewReplyTitle");
+    const textEl = document.getElementById("reviewReplyText");
+    const counterEl = document.getElementById("reviewReplyCount");
+
+    if (titleEl) titleEl.textContent = isEdit ? "تعديل الرد" : "إضافة رد";
+    if (textEl) textEl.value = review.admin_reply || "";
+    if (counterEl) counterEl.textContent = (review.admin_reply || "").length;
+
+    modal.classList.add("open");
+    setTimeout(() => textEl?.focus(), 100);
+}
+
+function closeReviewReplyModal() {
+    document.getElementById("reviewReplyModal")?.classList.remove("open");
+    currentReplyReviewId = null;
+}
+
+// ✅ حفظ الرد
+async function saveReviewReply() {
+    if (!currentReplyReviewId) return;
+
+    const text = document.getElementById("reviewReplyText")?.value.trim() || "";
+
+    if (!text || text.length < 2) {
+        alert("اكتب الرد");
+        return;
+    }
+
+    const client = getSupabaseClient();
+    if (!client || !currentAdmin) return;
+
+    try {
+        const { error } = await client
+            .from("product_reviews")
+            .update({
+                admin_reply: text,
+                admin_reply_at: new Date().toISOString(),
+                admin_reply_by: currentAdmin.id,
+                admin_reply_by_username: currentAdmin.username || currentAdmin.email || "Admin",
+                updated_at: new Date().toISOString()
+            })
+            .eq("id", currentReplyReviewId);
+
+        if (error) throw error;
+
+        showToast("تم حفظ الرد ✅");
+        closeReviewReplyModal();
+        await loadAdminReviews();
+    } catch (err) {
+        console.error("Save Reply Error:", err);
+        alert("فشل الحفظ:\n\n" + err.message);
+    }
+}
+
+// ✅ حذف الرد
+async function deleteReviewReply(reviewId) {
+    const confirmed = confirm("هل تريد حذف الرد؟");
+    if (!confirmed) return;
+
+    const client = getSupabaseClient();
+    if (!client) return;
+
+    try {
+        const { error } = await client
+            .from("product_reviews")
+            .update({
+                admin_reply: null,
+                admin_reply_at: null,
+                admin_reply_by: null,
+                admin_reply_by_username: null,
+                updated_at: new Date().toISOString()
+            })
+            .eq("id", reviewId);
+
+        if (error) throw error;
+
+        showToast("تم حذف الرد");
+        await loadAdminReviews();
+    } catch (err) {
+        console.error("Delete Reply Error:", err);
+        alert("فشل الحذف:\n\n" + err.message);
+    }
+}
+
+// ✅ Exports
+window.loadAdminReviews = loadAdminReviews;
+window.filterAdminReviews = filterAdminReviews;
+window.approveReview = approveReview;
+window.rejectReview = rejectReview;
+window.deleteAdminReview = deleteAdminReview;
+window.openReviewReplyModal = openReviewReplyModal;
+window.closeReviewReplyModal = closeReviewReplyModal;
+window.saveReviewReply = saveReviewReply;
+window.deleteReviewReply = deleteReviewReply;
