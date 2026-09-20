@@ -983,6 +983,9 @@ function switchTab(tabId) {
 
     document.getElementById("sidebar")?.classList.remove("open");
     document.getElementById("mobileOverlay")?.classList.remove("show");
+
+    // ✅ نزامن حالة المفضلة النشطة
+    setTimeout(syncFavoritesActiveState, 50);
 }
 
 // ========================================
@@ -1064,6 +1067,9 @@ async function protectAdminDashboard() {
     setupProductsSearch();
     setupAddProductModal();
     setupNotificationsDropdown();
+
+    // ✅ تفعيل ميزات الـ Sidebar الجديدة
+    initSidebarFeatures();
 
     // ✅ تشغيل التحديث التلقائي
     startAutoRefresh();
