@@ -65,6 +65,159 @@
     </div>
   </section>
 
+  <!-- ============ PRODUCT REVIEWS ============ -->
+  <section class="product-reviews-section" id="productReviewsSection">
+    <div class="container">
+
+      <!-- Section Header -->
+      <div class="reviews-header">
+        <div class="reviews-header-left">
+          <p class="reviews-header-small">آراء العملاء</p>
+          <h2>تقييمات المنتج</h2>
+        </div>
+        <div class="reviews-summary" id="reviewsSummary">
+          <div class="reviews-summary-score">
+            <strong id="reviewsAvgScore">0</strong>
+            <div class="reviews-summary-stars" id="reviewsAvgStars">
+              <i class="fa-solid fa-star"></i>
+              <i class="fa-solid fa-star"></i>
+              <i class="fa-solid fa-star"></i>
+              <i class="fa-solid fa-star"></i>
+              <i class="fa-solid fa-star"></i>
+            </div>
+          </div>
+          <div class="reviews-summary-count">
+            <span id="reviewsCountText">0 مراجعة</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Review Form Card -->
+      <div class="review-form-card" id="reviewFormCard" style="display:none;">
+
+        <div class="review-form-header">
+          <div class="review-form-icon">
+            <i class="fa-solid fa-star"></i>
+          </div>
+          <div>
+            <h3 id="reviewFormTitle">شاركنا تجربتك</h3>
+            <p id="reviewFormSubtitle">
+              رأيك يساعد عملاء تانيين ياخدوا قرار صح
+            </p>
+          </div>
+        </div>
+
+        <div id="reviewFormMessage" class="auth-message"></div>
+
+        <form id="reviewForm" class="review-form">
+
+          <input type="hidden" id="reviewProductId">
+          <input type="hidden" id="reviewCustomerPhone">
+
+          <div class="review-form-group">
+            <label for="reviewCustomerName">الاسم *</label>
+            <input type="text" id="reviewCustomerName" required placeholder="اسمك" maxlength="50">
+          </div>
+
+          <div class="review-form-group">
+            <label>التقييم *</label>
+            <div class="review-stars-input" id="reviewStarsInput">
+              <button type="button" class="review-star-btn" data-star="1" onclick="selectReviewStar(1)">
+                <i class="fa-solid fa-star"></i>
+              </button>
+              <button type="button" class="review-star-btn" data-star="2" onclick="selectReviewStar(2)">
+                <i class="fa-solid fa-star"></i>
+              </button>
+              <button type="button" class="review-star-btn" data-star="3" onclick="selectReviewStar(3)">
+                <i class="fa-solid fa-star"></i>
+              </button>
+              <button type="button" class="review-star-btn" data-star="4" onclick="selectReviewStar(4)">
+                <i class="fa-solid fa-star"></i>
+              </button>
+              <button type="button" class="review-star-btn" data-star="5" onclick="selectReviewStar(5)">
+                <i class="fa-solid fa-star"></i>
+              </button>
+              <span class="review-stars-label" id="reviewStarsLabel">اختر التقييم</span>
+            </div>
+            <input type="hidden" id="reviewRating" required>
+          </div>
+
+          <div class="review-form-group">
+            <label for="reviewText">مراجعتك *</label>
+            <textarea id="reviewText" rows="4" required 
+              placeholder="اكتب رأيك بصراحة عن المنتج..."
+              minlength="5"
+              maxlength="1000"></textarea>
+            <small class="review-form-hint">
+              <span id="reviewTextCount">0</span> / 1000 حرف
+            </small>
+          </div>
+
+          <div class="review-form-group">
+            <label>صور (اختياري - حتى 3 صور)</label>
+            <div class="review-images-grid" id="reviewImagesGrid">
+              <button type="button" class="review-image-add" id="reviewImageAdd">
+                <i class="fa-solid fa-cloud-arrow-up"></i>
+                <span>أضف صور</span>
+              </button>
+            </div>
+            <input type="file" id="reviewImagesInput" accept="image/*" multiple hidden>
+            <small class="review-form-hint">
+              حجم كل صورة 5 ميجا كحد أقصى
+            </small>
+          </div>
+
+          <button type="submit" class="review-submit-btn" id="reviewSubmitBtn">
+            <i class="fa-solid fa-paper-plane"></i>
+            إرسال المراجعة
+          </button>
+
+        </form>
+      </div>
+
+      <!-- Login Required Message -->
+      <div class="review-login-required" id="reviewLoginRequired" style="display:none;">
+        <i class="fa-solid fa-lock"></i>
+        <h3>سجّل دخول عشان تكتب مراجعة</h3>
+        <p>عشان نتأكد إن كل المراجعات حقيقية من عملاء فعليين</p>
+        <a href="account-login.html">
+          <i class="fa-solid fa-right-to-bracket"></i>
+          تسجيل الدخول
+        </a>
+      </div>
+
+      <!-- Already Reviewed Message -->
+      <div class="review-already" id="reviewAlreadyDone" style="display:none;">
+        <i class="fa-solid fa-circle-check"></i>
+        <h3>شاركت تجربتك بالفعل</h3>
+        <p>شكراً على مراجعتك! المراجعة في انتظار موافقة الإدارة</p>
+      </div>
+
+      <!-- Reviews List -->
+      <div class="reviews-list-wrapper">
+        <div class="reviews-list-header">
+          <h3>
+            <i class="fa-solid fa-comments"></i>
+            المراجعات
+          </h3>
+          <select class="reviews-sort-select" id="reviewsSortSelect" onchange="sortReviews(this.value)">
+            <option value="recent">الأحدث أولاً</option>
+            <option value="highest">الأعلى تقييماً</option>
+            <option value="lowest">الأقل تقييماً</option>
+          </select>
+        </div>
+
+        <div class="reviews-list" id="reviewsList">
+          <div class="reviews-empty">
+            <i class="fa-solid fa-spinner fa-spin"></i>
+            <p>جاري التحميل...</p>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </section>
+
   <section class="products related-products">
     <div class="container">
       <div class="section-title">
