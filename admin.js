@@ -11185,3 +11185,403 @@ document.addEventListener("DOMContentLoaded", () => {
     setTimeout(updateBadgeSizes, 500);
     setInterval(updateBadgeSizes, 5000);
 });
+// ========================================
+// DASHBOARD SALES CHART (14 DAYS)
+// ========================================
+
+let dashboardSalesChart = null;
+
+function renderDashboardSalesChart() {
+    const canvas = document.getElementById("dashSalesChart");
+    if (!canvas) return;
+
+    // ✅ لو Chart.js مش محمّل
+    if (typeof Chart === "undefined") {
+        console.warn("Chart.js not loaded");
+        return;
+    }
+
+    // ✅ آخر 14 يوم
+    const days = [];
+    const now = new Date();
+
+    for (let i = 13; i >= 0; i--) {
+        const d = new Date(now);
+        d.setDate(d.getDate() - i);
+        d.setHours(0, 0, 0, 0);
+        days.push(d);
+    }
+
+    // ✅ نجهز الطلبات المباعة
+    const soldOrders = adminOrders.filter(o => SOLD_STATUSES.includes(o.status));
+
+    // ✅ نحسب مبيعات كل يوم
+    const values = days.map(day => {
+        const next = new Date(day);
+        next.setDate(next.getDate() + 1);
+
+        return soldOrders
+            .filter(o => {
+                const d = new Date(o.created_at);
+                return d >= day && d < next;
+            })
+            .reduce((sum, o) => sum + Number(o.total_amount || 0), 0);
+    });
+
+    // ✅ إحصائيات الرسم
+    const total = values.reduce((s, v) => s + v, 0);
+    const avg = total / values.length;
+    const max = Math.max(...values);
+    const maxIdx = values.indexOf(max);
+    const bestDay = max > 0 ? days[maxIdx] : null;
+
+    // ✅ نحدّث الإحصائيات
+    const set = (id, val) => {
+        const el = document.getElementById(id);
+        if (el) el.textContent = val;
+    };
+
+    set("chartStatTotal", `${total.toLocaleString("en-US")} ج`);
+    set("chartStatAvg", `${Math.round(avg).toLocaleString("en-US")} ج`);
+
+    if (bestDay) {
+        const dayName = bestDay.toLocaleDateString("ar-EG", { weekday: "long" });
+        set("chartStatBest", dayName);
+    } else {
+        set("chartStatBest", "-");
+    }
+
+    // ✅ نجهز الـ labels
+    const labels = days.map(d => {
+        return d.toLocaleDateString("ar-EG-u-nu-latn", {
+            day: "numeric",
+            month: "short"
+        });
+    });
+
+    // ✅ نطفي الرسم القديم لو موجود
+    if (dashboardSalesChart) {
+        dashboardSalesChart.destroy();
+        dashboardSalesChart = null;
+    }
+
+    // ✅ نحضّر الـ context
+    const ctx = canvas.getContext("2d");
+
+    // ✅ Gradient للتعبئة
+    const gradient = ctx.createLinearGradient(0, 0, 0, 280);
+    gradient.addColorStop(0, "rgba(139, 92, 246, 0.35)");
+    gradient.addColorStop(0.5, "rgba(139, 92, 246, 0.15)");
+    gradient.addColorStop(1, "rgba(139, 92, 246, 0)");
+
+    // ✅ نرسم
+    dashboardSalesChart = new Chart(ctx, {
+        type: "line",
+        data: {
+            labels: labels,
+            datasets: [{
+                label: "المبيعات (ج)",
+                data: values,
+                borderColor: "#8b5cf6",
+                backgroundColor: gradient,
+                borderWidth: 3,
+                fill: true,
+                tension: 0.4,
+                pointRadius: 4,
+                pointBackgroundColor: "#8b5cf6",
+                pointBorderColor: "#fff",
+                pointBorderWidth: 2,
+                pointHoverRadius: 7,
+                pointHoverBackgroundColor: "#7c3aed",
+                pointHoverBorderColor: "#fff",
+                pointHoverBorderWidth: 3
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            interaction: {
+                intersect: false,
+                mode: "index"
+            },
+            plugins: {
+                legend: {
+                    display: false
+                },
+                tooltip: {
+                    backgroundColor: "#111827",
+                    titleColor: "#fff",
+                    bodyColor: "#e5e7eb",
+                    titleFont: {
+                        family: "Tajawal",
+                        size: 13,
+                        weight: "800"
+                    },
+                    bodyFont: {
+                        family: "Tajawal",
+                        size: 13,
+                        weight: "700"
+                    },
+                    padding: 12,
+                    cornerRadius: 10,
+                    displayColors: false,
+                    callbacks: {
+                        label: function (context) {
+                            const val = context.parsed.y;
+                            return `${val.toLocaleString("en-US")} ج`;
+                        },
+                        title: function (items) {
+                            return items[0].label;
+                        }
+                    }
+                }
+            },
+            scales: {
+                x: {
+                    grid: {
+                        display: false,
+                        drawBorder: false
+                    },
+                    ticks: {
+                        color: "#94a3b8",
+                        font: {
+                            family: "Tajawal",
+                            size: 11,
+                            weight: "700"
+                        },
+                        maxRotation: 0,
+                        autoSkip: true,
+                        maxTicksLimit: 7
+                    }
+                },
+                y: {
+                    beginAtZero: true,
+                    grid: {
+                        color: "#f1f5f9",
+                        drawBorder: false
+                    },
+                    ticks: {
+                        color: "#94a3b8",
+                        font: {
+                            family: "Tajawal",
+                            size: 11,
+                            weight: "700"
+                        },
+                        callback: function (value) {
+                            if (value >= 1000) {
+                                return (value / 1000).toFixed(0) + "k";
+                            }
+                            return value;
+                        }
+                    }
+                }
+            }
+        }
+    });
+}
+
+// ✅ Exports
+window.renderDashboardSalesChart = renderDashboardSalesChart;
+// ========================================
+// DASHBOARD WEEK COMPARISON
+// ========================================
+
+function renderWeekComparison() {
+    const soldOrders = adminOrders.filter(o => SOLD_STATUSES.includes(o.status));
+
+    // ✅ تحديد الأسبوع الحالي والماضي
+    const now = new Date();
+
+    // الأسبوع الحالي: من السبت الماضي (بداية الأسبوع) لليوم
+    const currentWeekStart = new Date(now);
+    currentWeekStart.setDate(now.getDate() - now.getDay() - 1); // -1 عشان الأسبوع يبدأ السبت
+    currentWeekStart.setHours(0, 0, 0, 0);
+
+    if (now.getDay() === 6) {
+        // لو النهاردة سبت
+        currentWeekStart.setDate(now.getDate());
+    }
+
+    // الأسبوع الماضي: 7 أيام قبل بداية الأسبوع الحالي
+    const previousWeekStart = new Date(currentWeekStart);
+    previousWeekStart.setDate(previousWeekStart.getDate() - 7);
+
+    const previousWeekEnd = new Date(currentWeekStart);
+    previousWeekEnd.setMilliseconds(-1);
+
+    // ✅ نحسب إحصائيات الأسبوع الحالي
+    const currentOrders = soldOrders.filter(o => {
+        const d = new Date(o.created_at);
+        return d >= currentWeekStart && d <= now;
+    });
+
+    const currentTotal = currentOrders.reduce(
+        (sum, o) => sum + Number(o.total_amount || 0),
+        0
+    );
+
+    // ✅ نحسب إحصائيات الأسبوع الماضي
+    const previousOrders = soldOrders.filter(o => {
+        const d = new Date(o.created_at);
+        return d >= previousWeekStart && d <= previousWeekEnd;
+    });
+
+    const previousTotal = previousOrders.reduce(
+        (sum, o) => sum + Number(o.total_amount || 0),
+        0
+    );
+
+    // ✅ نحدّث القيم
+    const set = (id, val) => {
+        const el = document.getElementById(id);
+        if (el) el.textContent = val;
+    };
+
+    set("weekCurrentValue", `${currentTotal.toLocaleString("en-US")} ج`);
+    set("weekCurrentOrders", `${currentOrders.length} طلب`);
+
+    set("weekPreviousValue", `${previousTotal.toLocaleString("en-US")} ج`);
+    set("weekPreviousOrders", `${previousOrders.length} طلب`);
+
+    // ✅ نحسب النسبة
+    const changeBox = document.getElementById("weekChangeBox");
+    const changeIcon = document.getElementById("weekChangeIcon");
+    const changeValue = document.getElementById("weekChangeValue");
+    const changeText = document.getElementById("weekChangeText");
+
+    if (!changeBox) return;
+
+    // ✅ نشيل الكلاسات القديمة
+    changeBox.classList.remove("up", "down", "same");
+
+    if (previousTotal === 0 && currentTotal === 0) {
+        // مفيش مبيعات في الاتنين
+        changeBox.classList.add("same");
+        if (changeIcon) changeIcon.innerHTML = '<i class="fa-solid fa-minus"></i>';
+        if (changeValue) changeValue.textContent = "—";
+        if (changeText) changeText.textContent = "لا توجد مبيعات في الفترة";
+    } else if (previousTotal === 0) {
+        // مبيعات جديدة بس
+        changeBox.classList.add("up");
+        if (changeIcon) changeIcon.innerHTML = '<i class="fa-solid fa-arrow-up"></i>';
+        if (changeValue) changeValue.textContent = "+100%";
+        if (changeText) changeText.textContent = "بداية مبيعات هذا الأسبوع 🎉";
+    } else {
+        const percent = ((currentTotal - previousTotal) / previousTotal) * 100;
+        const absPercent = Math.abs(percent).toFixed(1);
+
+        if (percent > 0) {
+            changeBox.classList.add("up");
+            if (changeIcon) changeIcon.innerHTML = '<i class="fa-solid fa-arrow-up"></i>';
+            if (changeValue) changeValue.textContent = `+${absPercent}%`;
+            if (changeText) changeText.textContent = "نمو في المبيعات 🚀";
+        } else if (percent < 0) {
+            changeBox.classList.add("down");
+            if (changeIcon) changeIcon.innerHTML = '<i class="fa-solid fa-arrow-down"></i>';
+            if (changeValue) changeValue.textContent = `-${absPercent}%`;
+            if (changeText) changeText.textContent = "انخفاض في المبيعات";
+        } else {
+            changeBox.classList.add("same");
+            if (changeIcon) changeIcon.innerHTML = '<i class="fa-solid fa-minus"></i>';
+            if (changeValue) changeValue.textContent = "0%";
+            if (changeText) changeText.textContent = "لا يوجد تغيير";
+        }
+    }
+}
+
+// ========================================
+// DASHBOARD INSIGHTS (Best Day / Hour / Gov)
+// ========================================
+
+function renderDashboardInsights() {
+    const soldOrders = adminOrders.filter(o => SOLD_STATUSES.includes(o.status));
+
+    // ===== 1) أكثر يوم =====
+    const dayMap = {};
+    const dayNames = ["الأحد", "الاثنين", "الثلاثاء", "الأربعاء", "الخميس", "الجمعة", "السبت"];
+
+    soldOrders.forEach(o => {
+        const d = new Date(o.created_at);
+        const dayName = dayNames[d.getDay()];
+        if (!dayMap[dayName]) dayMap[dayName] = { revenue: 0, count: 0 };
+        dayMap[dayName].revenue += Number(o.total_amount || 0);
+        dayMap[dayName].count++;
+    });
+
+    const bestDayEntry = Object.entries(dayMap).sort((a, b) => b[1].revenue - a[1].revenue)[0];
+
+    const dayEl = document.getElementById("insightBestDay");
+    const dayValueEl = document.getElementById("insightBestDayValue");
+
+    if (bestDayEntry) {
+        if (dayEl) dayEl.textContent = bestDayEntry[0];
+        if (dayValueEl) dayValueEl.textContent = `${Math.round(bestDayEntry[1].revenue).toLocaleString("en-US")} ج`;
+    } else {
+        if (dayEl) dayEl.textContent = "-";
+        if (dayValueEl) dayValueEl.textContent = "لا توجد مبيعات";
+    }
+
+    // ===== 2) أكثر ساعة =====
+    const hourMap = {};
+
+    soldOrders.forEach(o => {
+        const d = new Date(o.created_at);
+        const hour = d.getHours();
+        if (!hourMap[hour]) hourMap[hour] = 0;
+        hourMap[hour]++;
+    });
+
+    const bestHourEntry = Object.entries(hourMap).sort((a, b) => b[1] - a[1])[0];
+
+    const hourEl = document.getElementById("insightBestHour");
+    const hourValueEl = document.getElementById("insightBestHourValue");
+
+    if (bestHourEntry) {
+        const hour = Number(bestHourEntry[0]);
+        const nextHour = (hour + 1) % 24;
+
+        const formatHour = h => {
+            const period = h < 12 ? "ص" : "م";
+            const h12 = h % 12 || 12;
+            return `${h12} ${period}`;
+        };
+
+        if (hourEl) hourEl.textContent = `${formatHour(hour)} - ${formatHour(nextHour)}`;
+        if (hourValueEl) hourValueEl.textContent = `${bestHourEntry[1]} طلب`;
+    } else {
+        if (hourEl) hourEl.textContent = "-";
+        if (hourValueEl) hourValueEl.textContent = "لا توجد طلبات";
+    }
+
+    // ===== 3) أكثر محافظة =====
+    const govMap = {};
+    let totalRevenue = 0;
+
+    soldOrders.forEach(o => {
+        const gov = o.governorate || "غير محدد";
+        if (!govMap[gov]) govMap[gov] = 0;
+        govMap[gov] += Number(o.total_amount || 0);
+        totalRevenue += Number(o.total_amount || 0);
+    });
+
+    const bestGovEntry = Object.entries(govMap).sort((a, b) => b[1] - a[1])[0];
+
+    const govEl = document.getElementById("insightBestGov");
+    const govValueEl = document.getElementById("insightBestGovValue");
+
+    if (bestGovEntry) {
+        const percent = totalRevenue > 0
+            ? ((bestGovEntry[1] / totalRevenue) * 100).toFixed(1)
+            : 0;
+
+        if (govEl) govEl.textContent = bestGovEntry[0];
+        if (govValueEl) govValueEl.textContent = `${percent}% من المبيعات`;
+    } else {
+        if (govEl) govEl.textContent = "-";
+        if (govValueEl) govValueEl.textContent = "لا توجد مبيعات";
+    }
+}
+
+// ✅ Exports
+window.renderWeekComparison = renderWeekComparison;
+window.renderDashboardInsights = renderDashboardInsights;
