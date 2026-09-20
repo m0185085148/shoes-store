@@ -937,6 +937,14 @@ function switchTab(tabId) {
 
         // ✅ تحديث تلقائي
         loadApprovalRequests();
+    } else if (tabId === "customers") {
+        document.getElementById("viewCustomers")?.classList.add("active");
+        document.getElementById("tabNavCustomers")?.classList.add("active");
+        title.textContent = "إدارة العملاء";
+        subtitle.textContent = "عرض وتحليل بيانات العملاء";
+
+        // ✅ تحديث تلقائي
+        loadCustomersScreen();
     } else if (tabId === "products") {
         document.getElementById("viewProducts")?.classList.add("active");
         document.getElementById("tabNavProducts")?.classList.add("active");
@@ -9600,3 +9608,685 @@ function closeInvoicePreview() {
 
 window.printOrderInvoice = printOrderInvoice;
 window.closeInvoicePreview = closeInvoicePreview;
+// ========================================
+// CUSTOMERS SCREEN (إدارة العملاء المتقدمة)
+// ========================================
+
+let adminCustomers = [];
+let customersFilter = "all";
+let customersSearchTerm = "";
+let currentCustomerFileKey = null;
+
+// ✅ تحميل بيانات شاشة العملاء
+async function loadCustomersScreen() {
+    const listEl = document.getElementById("customersAdminList");
+    if (!listEl) return;
+
+    listEl.innerHTML = `
+        <tr>
+            <td colspan="9" style="text-align:center;padding:40px;color:#94a3b8;">
+                <i class="fa-solid fa-spinner fa-spin" style="font-size:24px;display:block;margin-bottom:10px;"></i>
+                جاري التحميل...
+            </td>
+        </tr>
+    `;
+
+    const client = getSupabaseClient();
+    if (!client) return;
+
+    try {
+        const [ordersRes, profilesRes, notesRes] = await Promise.all([
+            client.from("orders").select("*").order("created_at", { ascending: false }),
+            client.from("customer_profiles").select("id, full_name, phone, governorate, city, address, created_at"),
+            client.from("customer_notes").select("*")
+        ]);
+
+        if (ordersRes.error) throw ordersRes.error;
+
+        // ✅ نستثني الطلبات الملغية والمرتجعة
+        const orders = (ordersRes.data || []).filter(o =>
+            !["cancelled", "refunded"].includes(o.status)
+        );
+        const profiles = profilesRes.data || [];
+        const notes = notesRes.data || [];
+
+        // ✅ خرائط للبحث السريع
+        const byPhone = {};
+        const byId = {};
+        profiles.forEach(p => {
+            if (p.phone) byPhone[String(p.phone)] = p;
+            if (p.id) byId[String(p.id)] = p;
+        });
+
+        // ✅ نبني قائمة العملاء من الطلبات
+        const map = new Map();
+
+        orders.forEach(o => {
+            const key = o.customer_id
+                ? `id:${o.customer_id}`
+                : `phone:${o.customer_phone || "unknown"}`;
+
+            if (!map.has(key)) {
+                const p = o.customer_id
+                    ? byId[String(o.customer_id)]
+                    : byPhone[String(o.customer_phone)];
+
+                map.set(key, {
+                    key,
+                    customerId: o.customer_id || null,
+                    name: p?.full_name || o.customer_name || "عميل",
+                    phone: p?.phone || o.customer_phone || "-",
+                    governorate: p?.governorate || o.governorate || "-",
+                    ordersCount: 0,
+                    totalSpent: 0,
+                    firstOrderAt: o.created_at,
+                    lastOrderAt: o.created_at,
+                    orders: [],
+                    notes: []
+                });
+            }
+
+            const c = map.get(key);
+            c.ordersCount++;
+            c.totalSpent += Number(o.total_amount || 0);
+            c.orders.push(o);
+
+            if (new Date(o.created_at) < new Date(c.firstOrderAt)) {
+                c.firstOrderAt = o.created_at;
+            }
+            if (new Date(o.created_at) > new Date(c.lastOrderAt)) {
+                c.lastOrderAt = o.created_at;
+            }
+        });
+
+        // ✅ نضيف العملاء المسجلين اللي مفيهمش طلبات
+        profiles.forEach(p => {
+            const key = `id:${p.id}`;
+            if (!map.has(key)) {
+                map.set(key, {
+                    key,
+                    customerId: p.id,
+                    name: p.full_name || "عميل",
+                    phone: p.phone || "-",
+                    governorate: p.governorate || "-",
+                    ordersCount: 0,
+                    totalSpent: 0,
+                    firstOrderAt: p.created_at || null,
+                    lastOrderAt: null,
+                    orders: [],
+                    notes: []
+                });
+            }
+        });
+
+        // ✅ نربط الملاحظات
+        notes.forEach(n => {
+            map.forEach(c => {
+                const matchesId = n.customer_id && c.customerId
+                    && String(n.customer_id) === String(c.customerId);
+                const matchesPhone = n.customer_phone && c.phone && c.phone !== "-"
+                    && String(n.customer_phone) === String(c.phone);
+
+                if (matchesId || matchesPhone) {
+                    c.notes.push(n);
+                }
+            });
+        });
+
+        adminCustomers = Array.from(map.values());
+
+        // ✅ نحسب التصنيفات
+        const now = Date.now();
+        const thirtyDaysMs = 30 * 24 * 60 * 60 * 1000;
+
+        adminCustomers.forEach(c => {
+            const vipNote = c.notes.find(n => n.tag === "vip");
+            const blockedNote = c.notes.find(n => n.tag === "blocked");
+            const watchNote = c.notes.find(n => n.tag === "watch");
+
+            if (vipNote) c.tag = "vip";
+            else if (blockedNote) c.tag = "blocked";
+            else if (watchNote) c.tag = "watch";
+            else c.tag = null;
+
+            if (c.ordersCount === 1) c.type = "new";
+            else if (c.ordersCount >= 2) c.type = "repeat";
+            else c.type = "no-orders";
+
+            if (c.lastOrderAt) {
+                const diff = now - new Date(c.lastOrderAt).getTime();
+                c.isInactive = diff > thirtyDaysMs;
+            } else {
+                c.isInactive = false;
+            }
+        });
+
+        renderCustomersScreen();
+        updateCustomersStats();
+
+    } catch (err) {
+        console.error("Load Customers Error:", err);
+        listEl.innerHTML = `
+            <tr>
+                <td colspan="9" style="text-align:center;padding:30px;color:#dc2626;font-weight:700;">
+                    حدث خطأ: ${escapeAdminHTML(err.message)}
+                </td>
+            </tr>
+        `;
+    }
+}
+
+// ✅ إحصائيات علوية + شارات الفلاتر
+function updateCustomersStats() {
+    const total = adminCustomers.length;
+    const vip = adminCustomers.filter(c => c.tag === "vip").length;
+    const isNew = adminCustomers.filter(c => c.type === "new").length;
+    const repeat = adminCustomers.filter(c => c.type === "repeat").length;
+    const inactive = adminCustomers.filter(c => c.isInactive).length;
+    const blocked = adminCustomers.filter(c => c.tag === "blocked").length;
+
+    const set = (id, val) => {
+        const el = document.getElementById(id);
+        if (el) el.textContent = val;
+    };
+
+    set("custStatTotal", total);
+    set("custStatVip", vip);
+    set("custStatNew", isNew);
+    set("custStatRepeat", repeat);
+
+    set("chipCountAll", total);
+    set("chipCountVip", vip);
+    set("chipCountNew", isNew);
+    set("chipCountRepeat", repeat);
+    set("chipCountInactive", inactive);
+    set("chipCountBlocked", blocked);
+}
+
+// ✅ عرض جدول العملاء
+function renderCustomersScreen() {
+    const listEl = document.getElementById("customersAdminList");
+    const countEl = document.getElementById("custCountLabel");
+    if (!listEl) return;
+
+    let list = [...adminCustomers];
+
+    if (customersFilter === "vip") {
+        list = list.filter(c => c.tag === "vip");
+    } else if (customersFilter === "new") {
+        list = list.filter(c => c.type === "new");
+    } else if (customersFilter === "repeat") {
+        list = list.filter(c => c.type === "repeat");
+    } else if (customersFilter === "inactive") {
+        list = list.filter(c => c.isInactive);
+    } else if (customersFilter === "blocked") {
+        list = list.filter(c => c.tag === "blocked");
+    }
+
+    if (customersSearchTerm) {
+        const term = customersSearchTerm.toLowerCase();
+        list = list.filter(c =>
+            String(c.name || "").toLowerCase().includes(term) ||
+            String(c.phone || "").includes(term)
+        );
+    }
+
+    list.sort((a, b) => b.totalSpent - a.totalSpent);
+
+    if (countEl) countEl.textContent = `${list.length} عميل`;
+
+    if (!list.length) {
+        listEl.innerHTML = `
+            <tr>
+                <td colspan="9" style="text-align:center;padding:40px;color:#94a3b8;">
+                    <i class="fa-solid fa-users-slash" style="font-size:32px;display:block;margin-bottom:10px;opacity:0.5;"></i>
+                    لا يوجد عملاء مطابقين
+                </td>
+            </tr>
+        `;
+        return;
+    }
+
+    listEl.innerHTML = list.map((c, i) => {
+        let tagBadge = "";
+
+        if (c.tag === "vip") {
+            tagBadge = `<span class="cust-tag-badge vip"><i class="fa-solid fa-crown"></i> VIP</span>`;
+        } else if (c.tag === "blocked") {
+            tagBadge = `<span class="cust-tag-badge blocked"><i class="fa-solid fa-ban"></i> محظور</span>`;
+        } else if (c.type === "new") {
+            tagBadge = `<span class="cust-tag-badge new"><i class="fa-solid fa-user-plus"></i> جديد</span>`;
+        } else if (c.type === "repeat") {
+            tagBadge = `<span class="cust-tag-badge repeat"><i class="fa-solid fa-repeat"></i> متكرر</span>`;
+        } else if (c.isInactive) {
+            tagBadge = `<span class="cust-tag-badge inactive"><i class="fa-solid fa-moon"></i> خامل</span>`;
+        } else {
+            tagBadge = `<span style="color:#cbd5e1;font-size:11px;font-weight:700;">—</span>`;
+        }
+
+        const phoneEscaped = escapeAdminHTML(c.phone);
+        const keyEscaped = escapeAdminHTML(c.key);
+        const custIdEscaped = escapeAdminHTML(c.customerId || "");
+
+        return `
+            <tr>
+                <td style="color:#94a3b8;font-weight:800;">${i + 1}</td>
+                <td>
+                    <div class="cust-name-cell">
+                        <strong>${escapeAdminHTML(c.name)}</strong>
+                        ${c.notes.length > 0 ? `
+                            <small>
+                                <i class="fa-solid fa-note-sticky"></i>
+                                ${c.notes.length} ملاحظة
+                            </small>
+                        ` : ""}
+                    </div>
+                </td>
+                <td class="phone-cell">
+                    <div class="phone" style="direction:ltr;justify-content:flex-end;">
+                        ${phoneEscaped}
+                    </div>
+                </td>
+                <td style="font-size:12px;color:#475569;font-weight:700;">
+                    ${escapeAdminHTML(c.governorate || "-")}
+                </td>
+                <td style="text-align:center;font-weight:800;font-size:15px;color:#7c3aed;">
+                    ${c.ordersCount}
+                </td>
+                <td class="amount-cell">
+                    ${c.totalSpent.toLocaleString("en-US")} <span class="currency">ج.م</span>
+                </td>
+                <td class="date-cell" style="font-size:12px;">
+                    ${c.lastOrderAt ? formatDate(c.lastOrderAt) : "-"}
+                </td>
+                <td>${tagBadge}</td>
+                <td>
+                    <div class="cust-action-btns">
+                        <button type="button" class="cust-action-btn view"
+                            onclick="openCustomerFileModal('${keyEscaped}')"
+                            title="ملف العميل">
+                            <i class="fa-solid fa-eye"></i>
+                        </button>
+                        <button type="button" class="cust-action-btn wa"
+                            onclick="sendCustomerWhatsApp('${phoneEscaped}', '${escapeAdminHTML(c.name)}')"
+                            title="إرسال واتساب">
+                            <i class="fa-brands fa-whatsapp"></i>
+                        </button>
+                        <button type="button" class="cust-action-btn note"
+                            onclick="openAddCustomerNoteModal('${custIdEscaped}', '${phoneEscaped}')"
+                            title="إضافة ملاحظة">
+                            <i class="fa-solid fa-note-sticky"></i>
+                        </button>
+                    </div>
+                </td>
+            </tr>
+        `;
+    }).join("");
+}
+
+// ✅ فلترة العملاء
+function filterCustomers(type, btnEl) {
+    customersFilter = type;
+
+    document.querySelectorAll(".cust-filter-chip").forEach(b => b.classList.remove("active"));
+    btnEl?.classList.add("active");
+
+    renderCustomersScreen();
+}
+
+// ✅ البحث
+function setupCustomersSearch() {
+    const input = document.getElementById("custSearchInput");
+    const clearBtn = document.getElementById("custSearchClear");
+    if (!input) return;
+
+    let timer;
+    input.addEventListener("input", (e) => {
+        const val = e.target.value;
+        if (clearBtn) {
+            clearBtn.style.display = val ? "flex" : "none";
+        }
+        clearTimeout(timer);
+        timer = setTimeout(() => {
+            customersSearchTerm = val;
+            renderCustomersScreen();
+        }, 250);
+    });
+}
+
+function clearCustomerSearch() {
+    const input = document.getElementById("custSearchInput");
+    const clearBtn = document.getElementById("custSearchClear");
+    if (input) input.value = "";
+    if (clearBtn) clearBtn.style.display = "none";
+    customersSearchTerm = "";
+    renderCustomersScreen();
+}
+
+// ✅ إرسال واتساب
+function sendCustomerWhatsApp(phone, name) {
+    let cleanPhone = String(phone || "").replace(/\D/g, "");
+    if (cleanPhone.startsWith("0")) cleanPhone = "2" + cleanPhone;
+
+    if (cleanPhone.length < 11) {
+        alert("رقم الهاتف غير صحيح");
+        return;
+    }
+
+    const msg = `مرحباً ${name || ""}\n\nمعاك STEP Store\nعندنا عروض جديدة على الأحذية!\n\nلو محتاج أي حاجة كلمنا`;
+
+    const waUrl = `https://wa.me/${cleanPhone}?text=${encodeURIComponent(msg)}`;
+    window.open(waUrl, "_blank");
+}
+
+// ✅ ملف العميل (مودال كامل)
+function openCustomerFileModal(key) {
+    const c = adminCustomers.find(x => x.key === key);
+    if (!c) return;
+
+    currentCustomerFileKey = key;
+
+    const modal = document.getElementById("customerFileModal");
+    const body = document.getElementById("customerFileBody");
+    const title = document.getElementById("custFileTitle");
+    const subtitle = document.getElementById("custFileSubtitle");
+
+    if (!modal || !body) return;
+
+    if (title) title.textContent = c.name;
+    if (subtitle) subtitle.textContent = c.firstOrderAt
+        ? `عميل منذ ${formatDate(c.firstOrderAt)}`
+        : `مسجل منذ ${formatDate(c.lastOrderAt || new Date())}`;
+
+    const initial = String(c.name || "؟").trim().charAt(0).toUpperCase();
+    const aov = c.ordersCount > 0 ? c.totalSpent / c.ordersCount : 0;
+
+    let tagLabel = "عميل عادي";
+    let tagClass = "";
+    if (c.tag === "vip") { tagLabel = "VIP"; tagClass = "vip"; }
+    else if (c.tag === "blocked") { tagLabel = "محظور"; tagClass = "blocked"; }
+    else if (c.tag === "watch") { tagLabel = "للمراقبة"; tagClass = "watch"; }
+    else if (c.type === "new") { tagLabel = "جديد"; tagClass = "new"; }
+    else if (c.type === "repeat") { tagLabel = "متكرر"; tagClass = "repeat"; }
+
+    // ✅ الملاحظات
+    const notesHTML = c.notes.length
+        ? c.notes.map(n => {
+            let noteTag = "";
+            if (n.tag === "vip") noteTag = `<span class="cust-tag-badge vip"><i class="fa-solid fa-crown"></i> VIP</span>`;
+            else if (n.tag === "blocked") noteTag = `<span class="cust-tag-badge blocked"><i class="fa-solid fa-ban"></i> محظور</span>`;
+            else if (n.tag === "watch") noteTag = `<span class="cust-tag-badge inactive"><i class="fa-solid fa-eye"></i> مراقبة</span>`;
+            else if (n.tag === "normal") noteTag = `<span class="cust-tag-badge new"><i class="fa-solid fa-user"></i> عادي</span>`;
+
+            return `
+                <div class="cust-note-item">
+                    <div class="cust-note-header">
+                        <div class="cust-note-meta">
+                            ${noteTag}
+                            <span class="cust-note-author">
+                                <i class="fa-solid fa-user"></i>
+                                ${escapeAdminHTML(n.created_by_username || "أدمن")}
+                            </span>
+                            <span class="cust-note-date">
+                                ${formatDate(n.created_at)}
+                            </span>
+                        </div>
+                        <button type="button" class="cust-note-delete"
+                            onclick="deleteCustomerNote(${Number(n.id)})"
+                            title="حذف">
+                            <i class="fa-solid fa-trash"></i>
+                        </button>
+                    </div>
+                    <div class="cust-note-text">${escapeAdminHTML(n.note)}</div>
+                </div>
+            `;
+        }).join("")
+        : `
+            <div class="cust-notes-empty">
+                <i class="fa-solid fa-note-sticky"></i>
+                <p>لا توجد ملاحظات</p>
+            </div>
+        `;
+
+    // ✅ سجل الطلبات
+    const ordersHTML = c.orders.length
+        ? c.orders
+            .sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
+            .slice(0, 10)
+            .map(o => `
+                <div class="cust-order-history-item"
+                    onclick="closeCustomerFileModal(); viewOrderDetails(${Number(o.id)})">
+                    <div class="cust-order-info">
+                        <h4>طلب #${escapeAdminHTML(o.id)}</h4>
+                        <div class="cust-order-info-meta">
+                            ${getStatusBadge(o.status)}
+                            <span>${formatDate(o.created_at)}</span>
+                        </div>
+                    </div>
+                    <div class="cust-order-total">
+                        ${Number(o.total_amount || 0).toLocaleString("en-US")} ج
+                    </div>
+                </div>
+            `).join("")
+        : `
+            <div class="cust-notes-empty">
+                <i class="fa-solid fa-box-open"></i>
+                <p>لا توجد طلبات</p>
+            </div>
+        `;
+
+    const phoneEscaped = escapeAdminHTML(c.phone);
+    const custIdEscaped = escapeAdminHTML(c.customerId || "");
+
+    body.innerHTML = `
+        <div class="cust-file-wrapper">
+
+            <!-- Header -->
+            <div class="cust-file-header">
+                <div class="cust-file-avatar">${escapeAdminHTML(initial)}</div>
+                <div class="cust-file-name-block">
+                    <h3>${escapeAdminHTML(c.name)}</h3>
+                    <p>${phoneEscaped}</p>
+                    ${tagClass ? `<span class="cust-tag-badge ${tagClass}" style="margin-top:6px;display:inline-flex;">${escapeAdminHTML(tagLabel)}</span>` : ""}
+                </div>
+            </div>
+
+            <!-- Stats -->
+            <div class="cust-file-stats">
+                <div class="cust-file-stat">
+                    <strong>${c.ordersCount}</strong>
+                    <span>عدد الطلبات</span>
+                </div>
+                <div class="cust-file-stat">
+                    <strong>${c.totalSpent.toLocaleString("en-US")}</strong>
+                    <span>إجمالي الشراء</span>
+                </div>
+                <div class="cust-file-stat">
+                    <strong>${Math.round(aov).toLocaleString("en-US")}</strong>
+                    <span>متوسط الطلب</span>
+                </div>
+            </div>
+
+            <!-- Actions -->
+            <div class="cust-file-actions">
+                <button type="button" class="cust-file-action-btn whatsapp"
+                    onclick="sendCustomerWhatsApp('${phoneEscaped}', '${escapeAdminHTML(c.name)}')">
+                    <i class="fa-brands fa-whatsapp"></i>
+                    إرسال واتساب
+                </button>
+                <button type="button" class="cust-file-action-btn add-note"
+                    onclick="openAddCustomerNoteModal('${custIdEscaped}', '${phoneEscaped}')">
+                    <i class="fa-solid fa-note-sticky"></i>
+                    إضافة ملاحظة
+                </button>
+            </div>
+
+            <!-- Notes -->
+            <div>
+                <div class="cust-file-section-title">
+                    <i class="fa-solid fa-note-sticky"></i>
+                    الملاحظات الداخلية (${c.notes.length})
+                </div>
+                <div class="cust-notes-list">
+                    ${notesHTML}
+                </div>
+            </div>
+
+            <!-- Order History -->
+            <div>
+                <div class="cust-file-section-title">
+                    <i class="fa-solid fa-box"></i>
+                    سجل الطلبات (${c.ordersCount})
+                </div>
+                <div class="cust-notes-list">
+                    ${ordersHTML}
+                </div>
+            </div>
+
+            <!-- Info Row -->
+            <div style="padding:12px 16px;background:#f8fafc;border-radius:12px;font-size:12px;color:#64748b;font-weight:700;line-height:1.8;">
+                <div><strong>المحافظة:</strong> ${escapeAdminHTML(c.governorate || "-")}</div>
+                <div><strong>أول طلب:</strong> ${c.firstOrderAt ? formatDate(c.firstOrderAt) : "-"}</div>
+                <div><strong>آخر طلب:</strong> ${c.lastOrderAt ? formatDate(c.lastOrderAt) : "-"}</div>
+            </div>
+
+        </div>
+    `;
+
+    modal.classList.add("open");
+}
+
+function closeCustomerFileModal() {
+    document.getElementById("customerFileModal")?.classList.remove("open");
+    currentCustomerFileKey = null;
+}
+
+// ✅ إضافة ملاحظة
+function openAddCustomerNoteModal(customerId, customerPhone) {
+    const modal = document.getElementById("addCustomerNoteModal");
+    if (!modal) return;
+
+    document.getElementById("noteCustomerId").value = customerId || "";
+    document.getElementById("noteCustomerPhone").value = customerPhone || "";
+    document.getElementById("noteTagSelect").value = "";
+    document.getElementById("noteText").value = "";
+
+    modal.classList.add("open");
+}
+
+function closeAddCustomerNoteModal() {
+    document.getElementById("addCustomerNoteModal")?.classList.remove("open");
+}
+
+async function saveCustomerNote(e) {
+    e.preventDefault();
+
+    const client = getSupabaseClient();
+    if (!client || !currentAdmin) return;
+
+    const customerId = document.getElementById("noteCustomerId").value.trim();
+    const customerPhone = document.getElementById("noteCustomerPhone").value.trim();
+    const tag = document.getElementById("noteTagSelect").value;
+    const note = document.getElementById("noteText").value.trim();
+
+    if (!note) {
+        alert("اكتب الملاحظة");
+        return;
+    }
+
+    const btn = document.getElementById("saveCustomerNoteBtn");
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> جاري الحفظ...';
+
+    try {
+        const { error } = await client.from("customer_notes").insert({
+            customer_id: customerId || null,
+            customer_phone: customerPhone || null,
+            note: note,
+            tag: tag || null,
+            created_by: currentAdmin.id,
+            created_by_username: currentAdmin.username || currentAdmin.email || "Admin"
+        });
+
+        if (error) throw error;
+
+        showToast("تم حفظ الملاحظة");
+
+        closeAddCustomerNoteModal();
+
+        await loadCustomersScreen();
+
+        if (currentCustomerFileKey) {
+            openCustomerFileModal(currentCustomerFileKey);
+        }
+    } catch (error) {
+        console.error("Save Note Error:", error);
+        alert("فشل الحفظ:\n\n" + error.message);
+    } finally {
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fa-solid fa-check"></i> حفظ الملاحظة';
+    }
+}
+
+// ✅ حذف ملاحظة
+async function deleteCustomerNote(noteId) {
+    const confirmed = confirm("هل تريد حذف هذه الملاحظة؟");
+    if (!confirmed) return;
+
+    const client = getSupabaseClient();
+    if (!client) return;
+
+    try {
+        const { error } = await client
+            .from("customer_notes")
+            .delete()
+            .eq("id", noteId);
+
+        if (error) throw error;
+
+        showToast("تم حذف الملاحظة");
+
+        await loadCustomersScreen();
+
+        if (currentCustomerFileKey) {
+            openCustomerFileModal(currentCustomerFileKey);
+        }
+    } catch (error) {
+        console.error("Delete Note Error:", error);
+        alert("فشل الحذف:\n\n" + error.message);
+    }
+}
+
+// ✅ ربط أحداث شاشة العملاء
+document.addEventListener("DOMContentLoaded", () => {
+    setupCustomersSearch();
+
+    document.getElementById("addCustomerNoteForm")
+        ?.addEventListener("submit", saveCustomerNote);
+
+    // ✅ إغلاق المودال عند الضغط على الخلفية
+    document.getElementById("customerFileModal")
+        ?.addEventListener("click", (e) => {
+            if (e.target.id === "customerFileModal") {
+                closeCustomerFileModal();
+            }
+        });
+
+    document.getElementById("addCustomerNoteModal")
+        ?.addEventListener("click", (e) => {
+            if (e.target.id === "addCustomerNoteModal") {
+                closeAddCustomerNoteModal();
+            }
+        });
+});
+
+// ✅ Exports
+window.loadCustomersScreen = loadCustomersScreen;
+window.filterCustomers = filterCustomers;
+window.clearCustomerSearch = clearCustomerSearch;
+window.openCustomerFileModal = openCustomerFileModal;
+window.closeCustomerFileModal = closeCustomerFileModal;
+window.openAddCustomerNoteModal = openAddCustomerNoteModal;
+window.closeAddCustomerNoteModal = closeAddCustomerNoteModal;
+window.deleteCustomerNote = deleteCustomerNote;
+window.sendCustomerWhatsApp = sendCustomerWhatsApp;
