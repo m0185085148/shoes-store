@@ -8943,3 +8943,135 @@ body {
         display: none;
     }
 }
+/* =========================================
+   NOTIFICATION BADGES — V2 (مصحح)
+   ========================================= */
+
+/* ✅ نخلي الشارة جنب النص مباشرة (مش على الطرف البعيد) */
+.sidebar .nav-item a {
+    justify-content: flex-start;
+    gap: 10px;
+}
+
+.sidebar .nav-item-content {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.sidebar .nav-item-content > span {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    flex: 1;
+}
+
+/* ✅ الشارة نفسها — صغيرة وأنيقة */
+.sidebar .nav-item .tab-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 20px;
+    height: 20px;
+    padding: 0 7px;
+    border-radius: 10px;
+
+    font-family: inherit;
+    font-size: 10.5px;
+    font-weight: 800;
+    line-height: 1;
+    letter-spacing: 0.2px;
+
+    background: linear-gradient(135deg, #ef4444, #dc2626);
+    color: #fff;
+
+    /* ✅ ظل خفيف جدًا (شيلنا الحدود السميكة) */
+    box-shadow: 0 2px 6px rgba(239, 68, 68, 0.35);
+
+    transition: all 0.25s cubic-bezier(.2,.8,.2,1);
+    flex-shrink: 0;
+}
+
+/* ✅ warning (ذهبي دافئ) */
+.sidebar .nav-item .tab-badge.warning {
+    background: linear-gradient(135deg, #fbbf24, #d97706);
+    color: #fff;
+    box-shadow: 0 2px 6px rgba(251, 191, 36, 0.35);
+}
+
+/* ✅ نشيل أي نقطة نبض (الشكل أنضف بدونها) */
+.sidebar .nav-item .tab-badge::before,
+.sidebar .nav-item .tab-badge.danger::before {
+    display: none !important;
+}
+
+/* ✅ hover — تكبر شوية */
+.sidebar .nav-item a:hover .tab-badge {
+    transform: scale(1.08);
+}
+
+/* ✅ active — لون متناسق مع العنصر النشط */
+.sidebar .nav-item.active .tab-badge {
+    background: rgba(255, 255, 255, 0.25);
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
+    color: #fff;
+}
+
+/* ✅ collapsed mode — نقطة صغيرة */
+.sidebar.collapsed .nav-item .tab-badge {
+    position: absolute;
+    top: 6px;
+    left: 6px;
+    min-width: 8px;
+    height: 8px;
+    padding: 0;
+    font-size: 0;
+    border-radius: 50%;
+    background: #ef4444;
+    box-shadow: 0 0 0 2px #111827;
+}
+
+.sidebar.collapsed .nav-item .tab-badge.warning {
+    background: #fbbf24;
+}
+
+/* ✅ الجرس — نظبط حجمه كمان */
+.notifications-badge {
+    min-width: 20px !important;
+    height: 20px !important;
+    padding: 0 6px !important;
+    border-radius: 10px !important;
+    font-size: 10.5px !important;
+    font-weight: 800 !important;
+    background: linear-gradient(135deg, #ef4444, #dc2626) !important;
+    border: 2px solid #fff !important;
+    box-shadow: 0 2px 8px rgba(239, 68, 68, 0.35) !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+}
+
+/* ✅ responsive */
+@media (max-width: 1100px) {
+    .sidebar .nav-item .tab-badge {
+        position: static;
+        min-width: 20px;
+        height: 20px;
+        padding: 0 7px;
+        font-size: 10.5px;
+        border-radius: 10px;
+        background: linear-gradient(135deg, #ef4444, #dc2626);
+        box-shadow: 0 2px 6px rgba(239, 68, 68, 0.35);
+    }
+
+    .sidebar .nav-item .tab-badge.warning {
+        background: linear-gradient(135deg, #fbbf24, #d97706);
+        box-shadow: 0 2px 6px rgba(251, 191, 36, 0.35);
+    }
+
+    .sidebar .nav-item.active .tab-badge {
+        background: rgba(255, 255, 255, 0.25);
+    }
+}
