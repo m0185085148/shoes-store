@@ -11149,3 +11149,39 @@ window.renderSidebarFavorites = renderSidebarFavorites;
 window.updateFavoriteStars = updateFavoriteStars;
 window.syncFavoritesActiveState = syncFavoritesActiveState;
 window.initSidebarFeatures = initSidebarFeatures;
+// ========================================
+// BADGE MULTI-DIGIT CLASS
+// ========================================
+
+function updateBadgeSizes() {
+    // ✅ كل شارات الـ Sidebar
+    document.querySelectorAll(".sidebar .tab-badge").forEach(badge => {
+        const text = badge.textContent.trim();
+        const num = Number(text);
+
+        if (!isNaN(num) && num >= 100) {
+            badge.classList.add("multi-digit");
+        } else {
+            badge.classList.remove("multi-digit");
+        }
+    });
+
+    // ✅ شارة الجرس
+    const bellBadge = document.getElementById("notificationsBadge");
+    if (bellBadge) {
+        const num = Number(bellBadge.textContent.trim());
+        if (!isNaN(num) && num >= 100) {
+            bellBadge.classList.add("multi-digit");
+        } else {
+            bellBadge.classList.remove("multi-digit");
+        }
+    }
+}
+
+window.updateBadgeSizes = updateBadgeSizes;
+
+// ✅ نتحقق من الأحجام عند التحميل + كل 5 ثواني
+document.addEventListener("DOMContentLoaded", () => {
+    setTimeout(updateBadgeSizes, 500);
+    setInterval(updateBadgeSizes, 5000);
+});
