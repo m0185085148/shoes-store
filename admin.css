@@ -10170,3 +10170,487 @@ body {
         grid-template-columns: 1fr;
     }
 }
+/* =========================================
+   TREASURY SUB-TABS
+   ========================================= */
+
+.treasury-sub-tabs {
+    display: flex;
+    gap: 6px;
+    padding: 6px;
+    background: #f8fafc;
+    border: 1.5px solid #e2e8f0;
+    border-radius: 14px;
+    margin-bottom: 20px;
+    width: fit-content;
+}
+
+.treasury-sub-tab {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 11px 22px;
+    border-radius: 10px;
+    border: 0;
+    background: transparent;
+    color: #64748b;
+    font-family: inherit;
+    font-size: 13px;
+    font-weight: 800;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.treasury-sub-tab:hover {
+    background: #fff;
+    color: #334155;
+}
+
+.treasury-sub-tab.active {
+    background: linear-gradient(135deg, #10b981, #059669);
+    color: #fff;
+    box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
+}
+
+.treasury-sub-tab i {
+    font-size: 12px;
+}
+
+/* Sub-panels */
+.treasury-sub-panel {
+    display: none;
+}
+
+.treasury-sub-panel.active {
+    display: block;
+    animation: fadeIn 0.25s ease;
+}
+
+/* =========================================
+   TREASURY LEDGER (كشف الحساب)
+   ========================================= */
+
+/* ===== Filter Bar ===== */
+.ledger-filter-bar {
+    display: flex;
+    gap: 12px;
+    align-items: flex-end;
+    flex-wrap: wrap;
+    padding: 18px 20px;
+    background: linear-gradient(180deg, #fafbfc, #f8fafc);
+    border: 1.5px solid #e2e8f0;
+    border-radius: 14px;
+    margin-bottom: 20px;
+}
+
+.ledger-filter-group {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    min-width: 170px;
+}
+
+.ledger-filter-group label {
+    font-size: 11.5px;
+    font-weight: 800;
+    color: #475569;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.ledger-filter-group label i {
+    color: #10b981;
+    font-size: 11px;
+}
+
+.ledger-filter-group select,
+.ledger-filter-group input {
+    padding: 10px 14px;
+    border: 1.5px solid #e2e8f0;
+    border-radius: 10px;
+    font-family: inherit;
+    font-size: 13px;
+    font-weight: 700;
+    background: #fff;
+    color: #111;
+    outline: none;
+    transition: all 0.2s ease;
+    cursor: pointer;
+}
+
+.ledger-filter-group select:focus,
+.ledger-filter-group input:focus {
+    border-color: #10b981;
+    box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.1);
+}
+
+/* ===== Presets ===== */
+.ledger-presets {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+    padding-bottom: 1px;
+}
+
+.ledger-preset {
+    padding: 10px 16px;
+    border-radius: 10px;
+    border: 1.5px solid #e2e8f0;
+    background: #fff;
+    color: #64748b;
+    font-family: inherit;
+    font-size: 12px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    white-space: nowrap;
+}
+
+.ledger-preset:hover {
+    border-color: #cbd5e1;
+    color: #334155;
+    transform: translateY(-1px);
+}
+
+.ledger-preset.active {
+    background: linear-gradient(135deg, #10b981, #059669);
+    color: #fff;
+    border-color: #10b981;
+    box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
+}
+
+/* ===== Filter Actions ===== */
+.ledger-filter-actions {
+    display: flex;
+    gap: 8px;
+    margin-right: auto;
+    padding-bottom: 1px;
+}
+
+/* ===== Opening Balance Box ===== */
+.ledger-opening-box {
+    display: flex;
+    align-items: center;
+    gap: 18px;
+    padding: 22px 24px;
+    background: linear-gradient(135deg, #f0f9ff, #e0f2fe);
+    border: 2px dashed #7dd3fc;
+    border-radius: 16px;
+    margin-bottom: 20px;
+    position: relative;
+    overflow: hidden;
+}
+
+.ledger-opening-box::before {
+    content: "";
+    position: absolute;
+    top: -40px;
+    left: -40px;
+    width: 160px;
+    height: 160px;
+    background: radial-gradient(circle, rgba(125, 211, 252, 0.3), transparent 70%);
+    border-radius: 50%;
+    pointer-events: none;
+}
+
+.ledger-opening-icon {
+    width: 60px;
+    height: 60px;
+    border-radius: 16px;
+    background: linear-gradient(135deg, #0284c7, #0369a1);
+    color: #fff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 24px;
+    flex-shrink: 0;
+    box-shadow: 0 6px 16px rgba(2, 132, 199, 0.25);
+    position: relative;
+    z-index: 1;
+}
+
+.ledger-opening-content {
+    flex: 1;
+    min-width: 0;
+    position: relative;
+    z-index: 1;
+}
+
+.ledger-opening-label {
+    display: block;
+    font-size: 12px;
+    font-weight: 800;
+    color: #0369a1;
+    letter-spacing: 0.5px;
+    margin-bottom: 6px;
+}
+
+.ledger-opening-value {
+    display: block;
+    font-size: 32px;
+    font-weight: 800;
+    color: #0c4a6e;
+    line-height: 1;
+    margin-bottom: 4px;
+    direction: ltr;
+    text-align: right;
+}
+
+.ledger-opening-note {
+    display: block;
+    font-size: 11.5px;
+    color: #0284c7;
+    font-weight: 700;
+    opacity: 0.85;
+}
+
+.ledger-opening-meta {
+    display: flex;
+    gap: 12px;
+    position: relative;
+    z-index: 1;
+    flex-shrink: 0;
+}
+
+.ledger-opening-meta-item {
+    text-align: center;
+    padding: 10px 16px;
+    background: rgba(255, 255, 255, 0.7);
+    border-radius: 10px;
+    min-width: 100px;
+}
+
+.ledger-opening-meta-item span {
+    display: block;
+    font-size: 10.5px;
+    color: #0369a1;
+    font-weight: 700;
+    margin-bottom: 4px;
+}
+
+.ledger-opening-meta-item strong {
+    display: block;
+    font-size: 14px;
+    font-weight: 800;
+    color: #0c4a6e;
+    direction: ltr;
+}
+
+/* ===== Ledger Table ===== */
+.ledger-table thead th {
+    background: linear-gradient(135deg, #0f172a, #1e293b) !important;
+    color: #fff !important;
+    font-weight: 800 !important;
+    font-size: 11.5px !important;
+    padding: 14px 12px !important;
+    white-space: nowrap;
+}
+
+.ledger-table tbody td {
+    padding: 12px;
+    font-size: 13px;
+    border-bottom: 1px solid #f0f0f0;
+    vertical-align: middle;
+}
+
+.ledger-table tbody tr:hover {
+    background: #fafbfc;
+}
+
+.ledger-doc-number {
+    display: inline-block;
+    padding: 4px 10px;
+    background: #f1f5f9;
+    color: #334155;
+    border-radius: 6px;
+    font-family: 'Courier New', monospace;
+    font-size: 11.5px;
+    font-weight: 800;
+    letter-spacing: 0.3px;
+    direction: ltr;
+}
+
+.ledger-type-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 5px 10px;
+    border-radius: 8px;
+    font-size: 11px;
+    font-weight: 800;
+    white-space: nowrap;
+}
+
+.ledger-type-badge.in {
+    background: #dcfce7;
+    color: #15803d;
+}
+
+.ledger-type-badge.out {
+    background: #fee2e2;
+    color: #991b1b;
+}
+
+.ledger-type-badge i {
+    font-size: 10px;
+}
+
+.ledger-amount-in {
+    font-size: 14px;
+    font-weight: 800;
+    color: #16a34a;
+    direction: ltr;
+    text-align: right;
+    letter-spacing: -0.3px;
+}
+
+.ledger-amount-out {
+    font-size: 14px;
+    font-weight: 800;
+    color: #dc2626;
+    direction: ltr;
+    text-align: right;
+    letter-spacing: -0.3px;
+}
+
+.ledger-balance {
+    font-size: 14px;
+    font-weight: 800;
+    color: #0f172a;
+    direction: ltr;
+    text-align: right;
+    padding: 6px 10px;
+    background: #f8fafc;
+    border-radius: 8px;
+    letter-spacing: -0.3px;
+}
+
+.ledger-balance.positive {
+    color: #0f172a;
+}
+
+.ledger-balance.negative {
+    color: #dc2626;
+    background: #fef2f2;
+}
+
+/* ===== Ledger Totals (tfoot) ===== */
+.ledger-table tfoot td {
+    padding: 16px 12px !important;
+    font-weight: 800 !important;
+    font-size: 13px !important;
+    background: #f1f5f9 !important;
+    border-top: 2px solid #cbd5e1 !important;
+    color: #0f172a !important;
+    text-align: right;
+}
+
+.ledger-table tfoot td.totals-label {
+    color: #475569 !important;
+    font-weight: 700 !important;
+}
+
+.ledger-table tfoot td.totals-value {
+    color: #0f172a !important;
+    font-size: 14px !important;
+    direction: ltr;
+}
+
+.ledger-table tfoot td.totals-value.in {
+    color: #16a34a !important;
+}
+
+.ledger-table tfoot td.totals-value.out {
+    color: #dc2626 !important;
+}
+
+/* =========================================
+   RESPONSIVE
+   ========================================= */
+
+@media (max-width: 900px) {
+    .treasury-sub-tabs {
+        width: 100%;
+    }
+
+    .treasury-sub-tab {
+        flex: 1;
+        justify-content: center;
+    }
+
+    .ledger-filter-bar {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .ledger-filter-group {
+        min-width: unset;
+    }
+
+    .ledger-presets {
+        justify-content: stretch;
+    }
+
+    .ledger-preset {
+        flex: 1 1 45%;
+        text-align: center;
+    }
+
+    .ledger-filter-actions {
+        margin-right: 0;
+        width: 100%;
+    }
+
+    .ledger-filter-actions button {
+        flex: 1;
+        justify-content: center;
+    }
+
+    .ledger-opening-box {
+        flex-direction: column;
+        text-align: center;
+        gap: 14px;
+    }
+
+    .ledger-opening-value {
+        text-align: center;
+        font-size: 26px;
+    }
+
+    .ledger-opening-meta {
+        width: 100%;
+        justify-content: center;
+    }
+}
+
+@media (max-width: 500px) {
+    .treasury-sub-tab {
+        padding: 10px 12px;
+        font-size: 12px;
+    }
+
+    .ledger-preset {
+        flex: 1 1 100%;
+        font-size: 11.5px;
+        padding: 8px 12px;
+    }
+
+    .ledger-opening-meta-item {
+        min-width: unset;
+        padding: 8px 12px;
+    }
+
+    .ledger-opening-value {
+        font-size: 22px;
+    }
+
+    .ledger-table {
+        font-size: 11px !important;
+    }
+
+    .ledger-table tbody td {
+        padding: 8px 6px;
+        font-size: 11px;
+    }
+}

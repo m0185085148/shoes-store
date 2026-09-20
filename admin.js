@@ -12315,3 +12315,503 @@ function applyTreasuryPermissions() {
 }
 
 window.applyTreasuryPermissions = applyTreasuryPermissions;
+// ========================================
+// TREASURY LEDGER (كشف الحساب)
+// ========================================
+
+let treasuryLedgerData = {
+    walletId: "all",
+    from: null,
+    to: null,
+    openingBalance: 0,
+    rows: [],
+    totalIn: 0,
+    totalOut: 0,
+    closingBalance: 0
+};
+
+let treasuryLedgerPreset = "month";
+
+// ✅ تبديل بين Sub-tabs
+function switchTreasurySubTab(subtab, btnEl) {
+    // ✅ تحديث الأزرار
+    document.querySelectorAll(".treasury-sub-tab").forEach(b => b.classList.remove("active"));
+    btnEl?.classList.add("active");
+
+    // ✅ تحديث الـ panels
+    document.querySelectorAll(".treasury-sub-panel").forEach(p => p.classList.remove("active"));
+
+    if (subtab === "transactions") {
+        document.getElementById("treasuryPanelTransactions")?.classList.add("active");
+    } else if (subtab === "ledger") {
+        document.getElementById("treasuryPanelLedger")?.classList.add("active");
+
+        // ✅ أول مرة يفتح، نحمّل الكشف
+        if (!treasuryLedgerData.rows.length) {
+            initTreasuryLedgerDefaults();
+            loadTreasuryLedger();
+        }
+    }
+}
+
+// ✅ تعيين القيم الافتراضية (هذا الشهر)
+function initTreasuryLedgerDefaults() {
+    const now = new Date();
+
+    // ✅ من بداية الشهر
+    const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+    monthStart.setHours(0, 0, 0, 0);
+
+    // ✅ لحد اليوم
+    const today = new Date();
+    today.setHours(23, 59, 59, 999);
+
+    setLedgerDates(monthStart, today);
+
+    // ✅ فعّل preset "month"
+    document.querySelectorAll(".ledger-preset").forEach(b => {
+        b.classList.toggle("active", b.dataset.preset === "month");
+    });
+
+    treasuryLedgerPreset = "month";
+}
+
+// ✅ ضبط التواريخ + تحديث الحقول
+function setLedgerDates(from, to) {
+    const fromEl = document.getElementById("ledgerDateFrom");
+    const toEl = document.getElementById("ledgerDateTo");
+
+    if (fromEl) {
+        fromEl.value = from ? formatYMDForInput(from) : "";
+    }
+    if (toEl) {
+        toEl.value = to ? formatYMDForInput(to) : "";
+    }
+
+    treasuryLedgerData.from = from;
+    treasuryLedgerData.to = to;
+}
+
+// ✅ تنسيق التاريخ للـ input (YYYY-MM-DD)
+function formatYMDForInput(d) {
+    if (!d) return "";
+    const date = new Date(d);
+    if (isNaN(date.getTime())) return "";
+
+    const y = date.getFullYear();
+    const m = String(date.getMonth() + 1).padStart(2, "0");
+    const day = String(date.getDate()).padStart(2, "0");
+
+    return `${y}-${m}-${day}`;
+}
+
+// ✅ Presets (هذا الشهر / آخر 7 أيام / هذه السنة / الكل)
+function setLedgerPreset(preset, btnEl) {
+    // ✅ تحديث الأزرار
+    document.querySelectorAll(".ledger-preset").forEach(b => b.classList.remove("active"));
+    btnEl?.classList.add("active");
+
+    treasuryLedgerPreset = preset;
+
+    const now = new Date();
+    let from = null;
+    let to = null;
+
+    if (preset === "week") {
+        from = new Date(now);
+        from.setDate(from.getDate() - 6);
+        from.setHours(0, 0, 0, 0);
+
+        to = new Date(now);
+        to.setHours(23, 59, 59, 999);
+    } else if (preset === "month") {
+        from = new Date(now.getFullYear(), now.getMonth(), 1);
+        from.setHours(0, 0, 0, 0);
+
+        to = new Date(now);
+        to.setHours(23, 59, 59, 999);
+    } else if (preset === "year") {
+        from = new Date(now.getFullYear(), 0, 1);
+        from.setHours(0, 0, 0, 0);
+
+        to = new Date(now);
+        to.setHours(23, 59, 59, 999);
+    } else if (preset === "all") {
+        from = null;
+        to = null;
+    }
+
+    setLedgerDates(from, to);
+
+    // ✅ نحمّل البيانات
+    loadTreasuryLedger();
+}
+
+// ✅ لما يتغير فلتر (خزينة أو تاريخ)
+function onLedgerFilterChange() {
+    // ✅ نحدّث الـ preset لـ "custom"
+    document.querySelectorAll(".ledger-preset").forEach(b => b.classList.remove("active"));
+
+    const fromEl = document.getElementById("ledgerDateFrom");
+    const toEl = document.getElementById("ledgerDateTo");
+
+    treasuryLedgerData.from = fromEl?.value ? new Date(fromEl.value + "T00:00:00") : null;
+    treasuryLedgerData.to = toEl?.value ? new Date(toEl.value + "T23:59:59") : null;
+}
+
+// ✅ تحميل كشف الحساب
+async function loadTreasuryLedger() {
+    const listEl = document.getElementById("ledgerListBody");
+    if (!listEl) return;
+
+    listEl.innerHTML = `
+        <tr>
+            <td colspan="8" style="text-align:center;padding:40px;color:#94a3b8;">
+                <i class="fa-solid fa-spinner fa-spin" style="font-size:24px;display:block;margin-bottom:10px;"></i>
+                جاري التحميل...
+            </td>
+        </tr>
+    `;
+
+    const client = getSupabaseClient();
+    if (!client) return;
+
+    try {
+        // ✅ نحدّد الفلاتر
+        const walletSelect = document.getElementById("ledgerWalletSelect");
+        const walletFilter = walletSelect?.value || "all";
+
+        const fromEl = document.getElementById("ledgerDateFrom");
+        const toEl = document.getElementById("ledgerDateTo");
+
+        const from = fromEl?.value ? new Date(fromEl.value + "T00:00:00") : null;
+        const to = toEl?.value ? new Date(toEl.value + "T23:59:59") : null;
+
+        // ✅ نجيب كل الحركات
+        let query = client
+            .from("transactions")
+            .select("*")
+            .order("created_at", { ascending: true });
+
+        if (walletFilter !== "all") {
+            query = query.eq("wallet_id", Number(walletFilter));
+        }
+
+        const { data: allMovements, error } = await query;
+
+        if (error) throw error;
+
+        // ✅ نحسب الرصيد الافتتاحي (قبل الفترة)
+        let openingBalance = 0;
+        const inRange = [];
+
+        (allMovements || []).forEach(t => {
+            const tDate = new Date(t.created_at);
+
+            if (from && tDate < from) {
+                // ✅ قبل الفترة → في الرصيد الافتتاحي
+                const amount = Number(t.amount || 0);
+                if (t.type === "in") openingBalance += amount;
+                else openingBalance -= amount;
+            } else if (to && tDate > to) {
+                // ✅ بعد الفترة → نتجاهلها
+                return;
+            } else {
+                // ✅ داخل الفترة
+                inRange.push(t);
+            }
+        });
+
+        // ✅ نحسب الرصيد بعد كل حركة
+        let runningBalance = openingBalance;
+        let totalIn = 0;
+        let totalOut = 0;
+
+        const rows = inRange.map((t, i) => {
+            const amount = Number(t.amount || 0);
+            const change = t.type === "in" ? amount : -amount;
+            runningBalance += change;
+
+            if (t.type === "in") totalIn += amount;
+            else totalOut += amount;
+
+            return {
+                ...t,
+                index: i + 1,
+                runningBalance,
+                qtyIn: t.type === "in" ? amount : 0,
+                qtyOut: t.type === "out" ? amount : 0
+            };
+        });
+
+        // ✅ نحفظ في الـ state
+        treasuryLedgerData = {
+            walletId: walletFilter,
+            from,
+            to,
+            openingBalance,
+            rows,
+            totalIn,
+            totalOut,
+            closingBalance: runningBalance
+        };
+
+        // ✅ نعرض
+        renderTreasuryLedger();
+
+    } catch (err) {
+        console.error("Load Treasury Ledger Error:", err);
+        listEl.innerHTML = `
+            <tr>
+                <td colspan="8" style="text-align:center;padding:30px;color:#dc2626;font-weight:700;">
+                    حدث خطأ: ${escapeAdminHTML(err.message)}
+                </td>
+            </tr>
+        `;
+    }
+}
+
+// ✅ عرض كشف الحساب
+function renderTreasuryLedger() {
+    const listEl = document.getElementById("ledgerListBody");
+    const totalsEl = document.getElementById("ledgerTotals");
+    if (!listEl) return;
+
+    const d = treasuryLedgerData;
+
+    // ✅ الرصيد الافتتاحي
+    const openingEl = document.getElementById("ledgerOpeningBalance");
+    if (openingEl) {
+        openingEl.textContent = `${d.openingBalance.toLocaleString("en-US")} ج`;
+    }
+
+    // ✅ الفترة
+    const periodEl = document.getElementById("ledgerPeriodText");
+    if (periodEl) {
+        if (d.from && d.to) {
+            const f = d.from.toLocaleDateString("ar-EG-u-nu-latn", { day: "numeric", month: "short" });
+            const t = d.to.toLocaleDateString("ar-EG-u-nu-latn", { day: "numeric", month: "short" });
+            periodEl.textContent = `${f} → ${t}`;
+        } else {
+            periodEl.textContent = "كل الفترات";
+        }
+    }
+
+    // ✅ عدد الحركات
+    const countTopEl = document.getElementById("ledgerCountTop");
+    if (countTopEl) countTopEl.textContent = d.rows.length;
+
+    const countLabelEl = document.getElementById("ledgerCountLabel");
+    if (countLabelEl) countLabelEl.textContent = `${d.rows.length} حركة`;
+
+    // ✅ note الرصيد الافتتاحي
+    const noteEl = document.getElementById("ledgerOpeningNote");
+    if (noteEl) {
+        if (d.from) {
+            const dt = d.from.toLocaleDateString("ar-EG-u-nu-latn", {
+                day: "numeric", month: "short", year: "numeric"
+            });
+            noteEl.textContent = `قبل ${dt}`;
+        } else {
+            noteEl.textContent = "قبل بداية الفترة";
+        }
+    }
+
+    // ✅ لو مفيش حركات
+    if (!d.rows.length) {
+        listEl.innerHTML = `
+            <tr>
+                <td colspan="8" style="text-align:center;padding:40px;color:#94a3b8;">
+                    <i class="fa-solid fa-book" style="font-size:32px;display:block;margin-bottom:10px;opacity:0.5;"></i>
+                    لا توجد حركات في الفترة المحددة
+                </td>
+            </tr>
+        `;
+        if (totalsEl) totalsEl.innerHTML = "";
+        return;
+    }
+
+    // ✅ خريطة أنواع المستندات
+    const typeLabels = {
+        order: "قبض عميل",
+        purchase: "شراء من مورد",
+        manual: "حركة يدوية",
+        refund: "استرجاع",
+        adjustment: "تسوية"
+    };
+
+    // ✅ الأيقونات
+    const typeIcons = {
+        order: "fa-shopping-cart",
+        purchase: "fa-truck-ramp-box",
+        manual: "fa-hand-holding-dollar",
+        refund: "fa-rotate-left",
+        adjustment: "fa-sliders"
+    };
+
+    // ✅ عرض الصفوف
+    listEl.innerHTML = d.rows.map(r => {
+        const wallet = treasuryWallets.find(w => Number(w.id) === Number(r.wallet_id));
+        const walletType = wallet?.type || "cash";
+
+        const typeClass = r.type === "in" ? "in" : "out";
+        const typeIcon = typeIcons[r.reference_type] || "fa-circle-info";
+        const typeLabel = typeLabels[r.reference_type] || "حركة";
+
+        const dateStr = new Date(r.created_at).toLocaleDateString("ar-EG-u-nu-latn", {
+            day: "numeric", month: "short", year: "numeric"
+        });
+
+        // ✅ البيان
+        let statement = r.notes || "—";
+        if (r.beneficiary_name) {
+            statement = `${r.beneficiary_name} — ${statement}`;
+        }
+
+        // ✅ رقم المستند
+        let docNumber = "—";
+        if (r.reference_type === "order" && r.reference_id) {
+            docNumber = `#${r.reference_id}`;
+        } else if (r.id) {
+            docNumber = `TR-${String(r.id).padStart(5, "0")}`;
+        }
+
+        return `
+            <tr>
+                <td style="color:#94a3b8;font-weight:800;text-align:center;">${r.index}</td>
+                <td>
+                    <span class="ledger-doc-number">${escapeAdminHTML(docNumber)}</span>
+                </td>
+                <td style="font-size:12px;font-weight:700;color:#334155;">${dateStr}</td>
+                <td>
+                    <span class="ledger-type-badge ${typeClass}">
+                        <i class="fa-solid ${typeIcon}"></i>
+                        ${escapeAdminHTML(typeLabel)}
+                    </span>
+                </td>
+                <td style="font-size:12.5px;color:#475569;font-weight:600;max-width:280px;">
+                    ${escapeAdminHTML(statement)}
+                </td>
+                <td>
+                    ${r.qtyIn > 0
+                        ? `<div class="ledger-amount-in">+${r.qtyIn.toLocaleString("en-US")} ج</div>`
+                        : `<span style="color:#cbd5e1;">—</span>`
+                    }
+                </td>
+                <td>
+                    ${r.qtyOut > 0
+                        ? `<div class="ledger-amount-out">-${r.qtyOut.toLocaleString("en-US")} ج</div>`
+                        : `<span style="color:#cbd5e1;">—</span>`
+                    }
+                </td>
+                <td>
+                    <div class="ledger-balance ${r.runningBalance >= 0 ? 'positive' : 'negative'}">
+                        ${r.runningBalance.toLocaleString("en-US")} ج
+                    </div>
+                </td>
+            </tr>
+        `;
+    }).join("");
+
+    // ✅ صف الإجمالي
+    if (totalsEl) {
+        totalsEl.innerHTML = `
+            <tr>
+                <td colspan="5" class="totals-label" style="text-align:right;">
+                    الإجمالي: ${d.rows.length} حركة
+                </td>
+                <td class="totals-value in" style="text-align:right;">
+                    +${d.totalIn.toLocaleString("en-US")} ج
+                </td>
+                <td class="totals-value out" style="text-align:right;">
+                    -${d.totalOut.toLocaleString("en-US")} ج
+                </td>
+                <td class="totals-value" style="text-align:right;color:#0f172a !important;">
+                    ${d.closingBalance.toLocaleString("en-US")} ج
+                </td>
+            </tr>
+        `;
+    }
+}
+
+// ✅ تصدير CSV
+function exportTreasuryLedgerCSV() {
+    if (!treasuryLedgerData.rows.length) {
+        alert("لا توجد بيانات للتصدير");
+        return;
+    }
+
+    const headers = [
+        "#",
+        "Document",
+        "Date",
+        "Type",
+        "Statement",
+        "In (Cash)",
+        "Out (Cash)",
+        "Balance"
+    ];
+
+    const rows = treasuryLedgerData.rows.map(r => {
+        const typeLabels = {
+            order: "Customer Payment",
+            purchase: "Purchase",
+            manual: "Manual",
+            refund: "Refund",
+            adjustment: "Adjustment"
+        };
+
+        let statement = r.notes || "";
+        if (r.beneficiary_name) {
+            statement = `${r.beneficiary_name} - ${statement}`;
+        }
+
+        return [
+            r.index,
+            r.reference_type === "order" && r.reference_id
+                ? `#${r.reference_id}`
+                : `TR-${String(r.id).padStart(5, "0")}`,
+            formatDateForCSV(r.created_at),
+            typeLabels[r.reference_type] || "Movement",
+            statement,
+            r.qtyIn > 0 ? r.qtyIn : 0,
+            r.qtyOut > 0 ? r.qtyOut : 0,
+            r.runningBalance
+        ];
+    });
+
+    const openingRow = [
+        0,
+        "—",
+        "—",
+        "Opening Balance",
+        "قبل بداية الفترة",
+        0,
+        0,
+        treasuryLedgerData.openingBalance
+    ];
+
+    const totalsRow = [
+        "الإجمالي",
+        "",
+        "",
+        "",
+        "",
+        treasuryLedgerData.totalIn,
+        treasuryLedgerData.totalOut,
+        treasuryLedgerData.closingBalance
+    ];
+
+    downloadCSV(
+        [headers, openingRow, ...rows, totalsRow],
+        `treasury-ledger-${Date.now()}.csv`
+    );
+}
+
+// ✅ Exports
+window.switchTreasurySubTab = switchTreasurySubTab;
+window.setLedgerPreset = setLedgerPreset;
+window.onLedgerFilterChange = onLedgerFilterChange;
+window.loadTreasuryLedger = loadTreasuryLedger;
+window.exportTreasuryLedgerCSV = exportTreasuryLedgerCSV;
+window.initTreasuryLedgerDefaults = initTreasuryLedgerDefaults;
