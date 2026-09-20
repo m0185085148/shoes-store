@@ -953,6 +953,14 @@ function switchTab(tabId) {
 
         // ✅ تحديث تلقائي
         loadAdminReviews();
+    } else if (tabId === "treasury") {
+        document.getElementById("viewTreasury")?.classList.add("active");
+        document.getElementById("tabNavTreasury")?.classList.add("active");
+        title.textContent = "الخزينة";
+        subtitle.textContent = "إدارة المقبوضات والمدفوعات";
+
+        // ✅ تحديث تلقائي
+        loadTreasury();
     } else if (tabId === "products") {
         document.getElementById("viewProducts")?.classList.add("active");
         document.getElementById("tabNavProducts")?.classList.add("active");
@@ -7832,7 +7840,7 @@ window.renderProductPickerList = renderProductPickerList;
 async function confirmInstaPayPayment(orderId) {
     const confirmed = confirm(
         "هل تأكدت من استلام المبلغ في حساب إنستاباي؟\n\n" +
-        "⚠️ بعد التأكيد، الطلب هيتحول لـ 'جديدة'"
+        "⚠️ بعد التأكيد، الطلب هيتحول لـ 'جديدة' وهيتسجل في الخزينة"
     );
 
     if (!confirmed) return;
@@ -7841,13 +7849,31 @@ async function confirmInstaPayPayment(orderId) {
     if (!client) return;
 
     try {
+        // ✅ 1) نأكد الدفع
         const { error } = await client.rpc("confirm_instapay_payment", {
             p_order_id: orderId
         });
 
         if (error) throw error;
 
-        showToast("تم تأكيد الدفع ✅");
+        // ✅ 2) نسجل القبض في الخزينة
+        try {
+            const { error: transError } = await client.rpc("record_order_payment", {
+                p_order_id: orderId,
+                p_wallet_type: "instapay"
+            });
+
+            if (transError) {
+                console.warn("Record payment failed:", transError);
+                showToast("تم التأكيد ⚠️ لكن فشل تسجيل الحركة في الخزينة");
+            } else {
+                showToast("تم تأكيد الدفع وتسجيله في الخزينة ✅");
+            }
+        } catch (e) {
+            console.warn("Treasury record failed:", e);
+            showToast("تم التأكيد ⚠️ لكن فشل تسجيل الحركة");
+        }
+
         await loadAdminOrders();
     } catch (err) {
         console.error("Confirm payment error:", err);
@@ -11590,3 +11616,619 @@ function renderDashboardInsights() {
 // ✅ Exports
 window.renderWeekComparison = renderWeekComparison;
 window.renderDashboardInsights = renderDashboardInsights;
+
+// ========================================
+// TREASURY MANAGEMENT
+// ========================================
+
+let treasuryWallets = [];
+let treasuryTransactions = [];
+let treasuryFilter = "all";
+let treasuryDateFilter = "month";
+let treasurySearchTerm = "";
+
+// ✅ تحميل بيانات الخزينة
+async function loadTreasury() {
+    const listEl = document.getElementById("treasuryList");
+    if (!listEl) return;
+
+    listEl.innerHTML = `
+        <tr>
+            <td colspan="9" style="text-align:center;padding:40px;color:#94a3b8;">
+                <i class="fa-solid fa-spinner fa-spin" style="font-size:24px;display:block;margin-bottom:10px;"></i>
+                جاري التحميل...
+            </td>
+        </tr>
+    `;
+
+    const client = getSupabaseClient();
+    if (!client) return;
+
+    try {
+        const [walletsRes, transactionsRes] = await Promise.all([
+            client.from("wallets").select("*").eq("is_active", true).order("id"),
+            client.from("transactions").select("*").order("created_at", { ascending: false })
+        ]);
+
+        if (walletsRes.error) throw walletsRes.error;
+
+        treasuryWallets = walletsRes.data || [];
+        treasuryTransactions = transactionsRes.data || [];
+
+        // ✅ نحدّث كروت المحافظ
+        const cashWallet = treasuryWallets.find(w => w.type === "cash");
+        const instaWallet = treasuryWallets.find(w => w.type === "instapay");
+        const total = treasuryWallets.reduce((s, w) => s + Number(w.current_balance || 0), 0);
+
+        const set = (id, val) => {
+            const el = document.getElementById(id);
+            if (el) el.textContent = val;
+        };
+
+        set("walletCashBalance", `${Number(cashWallet?.current_balance || 0).toLocaleString("en-US")} ج`);
+        set("walletInstaBalance", `${Number(instaWallet?.current_balance || 0).toLocaleString("en-US")} ج`);
+        set("walletTotalBalance", `${Number(total).toLocaleString("en-US")} ج`);
+
+        // ✅ نعرض الحركات
+        renderTreasuryTransactions();
+
+    } catch (err) {
+        console.error("Load Treasury Error:", err);
+        listEl.innerHTML = `
+            <tr>
+                <td colspan="9" style="text-align:center;padding:30px;color:#dc2626;font-weight:700;">
+                    حدث خطأ: ${escapeAdminHTML(err.message)}
+                </td>
+            </tr>
+        `;
+    }
+}
+
+// ✅ فلترة حسب التاريخ
+function getTreasuryDateRange() {
+    const now = new Date();
+    const today = new Date(now);
+    today.setHours(0, 0, 0, 0);
+
+    if (treasuryDateFilter === "today") {
+        const end = new Date(today);
+        end.setDate(end.getDate() + 1);
+        return { from: today, to: end };
+    }
+
+    if (treasuryDateFilter === "week") {
+        const from = new Date(today);
+        from.setDate(from.getDate() - 6);
+        return { from, to: null };
+    }
+
+    if (treasuryDateFilter === "month") {
+        const from = new Date(now.getFullYear(), now.getMonth(), 1);
+        from.setHours(0, 0, 0, 0);
+        return { from, to: null };
+    }
+
+    return { from: null, to: null };
+}
+
+// ✅ عرض الحركات
+function renderTreasuryTransactions() {
+    const listEl = document.getElementById("treasuryList");
+    const countEl = document.getElementById("treasuryCountAll");
+    if (!listEl) return;
+
+    let list = [...treasuryTransactions];
+
+    // ✅ فلتر التاريخ
+    const range = getTreasuryDateRange();
+    if (range.from) {
+        list = list.filter(t => new Date(t.created_at) >= range.from);
+    }
+    if (range.to) {
+        list = list.filter(t => new Date(t.created_at) < range.to);
+    }
+
+    // ✅ فلتر النوع
+    if (treasuryFilter === "in" || treasuryFilter === "out") {
+        list = list.filter(t => t.type === treasuryFilter);
+    }
+
+    // ✅ فلتر البحث
+    if (treasurySearchTerm) {
+        const term = treasurySearchTerm.toLowerCase();
+        list = list.filter(t =>
+            String(t.beneficiary_name || "").toLowerCase().includes(term) ||
+            String(t.notes || "").toLowerCase().includes(term)
+        );
+    }
+
+    // ✅ الإحصائيات
+    const totalIn = list.filter(t => t.type === "in").reduce((s, t) => s + Number(t.amount || 0), 0);
+    const totalOut = list.filter(t => t.type === "out").reduce((s, t) => s + Number(t.amount || 0), 0);
+    const net = totalIn - totalOut;
+
+    const set = (id, val) => {
+        const el = document.getElementById(id);
+        if (el) el.textContent = val;
+    };
+
+    set("treasuryStatIn", `${totalIn.toLocaleString("en-US")} ج`);
+    set("treasuryStatOut", `${totalOut.toLocaleString("en-US")} ج`);
+    set("treasuryStatNet", `${net.toLocaleString("en-US")} ج`);
+    set("treasuryStatCount", list.length);
+
+    // ✅ عدّادات الفلاتر
+    const allInRange = treasuryTransactions.filter(t => {
+        if (range.from && new Date(t.created_at) < range.from) return false;
+        if (range.to && new Date(t.created_at) >= range.to) return false;
+        return true;
+    });
+
+    set("treasuryCountAll", allInRange.length);
+    set("treasuryCountIn", allInRange.filter(t => t.type === "in").length);
+    set("treasuryCountOut", allInRange.filter(t => t.type === "out").length);
+
+    if (countEl) countEl.textContent = allInRange.length;
+
+    // ✅ عرض الجدول
+    if (!list.length) {
+        listEl.innerHTML = `
+            <tr>
+                <td colspan="9" style="text-align:center;padding:40px;color:#94a3b8;">
+                    <i class="fa-solid fa-receipt" style="font-size:32px;display:block;margin-bottom:10px;opacity:0.5;"></i>
+                    لا توجد حركات في الفترة المحددة
+                </td>
+            </tr>
+        `;
+        return;
+    }
+
+    const beneficiaryLabels = {
+        customer: "عميل",
+        supplier: "مورد",
+        entity: "جهة",
+        employee: "موظف",
+        partner: "شريك",
+        other: "أخرى"
+    };
+
+    listEl.innerHTML = list.map((t, i) => {
+        const wallet = treasuryWallets.find(w => Number(w.id) === Number(t.wallet_id));
+        const walletType = wallet?.type || "cash";
+
+        const typeClass = t.type === "in" ? "in" : "out";
+        const sign = t.type === "in" ? "+" : "-";
+
+        const dateStr = formatDate(t.created_at);
+
+        const beneficiaryTypeLabel = beneficiaryLabels[t.beneficiary_type] || "";
+
+        return `
+            <tr>
+                <td style="color:#94a3b8;font-weight:800;">${i + 1}</td>
+                <td class="date-cell" style="font-size:12px;">${dateStr}</td>
+                <td>
+                    <span class="treasury-type-badge ${typeClass}">
+                        <i class="fa-solid fa-arrow-${t.type === "in" ? "down" : "up"}"></i>
+                        ${t.type === "in" ? "قبض" : "صرف"}
+                    </span>
+                </td>
+                <td>
+                    <span class="treasury-wallet-badge ${walletType}">
+                        <i class="fa-solid ${walletType === "cash" ? "fa-money-bill-wave" : "fa-mobile-screen"}"></i>
+                        ${walletType === "cash" ? "نقدي" : "إنستاباي"}
+                    </span>
+                </td>
+                <td>
+                    <div class="treasury-beneficiary">
+                        <strong>${escapeAdminHTML(t.beneficiary_name || "—")}</strong>
+                        ${beneficiaryTypeLabel ? `<small>${beneficiaryTypeLabel}</small>` : ""}
+                    </div>
+                </td>
+                <td style="font-size:12px;color:#475569;font-weight:600;">
+                    ${escapeAdminHTML(t.notes || "—")}
+                </td>
+                <td>
+                    <div class="treasury-amount ${typeClass}" style="direction:ltr;text-align:right;">
+                        ${sign}${Number(t.amount || 0).toLocaleString("en-US")} ج
+                    </div>
+                </td>
+                <td style="font-size:11.5px;color:#94a3b8;font-weight:700;">
+                    ${escapeAdminHTML(t.performed_by_username || "—")}
+                </td>
+                <td>
+                    <button type="button" class="action-icon-btn preview"
+                        onclick="showTransactionDetails(${Number(t.id)})"
+                        title="تفاصيل">
+                        <i class="fa-solid fa-eye"></i>
+                    </button>
+                </td>
+            </tr>
+        `;
+    }).join("");
+}
+
+// ✅ فلتر النوع
+function filterTreasury(type, btnEl) {
+    treasuryFilter = type;
+
+    document.querySelectorAll(".treasury-chip").forEach(b => b.classList.remove("active"));
+    btnEl?.classList.add("active");
+
+    renderTreasuryTransactions();
+}
+
+// ✅ فلتر التاريخ
+function filterTreasuryByDate(value) {
+    treasuryDateFilter = value || "month";
+    renderTreasuryTransactions();
+}
+
+// ✅ البحث
+function setupTreasurySearch() {
+    const input = document.getElementById("treasurySearchInput");
+    const clearBtn = document.getElementById("treasurySearchClear");
+    if (!input) return;
+
+    let timer;
+    input.addEventListener("input", (e) => {
+        const val = e.target.value;
+        if (clearBtn) clearBtn.style.display = val ? "flex" : "none";
+
+        clearTimeout(timer);
+        timer = setTimeout(() => {
+            treasurySearchTerm = val;
+            renderTreasuryTransactions();
+        }, 250);
+    });
+}
+
+function clearTreasurySearch() {
+    const input = document.getElementById("treasurySearchInput");
+    const clearBtn = document.getElementById("treasurySearchClear");
+
+    if (input) input.value = "";
+    if (clearBtn) clearBtn.style.display = "none";
+
+    treasurySearchTerm = "";
+    renderTreasuryTransactions();
+}
+
+// ✅ Modal إضافة حركة
+function openAddTransactionModal() {
+    const modal = document.getElementById("addTransactionModal");
+    if (!modal) return;
+
+    const form = document.getElementById("addTransactionForm");
+    if (form) form.reset();
+
+    // ✅ نرجّع النوع "قبض" افتراضي
+    selectTransactionType("in", document.querySelector('.transaction-type-btn[data-type="in"]'));
+
+    modal.classList.add("open");
+}
+
+function closeAddTransactionModal() {
+    document.getElementById("addTransactionModal")?.classList.remove("open");
+}
+
+// ✅ اختيار نوع الحركة
+function selectTransactionType(type, btnEl) {
+    const hidden = document.getElementById("transactionType");
+    if (hidden) hidden.value = type;
+
+    document.querySelectorAll(".transaction-type-btn").forEach(b => b.classList.remove("active"));
+    btnEl?.classList.add("active");
+
+    // ✅ نحدّث أيقونة ولون المودال
+    const iconEl = document.getElementById("transactionModalIcon");
+    const titleEl = document.getElementById("transactionModalTitle");
+
+    if (iconEl) {
+        if (type === "in") {
+            iconEl.style.background = "#dcfce7";
+            iconEl.style.color = "#16a34a";
+            iconEl.innerHTML = '<i class="fa-solid fa-arrow-down"></i>';
+        } else {
+            iconEl.style.background = "#fee2e2";
+            iconEl.style.color = "#dc2626";
+            iconEl.innerHTML = '<i class="fa-solid fa-arrow-up"></i>';
+        }
+    }
+
+    if (titleEl) {
+        titleEl.textContent = type === "in" ? "تسجيل قبض" : "تسجيل صرف";
+    }
+}
+
+// ✅ حفظ الحركة
+async function saveTransaction(e) {
+    e.preventDefault();
+
+    const client = getSupabaseClient();
+    if (!client || !currentAdmin) return;
+
+    const walletId = Number(document.getElementById("transactionWallet")?.value);
+    const type = document.getElementById("transactionType")?.value;
+    const amount = Number(document.getElementById("transactionAmount")?.value || 0);
+    const beneficiaryType = document.getElementById("transactionBeneficiaryType")?.value || null;
+    const beneficiaryName = document.getElementById("transactionBeneficiaryName")?.value.trim() || null;
+    const notes = document.getElementById("transactionNotes")?.value.trim() || null;
+
+    if (!walletId || walletId <= 0) {
+        alert("اختر المحفظة");
+        return;
+    }
+
+    if (!amount || amount <= 0) {
+        alert("اكتب مبلغ صحيح");
+        return;
+    }
+
+    const btn = document.getElementById("saveTransactionBtn");
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> جاري الحفظ...';
+
+    try {
+        const { data, error } = await client.rpc("add_transaction", {
+            p_wallet_id: walletId,
+            p_type: type,
+            p_amount: amount,
+            p_beneficiary_type: beneficiaryType,
+            p_beneficiary_name: beneficiaryName,
+            p_reference_type: "manual",
+            p_reference_id: null,
+            p_notes: notes
+        });
+
+        if (error) throw error;
+        if (!data?.success) throw new Error("فشل الحفظ");
+
+        showToast(`تم تسجيل الحركة ✅ — الرصيد الجديد: ${Number(data.new_balance).toLocaleString("en-US")} ج`);
+
+        closeAddTransactionModal();
+        await loadTreasury();
+
+    } catch (err) {
+        console.error("Save Transaction Error:", err);
+        alert("فشل الحفظ:\n\n" + err.message);
+    } finally {
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fa-solid fa-check"></i> حفظ الحركة';
+    }
+}
+
+// ✅ تعديل رصيد المحفظة
+function openAdjustWalletModal(walletId, type) {
+    const wallet = treasuryWallets.find(w => Number(w.id) === Number(walletId));
+    if (!wallet) return;
+
+    const modal = document.getElementById("adjustWalletModal");
+    if (!modal) return;
+
+    document.getElementById("adjustWalletId").value = walletId;
+    document.getElementById("adjustWalletType").value = type;
+
+    document.getElementById("adjustWalletName").textContent = wallet.name;
+    document.getElementById("adjustWalletCurrent").textContent =
+        `${Number(wallet.current_balance || 0).toLocaleString("en-US")} ج`;
+
+    document.getElementById("adjustWalletNewBalance").value = wallet.current_balance || 0;
+    document.getElementById("adjustWalletReason").value = "";
+
+    modal.classList.add("open");
+}
+
+function closeAdjustWalletModal() {
+    document.getElementById("adjustWalletModal")?.classList.remove("open");
+}
+
+async function saveWalletAdjust(e) {
+    e.preventDefault();
+
+    const client = getSupabaseClient();
+    if (!client || !currentAdmin) return;
+
+    const walletId = Number(document.getElementById("adjustWalletId")?.value);
+    const newBalance = Number(document.getElementById("adjustWalletNewBalance")?.value || 0);
+    const reason = document.getElementById("adjustWalletReason")?.value.trim() || "";
+
+    if (!walletId) return;
+
+    if (!reason) {
+        alert("اكتب سبب التعديل");
+        return;
+    }
+
+    if (newBalance < 0) {
+        alert("الرصيد لا يمكن يكون سالب");
+        return;
+    }
+
+    const btn = document.getElementById("saveWalletAdjustBtn");
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> جاري الحفظ...';
+
+    try {
+        const { data, error } = await client.rpc("set_wallet_balance", {
+            p_wallet_id: walletId,
+            p_new_balance: newBalance,
+            p_reason: reason
+        });
+
+        if (error) throw error;
+        if (!data?.success) throw new Error("فشل التعديل");
+
+        showToast("تم تعديل الرصيد ✅");
+        closeAdjustWalletModal();
+        await loadTreasury();
+
+    } catch (err) {
+        console.error("Save Wallet Adjust Error:", err);
+        alert("فشل التعديل:\n\n" + err.message);
+    } finally {
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fa-solid fa-check"></i> تأكيد التعديل';
+    }
+}
+
+// ✅ تفاصيل الحركة
+function showTransactionDetails(transactionId) {
+    const t = treasuryTransactions.find(x => Number(x.id) === Number(transactionId));
+    if (!t || !orderModal || !orderModalDetails) return;
+
+    const wallet = treasuryWallets.find(w => Number(w.id) === Number(t.wallet_id));
+    const walletType = wallet?.type || "cash";
+
+    const beneficiaryLabels = {
+        customer: "عميل",
+        supplier: "مورد",
+        entity: "جهة (إيجار، خدمات)",
+        employee: "موظف",
+        partner: "شريك",
+        other: "أخرى"
+    };
+
+    const beneficiaryTypeLabel = beneficiaryLabels[t.beneficiary_type] || "غير محدد";
+    const typeClass = t.type === "in" ? "in" : "out";
+
+    orderModalDetails.innerHTML = `
+        <div style="text-align:center;padding:20px 0;">
+            <div style="width:80px;height:80px;margin:0 auto 16px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:32px;
+                background:${t.type === "in" ? "linear-gradient(135deg,#dcfce7,#86efac)" : "linear-gradient(135deg,#fee2e2,#fca5a5)"};
+                color:${t.type === "in" ? "#16a34a" : "#dc2626"};">
+                <i class="fa-solid fa-arrow-${t.type === "in" ? "down" : "up"}"></i>
+            </div>
+            <div style="font-size:14px;color:#64748b;font-weight:700;margin-bottom:6px;">
+                ${t.type === "in" ? "قبض" : "صرف"}
+            </div>
+            <div style="font-size:32px;font-weight:800;color:${t.type === "in" ? "#16a34a" : "#dc2626"};direction:ltr;">
+                ${t.type === "in" ? "+" : "-"}${Number(t.amount).toLocaleString("en-US")} ج
+            </div>
+        </div>
+
+        <div style="background:#f8fafc;padding:16px;border-radius:12px;margin-bottom:18px;">
+            <div style="display:flex;justify-content:space-between;padding:10px 0;border-bottom:1px solid #f0f0f0;">
+                <span style="font-size:13px;color:#64748b;">المحفظة</span>
+                <strong style="font-size:13px;color:#111;">${escapeAdminHTML(wallet?.name || "—")}</strong>
+            </div>
+            <div style="display:flex;justify-content:space-between;padding:10px 0;border-bottom:1px solid #f0f0f0;">
+                <span style="font-size:13px;color:#64748b;">نوع المستفيد</span>
+                <strong style="font-size:13px;color:#111;">${escapeAdminHTML(beneficiaryTypeLabel)}</strong>
+            </div>
+            ${t.beneficiary_name ? `
+                <div style="display:flex;justify-content:space-between;padding:10px 0;border-bottom:1px solid #f0f0f0;">
+                    <span style="font-size:13px;color:#64748b;">اسم المستفيد</span>
+                    <strong style="font-size:13px;color:#111;">${escapeAdminHTML(t.beneficiary_name)}</strong>
+                </div>
+            ` : ""}
+            <div style="display:flex;justify-content:space-between;padding:10px 0;border-bottom:1px solid #f0f0f0;">
+                <span style="font-size:13px;color:#64748b;">التاريخ</span>
+                <strong style="font-size:13px;color:#111;">${formatDate(t.created_at)}</strong>
+            </div>
+            <div style="display:flex;justify-content:space-between;padding:10px 0;">
+                <span style="font-size:13px;color:#64748b;">بواسطة</span>
+                <strong style="font-size:13px;color:#111;">${escapeAdminHTML(t.performed_by_username || "—")}</strong>
+            </div>
+        </div>
+
+        ${t.notes ? `
+            <div style="background:#fffbeb;border:1px solid #fcd34d;border-radius:10px;padding:12px 14px;">
+                <div style="font-size:11px;font-weight:800;color:#92400e;margin-bottom:6px;">
+                    <i class="fa-solid fa-note-sticky"></i>
+                    الوصف
+                </div>
+                <div style="font-size:13px;color:#78350f;line-height:1.7;">${escapeAdminHTML(t.notes)}</div>
+            </div>
+        ` : ""}
+    `;
+
+    orderModal.classList.add("open");
+
+    // ✅ نخفي زر طباعة الفاتورة (ده مش طلب)
+    currentInvoiceOrder = null;
+    const printBtn = document.getElementById("printOrderInvoiceBtn");
+    if (printBtn) printBtn.style.display = "none";
+}
+
+// ✅ تصدير CSV
+function exportTreasuryCSV() {
+    if (!treasuryTransactions.length) {
+        alert("لا توجد بيانات");
+        return;
+    }
+
+    const headers = [
+        "#",
+        "Date",
+        "Type",
+        "Wallet",
+        "Beneficiary Type",
+        "Beneficiary",
+        "Notes",
+        "Amount",
+        "By"
+    ];
+
+    const typeLabels = {
+        customer: "Customer",
+        supplier: "Supplier",
+        entity: "Entity",
+        employee: "Employee",
+        partner: "Partner",
+        other: "Other"
+    };
+
+    const rows = treasuryTransactions.map((t, i) => {
+        const wallet = treasuryWallets.find(w => Number(w.id) === Number(t.wallet_id));
+
+        return [
+            i + 1,
+            formatDateForCSV(t.created_at),
+            t.type === "in" ? "قبض" : "صرف",
+            wallet?.type === "instapay" ? "InstaPay" : "Cash",
+            typeLabels[t.beneficiary_type] || "",
+            t.beneficiary_name || "",
+            t.notes || "",
+            Number(t.amount || 0),
+            t.performed_by_username || ""
+        ];
+    });
+
+    downloadCSV([headers, ...rows], `treasury-${Date.now()}.csv`);
+}
+
+// ✅ ربط الأحداث
+document.addEventListener("DOMContentLoaded", () => {
+    setupTreasurySearch();
+
+    document.getElementById("addTransactionForm")
+        ?.addEventListener("submit", saveTransaction);
+
+    document.getElementById("adjustWalletForm")
+        ?.addEventListener("submit", saveWalletAdjust);
+
+    // ✅ إغلاق المودالات
+    document.getElementById("addTransactionModal")
+        ?.addEventListener("click", (e) => {
+            if (e.target.id === "addTransactionModal") closeAddTransactionModal();
+        });
+
+    document.getElementById("adjustWalletModal")
+        ?.addEventListener("click", (e) => {
+            if (e.target.id === "adjustWalletModal") closeAdjustWalletModal();
+        });
+});
+
+// ✅ Exports
+window.loadTreasury = loadTreasury;
+window.filterTreasury = filterTreasury;
+window.filterTreasuryByDate = filterTreasuryByDate;
+window.clearTreasurySearch = clearTreasurySearch;
+window.openAddTransactionModal = openAddTransactionModal;
+window.closeAddTransactionModal = closeAddTransactionModal;
+window.selectTransactionType = selectTransactionType;
+window.openAdjustWalletModal = openAdjustWalletModal;
+window.closeAdjustWalletModal = closeAdjustWalletModal;
+window.showTransactionDetails = showTransactionDetails;
+window.exportTreasuryCSV = exportTreasuryCSV;
