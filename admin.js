@@ -901,6 +901,19 @@ if (loginForm) {
 // ========================================
 
 function switchTab(tabId) {
+    // ✅ حماية الخزينة — للمديرين فقط
+    if (tabId === "treasury" && currentAdmin) {
+        const isManagerUser = (
+            currentAdmin.role === "super_admin" ||
+            currentAdmin.role === "manager"
+        );
+
+        if (!isManagerUser) {
+            showToast("⚠️ الخزينة متاحة للمديرين فقط");
+            return;
+        }
+    }
+
     document.querySelectorAll(".tab-content").forEach(tab => {
         tab.classList.remove("active");
     });
@@ -954,6 +967,13 @@ function switchTab(tabId) {
         // ✅ تحديث تلقائي
         loadAdminReviews();
     } else if (tabId === "treasury") {
+        // ✅ فحص: super_admin أو manager
+        const allowedRoles = ["super_admin", "manager"];
+        if (!currentAdmin || !allowedRoles.includes(currentAdmin.role)) {
+            alert("⚠️ الخزينة متاحة للمديرين فقط");
+            return;
+        }
+
         document.getElementById("viewTreasury")?.classList.add("active");
         document.getElementById("tabNavTreasury")?.classList.add("active");
         title.textContent = "الخزينة";
@@ -1078,6 +1098,9 @@ async function protectAdminDashboard() {
 
     // ✅ تفعيل ميزات الـ Sidebar الجديدة
     initSidebarFeatures();
+
+    // ✅ تطبيق صلاحيات الخزينة
+    applyTreasuryPermissions();
 
     // ✅ تشغيل التحديث التلقائي
     startAutoRefresh();
@@ -12232,3 +12255,39 @@ window.openAdjustWalletModal = openAdjustWalletModal;
 window.closeAdjustWalletModal = closeAdjustWalletModal;
 window.showTransactionDetails = showTransactionDetails;
 window.exportTreasuryCSV = exportTreasuryCSV;
+// ========================================
+// TREASURY PERMISSIONS
+// ========================================
+
+function applyTreasuryPermissions() {
+    if (!currentAdmin) return;
+
+    const isManagerUser = (
+        currentAdmin.role === "super_admin" ||
+        currentAdmin.role === "manager"
+    );
+
+    // ✅ لو مش مدير → نخفي رابط الخزينة
+    const treasuryNav = document.getElementById("tabNavTreasury");
+    if (treasuryNav) {
+        treasuryNav.style.display = isManagerUser ? "" : "none";
+    }
+
+    // ✅ نخفي من قائمة المفضلة (لو العميل ضافها في localStorage)
+    if (!isManagerUser) {
+        try {
+            const favs = JSON.parse(localStorage.getItem("sidebarFavorites") || "[]");
+            const filtered = favs.filter(k => k !== "treasury");
+            if (filtered.length !== favs.length) {
+                localStorage.setItem("sidebarFavorites", JSON.stringify(filtered));
+            }
+        } catch (e) {}
+    }
+
+    // ✅ نحدّث قائمة المفضلة عشان تختفي
+    if (typeof renderSidebarFavorites === "function") {
+        renderSidebarFavorites();
+    }
+}
+
+window.applyTreasuryPermissions = applyTreasuryPermissions;
