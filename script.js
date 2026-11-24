@@ -150,12 +150,11 @@ const SHIPPING_RATES = {
     "الجيزة": 80
 };
 
-const FREE_SHIPPING_MIN_ITEMS = 2;
+const FLAT_SHIPPING_COST = 80;
 
-function getShippingCost(governorate, itemsCount) {
+function getShippingCost(governorate) {
     if (!governorate) return null;
-    if (itemsCount >= FREE_SHIPPING_MIN_ITEMS) return 0;
-    return SHIPPING_RATES[governorate] ?? 50;
+    return SHIPPING_RATES[governorate] ?? FLAT_SHIPPING_COST;
 }
 
 function updateOrderSummary() {
@@ -167,7 +166,7 @@ function updateOrderSummary() {
     const govField = $('governorate');
     const gov = govField?.value || '';
 
-    const shipping = getShippingCost(gov, count);
+    const shipping = getShippingCost(gov);
     const total = subtotal + (shipping || 0);
 
     if (summaryCount) summaryCount.textContent = count;
@@ -181,10 +180,6 @@ function updateOrderSummary() {
             shippingEl.textContent = 'اختر المحافظة';
             shippingEl.style.color = '#999';
             shippingEl.style.fontWeight = '500';
-        } else if (shipping === 0) {
-            shippingEl.textContent = 'مجاني 🎉';
-            shippingEl.style.color = '#16a34a';
-            shippingEl.style.fontWeight = '800';
         } else {
             shippingEl.textContent = `${formatPrice(shipping)} جنيه`;
             shippingEl.style.color = '#111';
@@ -193,23 +188,7 @@ function updateOrderSummary() {
     }
 
     const hintEl = $('shippingHint');
-    if (hintEl) {
-        if (!gov) {
-            hintEl.style.display = 'none';
-        } else if (count >= FREE_SHIPPING_MIN_ITEMS) {
-            hintEl.textContent = '🎉 مبروك! الشحن مجاني';
-            hintEl.style.display = 'block';
-            hintEl.style.color = '#16a34a';
-            hintEl.style.background = '#dcfce7';
-        } else {
-            const remaining = FREE_SHIPPING_MIN_ITEMS - count;
-            hintEl.textContent =
-                `أضف ${remaining} قطعة أخرى للحصول على شحن مجاني`;
-            hintEl.style.display = 'block';
-            hintEl.style.color = '#92400e';
-            hintEl.style.background = '#fef3c7';
-        }
-    }
+    if (hintEl) hintEl.style.display = 'none';
 
     if (summaryTotal) {
         summaryTotal.textContent = `${formatPrice(total)} جنيه`;
@@ -687,7 +666,7 @@ function renderProductDetails() {
                     <div class="accordion-body">
                         <ul class="accordion-list">
                             <li><i class="fa-solid fa-check"></i> توصيل سريع داخل القاهرة والجيزة (2-3 أيام)</li>
-                            <li><i class="fa-solid fa-check"></i> شحن مجاني عند شراء قطعتين أو أكثر</li>
+                            <li><i class="fa-solid fa-check"></i> الشحن 80 جنيه ثابت لكل طلب</li>
                             <li><i class="fa-solid fa-check"></i> يمكنك تتبع طلبك مباشرة من الموقع</li>
                         </ul>
                     </div>
@@ -1166,7 +1145,7 @@ async function submitOrder(event) {
         (s, i) => s + Number(i.price) * Number(i.quantity), 0
     );
     const totalItems = cart.reduce((s, i) => s + Number(i.quantity), 0);
-    const shippingCost = getShippingCost(gov, totalItems);
+    const shippingCost = getShippingCost(gov);
     const total = subtotal + (shippingCost || 0);
 
     const paymentMethod =
