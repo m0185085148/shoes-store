@@ -270,6 +270,10 @@
         <!-- ============ DASHBOARD ============ -->
         <div id="viewDashboard" class="tab-content active">
 
+            <!-- ============ ATTENTION PANEL ============ -->
+            <div class="dashboard-section-title"><i class="fa-solid fa-bolt"></i> تحتاج انتباهك الآن</div>
+            <div class="dash-attn-grid" id="dashAttention"></div>
+
             <!-- ====== ROW 1: أداء المبيعات ====== -->
             <div class="dashboard-section-title">
                 <i class="fa-solid fa-chart-line"></i>
@@ -395,7 +399,7 @@
                     </div>
                 </div>
 
-                <div class="stat-card clickable" onclick="switchTab('inventory')">
+                <div class="stat-card clickable dash-dup-lowstock" onclick="switchTab('inventory')">
                     <div class="stat-icon warning">
                         <i class="fa-solid fa-triangle-exclamation"></i>
                     </div>
@@ -439,7 +443,7 @@
                     </div>
 
                     <div class="table-wrap">
-                        <table class="products-table">
+                        <table class="products-table dash-recent-table">
                             <thead>
                                 <tr>
                                     <th>رقم الطلب</th>
@@ -552,8 +556,8 @@
                 </div>
 
                 <!-- Insights -->
-                <div class="dash-insight-card">
-                    <div class="dash-insight-header">
+                <div class="dash-insight-card dash-collapsible collapsed">
+                    <div class="dash-insight-header" onclick="this.parentElement.classList.toggle('collapsed')" style="cursor:pointer" title="إظهار / إخفاء">
                         <div class="dash-insight-icon" style="background: linear-gradient(135deg, #f59e0b, #d97706);">
                             <i class="fa-solid fa-lightbulb"></i>
                         </div>
@@ -561,6 +565,7 @@
                             <h3>معلومات ذكية</h3>
                             <p>أفضل الأوقات والمحافظات</p>
                         </div>
+                        <i class="fa-solid fa-chevron-down dash-collapse-chev" style="margin-inline-start:auto;color:#94a3b8"></i>
                     </div>
 
                     <div class="dash-insights-list">
