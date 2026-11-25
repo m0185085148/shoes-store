@@ -1,0 +1,12 @@
+/* STEP order tracking page: brand colours only. Visual only, no markup or script changes. Status colours (green/amber/red) are untouched. */
+.track-hero{background:linear-gradient(135deg,#0B1F3A,#14213D)!important}
+.track-hero::after{background:radial-gradient(circle at 30% 20%,rgba(47,75,124,.38),transparent 60%),radial-gradient(circle at 70% 80%,rgba(31,138,138,.28),transparent 60%)!important}
+.track-hero-icon{color:#7FD6D6!important;border-color:rgba(255,255,255,.2)!important}
+.track-search-card h2 i,.track-copy-btn{background:#E9EEF7!important;color:#2F4B7C!important}
+.track-copy-btn:hover{background:#2F4B7C!important;color:#fff!important}
+.track-search-btn{background:#14213D!important;border-radius:10px!important}
+.track-search-btn:hover{background:#2F4B7C!important}
+.track-section h3 i,.track-instapay-amount strong,.track-summary-row.total span:last-child{color:#2F4B7C!important}
+.track-timeline-item::before{background:#2F4B7C}
+.track-timeline-item.done::before{background:#16a34a}
+.main-nav a.active{background:#14213D!important}
