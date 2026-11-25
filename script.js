@@ -247,7 +247,7 @@ async function fetchProducts() {
         const [productsRes, sizesRes, reviewsRes] = await Promise.all([
             supabaseClient
                 .from('products')
-                .select('*')
+                .select('id, name, price, old_price, category, badge, description, image, images, sku, barcode, sizes, low_stock_threshold, created_at, updated_at')
                 .order('id', { ascending: false }),
             supabaseClient
                 .from('product_sizes')
@@ -1560,11 +1560,12 @@ async function checkPendingInstapay() {
         // ✅ نتأكد إن الطلب لسه موجود في الداتابيز ولسه payment_pending
         if (!supabaseClient) return;
 
+        // يتحقق من الطلب برقم الطلب + الموبايل (نفس دالة التتبع) بدل قراءة جدول الطلبات مباشرة
         const { data: order, error } = await supabaseClient
-            .from("orders")
-            .select("id, status, payment_method")
-            .eq("id", data.orderId)
-            .maybeSingle();
+            .rpc("get_order_by_tracking", {
+                p_order_id: Number(data.orderId),
+                p_phone: String(data.phone || "")
+            });
 
         // ✅ لو الطلب اتمسح أو حالته اتغيرت → امسح البانر
         if (error || !order || order.status !== "payment_pending") {
