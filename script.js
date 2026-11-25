@@ -252,10 +252,7 @@ async function fetchProducts() {
             supabaseClient
                 .from('product_sizes')
                 .select('product_id, size, stock, reserved'),
-            supabaseClient
-                .from('product_reviews')
-                .select('product_id, rating')
-                .eq('status', 'approved')
+            supabaseClient.rpc('get_product_review_stats')
         ]);
 
         if (productsRes.error) {
@@ -277,9 +274,10 @@ async function fetchProducts() {
         const reviewsMap = {};
         (reviewsRes.data || []).forEach(r => {
             const pid = Number(r.product_id);
-            if (!reviewsMap[pid]) reviewsMap[pid] = { sum: 0, count: 0 };
-            reviewsMap[pid].sum += Number(r.rating || 0);
-            reviewsMap[pid].count++;
+            reviewsMap[pid] = {
+                sum: Number(r.rating_sum || 0),
+                count: Number(r.review_count || 0)
+            };
         });
 
         productReviewStats = {};
@@ -1658,11 +1656,7 @@ async function loadProductReviews(productId) {
 
     try {
         const { data, error } = await supabaseClient
-            .from("product_reviews")
-            .select("*")
-            .eq("product_id", productId)
-            .eq("status", "approved")
-            .order("created_at", { ascending: false });
+            .rpc("get_product_reviews_public", { p_product_id: Number(productId) });
 
         if (error) throw error;
 
@@ -1916,13 +1910,9 @@ async function setupReviewForm(productId) {
     // ✅ 3) عنده مراجعة بالفعل؟
     try {
         const { data: existing } = await supabaseClient
-            .from("product_reviews")
-            .select("id, status")
-            .eq("product_id", productId)
-            .eq("customer_phone", phone)
-            .maybeSingle();
+            .rpc("has_my_product_review", { p_product_id: Number(productId) });
 
-        if (existing) {
+        if (existing === true) {
             // عنده مراجعة → نخفي الفورم، نعرض "شكراً"
             alreadyDone.style.display = "block";
             return;
