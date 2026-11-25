@@ -1767,7 +1767,7 @@ function renderReviewsList() {
             ? `
                 <div class="review-item-images">
                     ${images.map(img => `
-                        <div class="review-item-image" onclick="openReviewImage('${escapeHTML(img)}')">
+                        <div class="review-item-image" data-img="${escapeHTML(img)}" onclick="openReviewImage(this.dataset.img)">
                             <img src="${escapeHTML(img)}" alt="صورة المراجعة" loading="lazy">
                         </div>
                     `).join("")}
@@ -2212,13 +2212,15 @@ function showReviewFormMessage(message, type = "error") {
 
 // ✅ فتح صورة في نافذة
 function openReviewImage(url) {
+    // يقبل روابط http/https فقط، ويتم تهريب الرابط قبل الكتابة
+    if (!/^https?:\/\//i.test(String(url || ""))) return;
     const w = window.open("", "_blank");
     if (w) {
         w.document.write(`
             <html>
             <head><title>صورة المراجعة</title></head>
             <body style="margin:0;background:#111;display:flex;align-items:center;justify-content:center;min-height:100vh;">
-                <img src="${url}" style="max-width:100%;max-height:100vh;object-fit:contain;">
+                <img src="${escapeHTML(url)}" style="max-width:100%;max-height:100vh;object-fit:contain;">
             </body>
             </html>
         `);
