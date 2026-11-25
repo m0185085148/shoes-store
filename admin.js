@@ -626,8 +626,10 @@ function getDeviceInfo() {
 }
 
 function generateSessionToken() {
-    const rand = Math.random().toString(36).substring(2, 15)
-        + Math.random().toString(36).substring(2, 15);
+    // Cryptographically random (was Math.random). Same token shape: <timestamp>_<random>.
+    const bytes = new Uint8Array(16);
+    crypto.getRandomValues(bytes);
+    const rand = Array.from(bytes, b => b.toString(16).padStart(2, '0')).join('');
     return `${Date.now()}_${rand}`;
 }
 
