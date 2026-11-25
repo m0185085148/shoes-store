@@ -2299,7 +2299,7 @@ async function loadAdminProducts() {
                 .from("products")
                 .select(`
                     id, name, price, old_price, badge, sizes, image,
-                    created_at, description, sku, barcode, purchase_price,
+                    created_at, description, sku, barcode,
                     low_stock_threshold,
                     created_by, created_by_username,
                     updated_by, updated_by_username, updated_at,
@@ -2316,6 +2316,17 @@ async function loadAdminProducts() {
         if (productsRes.error) throw productsRes.error;
 
         adminProducts = productsRes.data || [];
+
+        // Cost price is not readable through the table by customer accounts. Admins read it through an admin-only function.
+        try {
+            const { data: costRows, error: costError } = await client.rpc("admin_get_product_costs");
+            if (costError) throw costError;
+            const costMap = {};
+            (costRows || []).forEach(row => { costMap[Number(row.id)] = row.purchase_price; });
+            adminProducts.forEach(p => { p.purchase_price = costMap[Number(p.id)] ?? null; });
+        } catch (costErr) {
+            console.warn("Cost price load failed:", costErr);
+        }
         window.adminProducts = adminProducts;
 
         adminProductSizes = {};
@@ -2976,10 +2987,11 @@ if (addProductForm) {
             const { data: insertedProduct, error } = await client
                 .from("products")
                 .insert(productData)
-                .select()
+                .select("id, name, price, old_price, badge, sizes, image, images, created_at, description, sku, barcode, low_stock_threshold")
                 .single();
 
             if (error) throw error;
+            insertedProduct.purchase_price = purchasePrice;
 
             const sizeRows = sizesWithQty.map(item => ({
                 product_id: insertedProduct.id,
