@@ -19,3 +19,4 @@
 td:has(>.fa-spinner.fa-spin:not(button *,[class*="btn"] *)){position:relative;padding-bottom:78px!important}
 td>.fa-spinner.fa-spin:not(button *,[class*="btn"] *){position:absolute;left:50%;bottom:30px;margin:0!important;transform:translateX(-50%)}
 .image-upload-loading:has(>.fa-spinner.fa-spin){flex-direction:column-reverse!important;align-items:center;justify-content:center;gap:7px}
+.reviews-empty .fa-spinner.fa-spin{opacity:1!important}
