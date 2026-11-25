@@ -10654,3 +10654,21 @@ body {
         font-size: 11px;
     }
 }
+/* account link claims */
+.claims-wrap{max-width:720px;margin:0 auto}
+.claim-row{background:#fff;border:1px solid #e5e5e5;border-radius:12px;padding:14px;margin-bottom:12px}
+.claim-row-head{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:6px}
+.claim-status{font-size:12px;padding:3px 10px;border-radius:99px;background:#f1f1f1}
+.claim-status.s-pending{background:#fff3cd}.claim-status.s-approved{background:#d8f0de}.claim-status.s-rejected{background:#f8d9d9}
+.claim-row-meta{color:#666;font-size:13px;margin:4px 0}
+.claim-alert{background:#fdecec;border:1px solid #f1bcbc;color:#7a1f1f;border-radius:8px;padding:8px 10px;margin:8px 0;font-size:13px}
+.claim-inputs label{display:block;font-size:13px;margin:10px 0 4px}
+.claim-inputs input{width:100%;padding:10px;border:1px solid #d5d5d5;border-radius:8px;font-size:16px}
+.claim-hint{color:#777;font-size:12px;margin:8px 0}
+.claim-actions{display:flex;gap:8px;margin-top:10px}
+.claim-actions button{flex:1;padding:10px;border-radius:8px;border:1px solid #ccc;background:#fff;cursor:pointer;font-size:15px}
+.claim-actions .c-approve{background:#1f7a3a;color:#fff;border-color:#1f7a3a}
+.claim-msg{color:#b00020;font-size:13px;margin:8px 0 0;min-height:1em}
+.claims-empty{text-align:center;color:#777;padding:24px}
+
+.claim-code-adm{font-family:ui-monospace,Menlo,monospace;font-weight:700;font-size:18px;letter-spacing:1px;white-space:nowrap;text-align:left;margin:2px 0 6px}
