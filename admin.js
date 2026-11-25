@@ -5712,6 +5712,8 @@ function updateDashboard() {
     renderDashboardSalesChart();
     renderWeekComparison();
     renderDashboardInsights();
+    renderDashboardAttention();
+    softenSmallSampleWeek();
 }
 
 // ========================================
@@ -11282,6 +11284,10 @@ function renderDashboardSalesChart() {
     // ✅ لو Chart.js مش محمّل
     if (typeof Chart === "undefined") {
         console.warn("Chart.js not loaded");
+        const w = canvas.parentElement;
+        if (w && !w.querySelector(".dash-chart-msg")) {
+            w.insertAdjacentHTML("beforeend", '<div class="dash-chart-msg">تعذّر تحميل الرسم البياني. تأكد من الاتصال بالإنترنت وحدّث الصفحة.</div>');
+        }
         return;
     }
 
@@ -12821,3 +12827,76 @@ window.onLedgerFilterChange = onLedgerFilterChange;
 window.loadTreasuryLedger = loadTreasuryLedger;
 window.exportTreasuryLedgerCSV = exportTreasuryLedgerCSV;
 window.initTreasuryLedgerDefaults = initTreasuryLedgerDefaults;
+
+
+// ========================================
+// DASHBOARD ATTENTION PANEL (read-only, from loaded data)
+// ========================================
+function renderDashboardAttention() {
+    const box = document.getElementById("dashAttention");
+    if (!box) return;
+    const esc = (s) => String(s == null ? "" : s).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+    const num = (n) => Number(n || 0).toLocaleString("en-US");
+
+    // 1) بانتظار الدفع (انستاباي)
+    const waiting = adminOrders.filter(o => o.status === "payment_pending");
+    let oldestH = null;
+    waiting.forEach(o => {
+        const h = (Date.now() - new Date(o.created_at).getTime()) / 36e5;
+        if (oldestH === null || h > oldestH) oldestH = h;
+    });
+    const waitSum = waiting.reduce((s, o) => s + Number(o.total_amount || 0), 0);
+
+    // 2) مقاسات قاربت على النفاد
+    const low = [];
+    (adminProducts || []).forEach(p => {
+        getProductSizes(p.id).forEach(s => {
+            const a = Math.max(0, Number(s.stock || 0) - Number(s.reserved || 0));
+            if (a <= 5) low.push({ name: p.name, size: s.size, a });
+        });
+    });
+    low.sort((x, y) => ((x.a === 0) - (y.a === 0)) || (x.a - y.a));
+
+    // 3) طلبات جديدة محتاجة متابعة
+    const fresh = adminOrders.filter(o => o.status === "pending");
+
+    const card = (cls, icon, title, big, sub, extra, onclick) => `
+        <div class="dash-attn-card ${cls}" ${onclick ? `onclick="${onclick}" style="cursor:pointer"` : ""}>
+            <div class="dash-attn-head"><i class="fa-solid ${icon}"></i><span>${title}</span></div>
+            <div class="dash-attn-big"><bdi>${big}</bdi></div>
+            <div class="dash-attn-sub">${sub}</div>
+            ${extra || ""}
+        </div>`;
+
+    const waitSub = waiting.length
+        ? `<bdi>${num(waitSum)}</bdi> ج.م · أقدم طلب بقاله <bdi>${Math.floor(oldestH)}</bdi> ساعة`
+        : "مفيش طلبات بانتظار الدفع";
+    const lowNear = low.filter(x => x.a > 0).length;
+    const lowOut = low.length - lowNear;
+    const lowList = low.length
+        ? `<ul class="dash-attn-list">${low.slice(0, 4).map(x => `<li><span>${esc(x.name)} · مقاس <bdi>${esc(x.size)}</bdi></span><b class="${x.a === 0 ? "z" : ""}">${x.a === 0 ? "نفد" : "باقي <bdi>" + x.a + "</bdi>"}</b></li>`).join("")}</ul>`
+        : "";
+
+    box.innerHTML =
+        card("attn-blue", "fa-hourglass-half", "بانتظار الدفع", waiting.length, waitSub, "", "switchTab('orders')") +
+        card("attn-amber", "fa-box-open", "مقاسات قاربت على النفاد", lowNear, low.length ? (lowOut ? `و <bdi>${lowOut}</bdi> مقاس نفد · المتاح فعلياً بعد المحجوز (٥ أو أقل)` : "المتاح فعلياً بعد المحجوز (٥ أو أقل)") : "كل المقاسات متوفرة", lowList, "switchTab('inventory')") +
+        card("attn-green", "fa-bell", "طلبات جديدة", fresh.length, fresh.length ? "محتاجة مراجعة وتجهيز" : "مفيش طلبات جديدة", "", "switchTab('orders');setTimeout(function(){var c=document.querySelector('.filter-chip[data-filter=pending]');if(c)c.click();},400)");
+}
+window.renderDashboardAttention = renderDashboardAttention;
+
+
+// Small-sample week comparison: keep counts, avoid alarming % emphasis
+function softenSmallSampleWeek() {
+    const box = document.getElementById("weekChangeBox");
+    if (!box) return;
+    const n = (id) => parseInt(String((document.getElementById(id) || {}).textContent || "0").replace(/[^0-9]/g, ""), 10) || 0;
+    const cur = n("weekCurrentOrders"), prev = n("weekPreviousOrders");
+    box.classList.remove("small");
+    const old = box.parentElement.querySelector(".dash-week-note");
+    if (old) old.remove();
+    if (cur < 10 && prev < 10) {
+        box.classList.add("small");
+        box.insertAdjacentHTML("afterend", `<div class="dash-week-note">عينة صغيرة (<bdi>${cur}</bdi> و <bdi>${prev}</bdi> طلب)، النسبة للمقارنة فقط.</div>`);
+    }
+}
+window.softenSmallSampleWeek = softenSmallSampleWeek;
