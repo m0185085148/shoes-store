@@ -6256,6 +6256,12 @@ function _getPresetRange(preset) {
     return { from: null, to: null };
 }
 
+// Local (browser/Cairo) calendar date as YYYY-MM-DD. toISOString() uses UTC and shifts late-night dates by a day.
+function _localYMD(d) {
+    const p = n => String(n).padStart(2, '0');
+    return d.getFullYear() + '-' + p(d.getMonth() + 1) + '-' + p(d.getDate());
+}
+
 function _applyPresetToFilters(preset, filters, fromId, toId) {
     filters.preset = preset;
     const r = _getPresetRange(preset);
@@ -6264,8 +6270,8 @@ function _applyPresetToFilters(preset, filters, fromId, toId) {
 
     const fEl = document.getElementById(fromId);
     const tEl = document.getElementById(toId);
-    if (fEl) fEl.value = r.from ? r.from.toISOString().slice(0, 10) : '';
-    if (tEl) tEl.value = r.to ? r.to.toISOString().slice(0, 10) : '';
+    if (fEl) fEl.value = r.from ? _localYMD(r.from) : '';
+    if (tEl) tEl.value = r.to ? _localYMD(r.to) : '';
 }
 
 function _applyManualFilters(filters, fromId, toId) {
@@ -6655,7 +6661,7 @@ async function loadDailyReport() {
         const map = {};
         orders.forEach(o => {
             const d = new Date(o.created_at);
-            const key = d.toISOString().slice(0, 10);
+            const key = _localYMD(d);
 
             if (!map[key]) {
                 map[key] = {
@@ -8026,8 +8032,8 @@ function closeFilterPicker() {
 // ✅ Date Picker
 function renderDatePicker(bodyEl, reportKey) {
     const filters = getFiltersByReport(reportKey);
-    const fromStr = filters.from ? filters.from.toISOString().slice(0, 10) : '';
-    const toStr = filters.to ? filters.to.toISOString().slice(0, 10) : '';
+    const fromStr = filters.from ? _localYMD(filters.from) : '';
+    const toStr = filters.to ? _localYMD(filters.to) : '';
 
     bodyEl.innerHTML = `
         <div class="filter-picker-date">
@@ -8112,7 +8118,7 @@ function applyDateFilter() {
     const r_today = _getPresetRange("today");
     const r_week = _getPresetRange("week");
     const r_month = _getPresetRange("month");
-    const key = d => d ? d.toISOString().slice(0, 10) : '';
+    const key = d => d ? _localYMD(d) : '';
 
     if (fromStr === key(r_today.from) && toStr === key(r_today.to)) filters.preset = "today";
     else if (fromStr === key(r_week.from) && toStr === key(r_week.to)) filters.preset = "week";
