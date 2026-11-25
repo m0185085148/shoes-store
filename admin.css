@@ -10672,3 +10672,77 @@ body {
 .claims-empty{text-align:center;color:#777;padding:24px}
 
 .claim-code-adm{font-family:ui-monospace,Menlo,monospace;font-weight:700;font-size:18px;letter-spacing:1px;white-space:nowrap;text-align:left;margin:2px 0 6px}
+
+
+/* ===== Dashboard attention panel ===== */
+.dash-attn-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-bottom:28px}
+.dash-attn-card{background:#fff;border:1.5px solid #e8ecf3;border-radius:16px;padding:20px;border-top:4px solid #1e3a8a;transition:transform .15s,box-shadow .15s}
+.dash-attn-card:hover{transform:translateY(-2px);box-shadow:0 8px 22px rgba(15,23,42,.08)}
+.dash-attn-card.attn-blue{border-top-color:#2563eb}
+.dash-attn-card.attn-amber{border-top-color:#f59e0b}
+.dash-attn-card.attn-green{border-top-color:#10b981}
+.dash-attn-head{display:flex;align-items:center;gap:8px;color:#475569;font-weight:700;font-size:14px}
+.dash-attn-big{font-size:38px;font-weight:800;color:#0f172a;line-height:1.2;margin:8px 0 2px}
+.dash-attn-sub{color:#64748b;font-size:13px}
+.dash-attn-list{list-style:none;margin:12px 0 0;padding:0;display:grid;gap:6px}
+.dash-attn-list li{display:flex;justify-content:space-between;gap:8px;font-size:13px;background:#f8fafc;border-radius:8px;padding:6px 10px}
+.dash-attn-list b{color:#b45309}.dash-attn-list b.z{color:#dc2626}
+@media(max-width:900px){.dash-attn-grid{grid-template-columns:1fr}}
+
+/* Mobile/tablet: later desktop rule (.sidebar{position:relative}) overrode the off-canvas sidebar */
+@media (max-width: 1100px) {
+    .sidebar { position: fixed; top: 0; right: 0; bottom: 0; width: 260px; transform: translateX(100%); z-index: 999; }
+    .sidebar.open { transform: translateX(0); }
+}
+
+@media(max-width:700px){
+  .dash-attn-grid{gap:10px;margin-bottom:20px}
+  .dash-attn-card{padding:14px 16px}
+  .dash-attn-big{font-size:28px;margin:4px 0 0}
+  .dash-attn-list li:nth-child(n+3){display:none}
+}
+
+/* sparkline containment inside main sales card */
+.stat-card-main{overflow:hidden;position:relative}
+.stat-card-main .sparkline-canvas{width:90px !important;height:46px !important;max-width:90px;flex:0 0 90px}
+@media(max-width:1300px){.stat-card-main .sparkline-canvas{display:none}}
+
+/* ===== Dashboard cleanup (design only) ===== */
+.dash-dup-lowstock{display:none !important}
+.dashboard-grid{align-items:start}
+.dash-collapsible.collapsed .dash-insights-list{display:none}
+.dash-collapsible.collapsed .dash-insight-header{margin-bottom:0;padding-bottom:0;border-bottom:0}
+.dash-collapsible .dash-collapse-chev{transition:transform .2s}
+.dash-collapsible:not(.collapsed) .dash-collapse-chev{transform:rotate(180deg)}
+.dash-insights-grid{align-items:start}
+#dashRecentOrdersList td{white-space:nowrap}
+.dash-recent-table th:nth-child(3),#dashRecentOrdersList td:nth-child(3){display:none}
+@media(min-width:1101px){.quick-actions{display:none}}
+.dash-week-change.small{background:#f8fafc !important;border:1.5px dashed #cbd5e1 !important}
+.dash-week-note{font-size:12px;color:#64748b;margin-top:8px}
+.dash-chart-msg{padding:40px 16px;text-align:center;color:#64748b;font-size:14px}
+
+.dash-recent-table{min-width:0 !important}
+.dash-recent-table th,.dash-recent-table td{padding-inline:8px !important}
+.dash-week-change.small .dash-week-change-icon{background:#e2e8f0 !important;color:#64748b !important}
+.dash-week-change.small .dash-week-change-info strong{color:#334155 !important}
+@media(max-width:700px){
+  .dash-recent-table{font-size:12px}
+  .dash-recent-table th,.dash-recent-table td{padding-inline:4px !important}
+  #dashRecentOrdersList td:last-child *{font-size:11px !important;padding:3px 6px !important;white-space:nowrap}
+  #dashRecentOrdersList td:nth-child(2){max-width:90px;overflow:hidden;text-overflow:ellipsis}
+}
+@media(max-width:400px){
+  .dash-recent-table th:nth-child(2),#dashRecentOrdersList td:nth-child(2){display:none}
+}
+/* Mobile top bar: menu button lives in a reserved header, never over content */
+@media (max-width: 1100px) {
+  body::before{content:"";position:fixed;top:0;left:0;right:0;height:56px;background:var(--side);z-index:998;box-shadow:0 2px 10px rgba(0,0,0,.15)}
+  body::after{content:"STEP Admin";position:fixed;top:0;right:16px;height:56px;line-height:56px;color:#fff;font-weight:800;font-size:17px;z-index:999;direction:ltr}
+  .mobile-sidebar-toggle{top:6px !important;bottom:auto !important;left:12px !important;width:44px !important;height:44px !important;border-radius:12px !important;background:rgba(255,255,255,.12) !important;box-shadow:none !important}
+  .main-content{padding-top:76px !important}
+  .sidebar{padding-top:70px}
+}
+@media(max-width:480px){
+  .dash-recent-table th:nth-child(2),#dashRecentOrdersList td:nth-child(2){display:none}
+}
