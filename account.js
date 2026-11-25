@@ -153,9 +153,8 @@ if (isRegisterPage()) {
         const current = await getCurrentUserType();
         if (!current) return;
 
-        if (current.type === "admin") {
-            window.location.replace("admin.html");
-        } else if (current.type === "customer") {
+        // لو الجلسة الحالية أدمن: نسيب صفحة العميل تفتح عادي (الأدمن له صفحته admin-login.html)
+        if (current.type === "customer") {
             window.location.replace("account.html");
         }
     })();
@@ -311,9 +310,8 @@ if (isLoginPage()) {
         const current = await getCurrentUserType();
         if (!current) return;
 
-        if (current.type === "admin") {
-            window.location.replace("admin.html");
-        } else if (current.type === "customer" || current.type === "new_user") {
+        // لو الجلسة الحالية أدمن: نسيب صفحة تسجيل دخول العميل تفتح عادي
+        if (current.type === "customer" || current.type === "new_user") {
             window.location.replace("account.html");
         }
     })();
@@ -451,7 +449,8 @@ async function initAccountPage() {
         .maybeSingle();
 
     if (adminData) {
-        window.location.replace("admin.html");
+        // جلسة أدمن مش جلسة عميل: نرجّعه لصفحة دخول العميل بدل لوحة الأدمن
+        window.location.replace("account-login.html");
         return;
     }
 
