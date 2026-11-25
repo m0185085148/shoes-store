@@ -523,3 +523,16 @@ img{max-width:100%;display:block}
   .phone-reminder-banner{flex-direction:column;align-items:flex-start;text-align:right}
   .phone-reminder-btn{width:100%;justify-content:center}
 }
+/* manual account link */
+.claim-card{margin-bottom:16px}
+.claim-lead{color:#444;line-height:1.8;margin:0 0 12px}
+.claim-note{background:#fff7e0;border:1px solid #f0dca0;border-radius:10px;padding:10px 12px;margin:0 0 12px;color:#6b5200}
+.claim-form label{display:block;margin-bottom:6px;font-weight:600}
+.claim-form input{width:100%;padding:12px;border:1px solid #d9d9d9;border-radius:10px;margin-bottom:12px;font-size:16px;direction:ltr;text-align:right}
+.claim-steps{padding-inline-start:20px;line-height:2;margin:0 0 14px}
+.claim-code{font-family:ui-monospace,Menlo,monospace;font-size:28px;font-weight:700;letter-spacing:2px;text-align:center;background:#f6f4ee;border:1px dashed #b9b29c;border-radius:12px;padding:14px;margin:0 0 8px;user-select:all}
+.claim-meta{color:#777;font-size:13px;text-align:center;margin:0 0 12px}
+.claim-warn{background:#fdecec;border:1px solid #f1bcbc;border-radius:10px;padding:10px 12px;color:#7a1f1f;line-height:1.8;margin:0}
+.claim-ok{background:#e9f6ec;border:1px solid #b9dfc1;border-radius:10px;padding:12px;color:#1f5a2c;margin:0}
+
+.claim-code{white-space:nowrap}
