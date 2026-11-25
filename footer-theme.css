@@ -1,0 +1,6 @@
+/* STEP storefront footer: brand navy instead of black. Visual only. */
+.footer{background:#14213D}
+.footer p{color:#B9C6E0}
+.footer-links a:hover{color:#7FD6D6}
+.footer-bottom{border-top-color:rgba(255,255,255,.12)}
+.footer-bottom p{color:#8794B3}
