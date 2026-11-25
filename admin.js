@@ -970,6 +970,12 @@ function switchTab(tabId) {
 
         // ✅ تحديث تلقائي
         loadAdminReviews();
+    } else if (tabId === "claims") {
+        document.getElementById("viewClaims")?.classList.add("active");
+        document.getElementById("tabNavClaims")?.classList.add("active");
+        title.textContent = "طلبات ربط الحساب";
+        subtitle.textContent = "مراجعة يدوية لطلبات ربط الطلبات القديمة";
+        if (window.loadLinkClaims) window.loadLinkClaims();
     } else if (tabId === "treasury") {
         // ✅ فحص: super_admin أو manager
         const allowedRoles = ["super_admin", "manager"];
