@@ -6383,6 +6383,14 @@ async function loadSalesReport() {
             );
         }
 
+        // ✅ المبيعات = الطلبات المسلّمة (SOLD_STATUSES). الباقي يظهر في سطر "قيد التنفيذ" منفصل
+        if (!salesReportFilters.status || salesReportFilters.status === "all") {
+            salesReportInProgress = filtered.filter(o => !SOLD_STATUSES.includes(o.status));
+            filtered = filtered.filter(o => SOLD_STATUSES.includes(o.status));
+        } else {
+            salesReportInProgress = [];
+        }
+
         salesReportOrders = filtered;
 
         renderSalesKPIs();
@@ -6393,6 +6401,22 @@ async function loadSalesReport() {
         if (listEl) listEl.innerHTML = `<tr><td colspan="10" style="text-align:center;padding:30px;color:#dc2626;font-weight:700;">حدث خطأ: ${escapeAdminHTML(err.message)}</td></tr>`;
         if (prodEl) prodEl.innerHTML = `<tr><td colspan="8" style="text-align:center;padding:30px;color:#dc2626;font-weight:700;">حدث خطأ: ${escapeAdminHTML(err.message)}</td></tr>`;
     }
+}
+
+// ✅ طلبات قيد التنفيذ (غير داخلة في المبيعات إلا بعد التسليم) - سطر منفصل في التقارير
+let salesReportInProgress = [];
+function _inProgressSummaryRow(orders, colspan) {
+    if (!orders || !orders.length) return "";
+    let total = 0;
+    orders.forEach(o => {
+        const oItems = Array.isArray(o.items) ? o.items : [];
+        const g = oItems.reduce((s, i) => s + Number(i.price || 0) * Number(i.quantity || 0), 0);
+        total += g - Number(o.discount_total || 0) + Number(o.shipping_cost || 0);
+    });
+    return `
+            <tr class="in-progress-row">
+                <td colspan="${colspan}" style="color:#92400e;background:#fffbeb;font-weight:700;">قيد التنفيذ (مش محسوب في المبيعات لحد التسليم): ${orders.length} طلب، ${Math.round(total).toLocaleString("en-US")} ج</td>
+            </tr>`;
 }
 
 // ✅ حساب الإجماليات
@@ -6441,7 +6465,7 @@ function renderSalesOrdersTable() {
 
     if (!salesReportOrders.length) {
         listEl.innerHTML = `<tr><td colspan="10" style="text-align:center;padding:35px;color:#64748b;">لا توجد طلبات</td></tr>`;
-        if (totalsEl) totalsEl.innerHTML = "";
+        if (totalsEl) totalsEl.innerHTML = _inProgressSummaryRow(salesReportInProgress, 10);
         return;
     }
 
@@ -6491,7 +6515,7 @@ function renderSalesOrdersTable() {
                 <td class="totals-value" style="color:#2563eb;">${t.total.toLocaleString("en-US")} ج</td>
                 <td></td>
             </tr>
-        `;
+        ` + _inProgressSummaryRow(salesReportInProgress, 10);
     }
 }
 
@@ -6667,9 +6691,12 @@ async function loadDailyReport() {
         const allOrders = await _fetchOrdersInRange(dailyReportFilters);
 
         // ✅ نستثني الملغية والمرتجعة نهائيًا
-        const orders = allOrders.filter(o => 
+        const _live = allOrders.filter(o => 
             !["cancelled", "refunded"].includes(o.status)
         );
+        // ✅ المبيعات = الطلبات المسلّمة (SOLD_STATUSES). الباقي سطر "قيد التنفيذ" منفصل
+        const orders = _live.filter(o => SOLD_STATUSES.includes(o.status));
+        const _inProg = _live.filter(o => !SOLD_STATUSES.includes(o.status));
 
         // ✅ تجميع حسب اليوم
         const map = {};
@@ -6726,6 +6753,7 @@ async function loadDailyReport() {
 
         if (!list.length) {
             if (el) el.innerHTML = `<tr><td colspan="7" style="text-align:center;padding:35px;color:#64748b;">لا توجد بيانات</td></tr>`;
+            if (totalsEl) totalsEl.innerHTML = _inProgressSummaryRow(_inProg, 7);
             return;
         }
 
@@ -6769,7 +6797,7 @@ async function loadDailyReport() {
                     <td class="totals-value">${Math.round(totals.shipping).toLocaleString("en-US")} ج</td>
                     <td class="totals-value" style="color:#2563eb;">${Math.round(totals.total).toLocaleString("en-US")} ج</td>
                 </tr>
-            `;
+            ` + _inProgressSummaryRow(_inProg, 7);
         }
     } catch (err) {
         console.error("Daily Report Error:", err);
@@ -6788,10 +6816,8 @@ async function loadGovernorateReport() {
     try {
         const allOrders = await _fetchOrdersInRange(govReportFilters);
 
-        // ✅ نستثني الملغية
-        const orders = allOrders.filter(o => 
-            !["cancelled", "refunded"].includes(o.status)
-        );
+        // ✅ المبيعات = الطلبات المسلّمة (SOLD_STATUSES) فقط، زي الداشبورد
+        const orders = allOrders.filter(o => SOLD_STATUSES.includes(o.status));
         const map = {};
         orders.forEach(o => {
             const g = o.governorate || "غير محدد";
@@ -7014,10 +7040,8 @@ async function loadProductsReport() {
     try {
         const allOrders = await _fetchOrdersInRange(prodReportFilters);
 
-        // ✅ نستثني الملغية
-        const orders = allOrders.filter(o => 
-            !["cancelled", "refunded"].includes(o.status)
-        );
+        // ✅ المبيعات = الطلبات المسلّمة (SOLD_STATUSES) فقط، زي الداشبورد
+        const orders = allOrders.filter(o => SOLD_STATUSES.includes(o.status));
         const map = {};
         orders.forEach(o => (Array.isArray(o.items) ? o.items : []).forEach(item => {
             const k = String(item.id ?? item.name);
