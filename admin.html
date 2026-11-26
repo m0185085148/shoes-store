@@ -3917,7 +3917,8 @@
     <script>
         window.supabaseClient = window.supabase.createClient(
             'https://uobuxepixrqijgciurve.supabase.co',
-            'sb_publishable_5cu-Flvr7CSvRPMT3hByMQ_CfO7mBIv'
+            'sb_publishable_5cu-Flvr7CSvRPMT3hByMQ_CfO7mBIv',
+            { auth: { storageKey: 'sb-step-admin-auth' } }
         );
     </script>
     <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
