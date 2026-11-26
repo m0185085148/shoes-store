@@ -31,7 +31,7 @@ function isLoginPage() {
     return Boolean(document.getElementById("loginForm"));
 }
 function isAccountPage() {
-    return Boolean(document.getElementById("profileForm"));
+    return Boolean(document.getElementById("accountSide"));
 }
 
 // ========================================
@@ -439,6 +439,13 @@ async function initAccountPage() {
         return;
     }
 
+    // تسجيل الخروج من قايمة الحساب في الهيدر
+    if (new URLSearchParams(window.location.search).get("logout") === "1") {
+        await supabaseClient.auth.signOut();
+        window.location.replace("index.html");
+        return;
+    }
+
     const { data: sessionData, error: sessionError } =
         await supabaseClient.auth.getSession();
 
@@ -512,11 +519,15 @@ async function initAccountPage() {
     document.getElementById("userEmail").textContent = user.email;
 
     // املأ الفورم
-    document.getElementById("fullName").value = profile?.full_name || "";
-    document.getElementById("phone").value = profile?.phone || "";
-    document.getElementById("governorate").value = profile?.governorate || "";
-    document.getElementById("city").value = profile?.city || "";
-    document.getElementById("address").value = profile?.address || "";
+    const setField = (id, v) => {
+        const el = document.getElementById(id);
+        if (el) el.value = v || "";
+    };
+    setField("fullName", profile?.full_name);
+    setField("phone", profile?.phone);
+    setField("governorate", profile?.governorate);
+    setField("city", profile?.city);
+    setField("address", profile?.address);
 
 // ========================================
 // PHONE REMINDER BANNER
@@ -554,9 +565,8 @@ function updatePhoneReminder(phone) {
             renderOrdersList();
         });
     });
-    AccountShell.init(id => {
-        if (id === "orders") loadCustomerOrders();
-    }, "orders");
+    AccountShell.init();
+    if (document.getElementById("ordersList")) loadCustomerOrders();
 
     // ============================
     // SAVE PROFILE
@@ -564,7 +574,7 @@ function updatePhoneReminder(phone) {
     const profileForm = document.getElementById("profileForm");
     const saveProfileBtn = document.getElementById("saveProfileBtn");
 
-    profileForm.addEventListener("submit", async (e) => {
+    profileForm?.addEventListener("submit", async (e) => {
         e.preventDefault();
 
         const fullName = document.getElementById("fullName").value.trim();
