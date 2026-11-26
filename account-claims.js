@@ -9,7 +9,7 @@
 
   function renderForm(note) {
     box.innerHTML = `
-      <p class="claim-lead">لو كنت طلبت قبل كده من غير حساب، ابعتلنا طلب ربط وهنراجعه بإيدينا. مش هتشوف أي بيانات طلبات قبل ما نوافق.</p>
+      <p class="claim-lead">اربط رقمك علشان تشوف طلباتك القديمة.</p>
       ${note ? `<p class="claim-note">${esc(note)}</p>` : ""}
       <form id="claimForm" class="claim-form">
         <label for="claimPhone">رقم الموبايل اللي طلبت بيه</label>
@@ -21,15 +21,10 @@
 
   function renderPending(c) {
     box.innerHTML = `
-      <p class="claim-lead">طلب الربط اتسجل. كمّل الخطوات دي:</p>
-      <ol class="claim-steps">
-        <li>افتح واتساب من نفس الرقم اللي طلبت بيه.</li>
-        <li>ابعت الكود ده لرقم المتجر <strong dir="ltr">${STORE_WA}</strong></li>
-        <li>هنراجع ونوافق، وطلباتك هتظهر هنا.</li>
-      </ol>
+      <p class="claim-lead">ابعت الكود ده على واتساب المتجر <strong dir="ltr">${STORE_WA}</strong> من رقمك اللي طلبت بيه.</p>
       <div class="claim-code" dir="ltr" aria-label="كود الربط">${esc(c.code)}</div>
       <p class="claim-meta">الكود صالح لحد ${esc(fmtDate(c.expires_at))}</p>
-      <p class="claim-warn">الموافقة على الكود دي معناها إن طلبات الرقم ده تتربط بالحساب اللي طلب الربط. ما تبعتش الكود ده لأي حد، وما تبعتش كود حد تاني ليك.</p>`;
+      <p class="claim-warn">ما تشاركش الكود ده مع حد.</p>`;
   }
 
   function renderStatus(c) {
@@ -40,7 +35,7 @@
       return;
     }
     if (c.status === "expired") return renderForm("الكود انتهى. تقدر تطلب كود جديد.");
-    if (c.status === "rejected") return renderForm("مقدرناش نكمل الربط. تقدر تحاول تاني أو تكلمنا على واتساب.");
+    if (c.status === "rejected") return renderForm("مقدرناش نكمل الربط. جرّب تاني أو كلمنا على واتساب.");
     if (c.status === "undone") return renderForm("الربط اتلغى. تقدر تطلب ربط جديد.");
     return renderForm();
   }
