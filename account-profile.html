@@ -7,6 +7,7 @@
 <link rel="stylesheet" href="account.css">
 <link rel="stylesheet" href="login-theme.css">
 <link rel="stylesheet" href="account-theme.css">
+<link rel="stylesheet" href="account-profile.css">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="steps.css">
@@ -73,56 +74,88 @@
         </button>
       </div>
 
-      <div class="info-card">
-        <h2>
-          <i class="fa-solid fa-user-pen"></i>
-          بياناتي الشخصية
-        </h2>
+      <div id="profileMessage" class="auth-message"></div>
 
-        <div id="profileMessage" class="auth-message"></div>
+      <form id="profileForm" class="auth-form profile-form" novalidate>
 
-        <form id="profileForm" class="auth-form">
-          <div class="form-group">
-            <label for="fullName">الاسم بالكامل</label>
-            <div class="input-icon-wrapper">
-              <i class="fa-solid fa-user"></i>
-              <input type="text" id="fullName" required placeholder="الاسم">
+        <div class="info-card profile-card">
+          <div class="pf-head"><span class="pf-ico"><i class="fa-solid fa-address-book"></i></span><div><h2>بيانات التواصل</h2><p>الإيميل والموبايل اللي بنتواصل معاك عليهم</p></div></div>
+          <div class="pf-grid">
+            <div class="form-group">
+              <div class="pf-field pf-locked">
+                <label for="profileEmail">البريد الإلكتروني</label>
+                <input type="email" id="profileEmail" readonly tabindex="-1" aria-readonly="true">
+                <span class="pf-lockico" title="مقفول"><i class="fa-solid fa-lock"></i></span>
+              </div>
+              <small class="pf-help">ده البريد اللي بتسجّل بيه الدخول</small>
+            </div>
+            <div class="form-group">
+              <div class="pf-field pf-edit">
+                <label for="phone">رقم الهاتف</label>
+                <input type="tel" id="phone" placeholder="01xxxxxxxxx" pattern="01[0-9]{9}" inputmode="tel" readonly>
+                <button type="button" class="pf-pencil" aria-label="تعديل رقم الهاتف"><i class="fa-solid fa-pen"></i></button>
+              </div>
+              <small class="pf-help">بنتواصل معاك عليه بخصوص طلباتك</small>
             </div>
           </div>
+        </div>
 
-          <div class="form-group">
-            <label for="phone">رقم الهاتف</label>
-            <div class="input-icon-wrapper">
-              <i class="fa-solid fa-phone"></i>
-              <input type="tel" id="phone" placeholder="01xxxxxxxxx" pattern="01[0-9]{9}">
+        <div class="info-card profile-card">
+          <div class="pf-head"><span class="pf-ico"><i class="fa-solid fa-user"></i></span><div><h2>البيانات الشخصية</h2><p>اسمك وبياناتك الأساسية</p></div></div>
+          <input type="hidden" id="fullName">
+          <input type="hidden" id="governorate">
+          <input type="hidden" id="city">
+          <input type="hidden" id="address">
+          <div class="pf-grid">
+            <div class="form-group">
+              <div class="pf-field pf-edit">
+                <label for="firstName">الاسم الأول</label>
+                <input type="text" id="firstName" placeholder="الاسم الأول" readonly maxlength="40" autocomplete="given-name">
+                <button type="button" class="pf-pencil" aria-label="تعديل الاسم الأول"><i class="fa-solid fa-pen"></i></button>
+              </div>
+            </div>
+            <div class="form-group">
+              <div class="pf-field pf-edit">
+                <label for="lastName">اسم العائلة</label>
+                <input type="text" id="lastName" placeholder="اسم العائلة" readonly maxlength="60" autocomplete="family-name">
+                <button type="button" class="pf-pencil" aria-label="تعديل اسم العائلة"><i class="fa-solid fa-pen"></i></button>
+              </div>
+            </div>
+            <div class="form-group">
+              <div class="pf-field pf-edit pf-dob">
+                <label for="birthDay">تاريخ الميلاد</label>
+                <div class="pf-dobrow"><select id="birthDay" disabled aria-label="اليوم"><option value="">اليوم</option><option>1</option><option>2</option><option>3</option><option>4</option><option>5</option><option>6</option><option>7</option><option>8</option><option>9</option><option>10</option><option>11</option><option>12</option><option>13</option><option>14</option><option>15</option><option>16</option><option>17</option><option>18</option><option>19</option><option>20</option><option>21</option><option>22</option><option>23</option><option>24</option><option>25</option><option>26</option><option>27</option><option>28</option><option>29</option><option>30</option><option>31</option></select>
+                <select id="birthMonth" disabled aria-label="الشهر"><option value="">الشهر</option><option value="1">يناير</option><option value="2">فبراير</option><option value="3">مارس</option><option value="4">أبريل</option><option value="5">مايو</option><option value="6">يونيو</option><option value="7">يوليو</option><option value="8">أغسطس</option><option value="9">سبتمبر</option><option value="10">أكتوبر</option><option value="11">نوفمبر</option><option value="12">ديسمبر</option></select>
+                <select id="birthYear" disabled aria-label="السنة"><option value="">السنة</option></select></div>
+                <button type="button" class="pf-pencil" aria-label="تعديل تاريخ الميلاد"><i class="fa-solid fa-pen"></i></button>
+              </div>
+            </div>
+            <div class="form-group">
+              <div class="pf-field pf-edit">
+                <label for="gender">النوع</label>
+                <select id="gender" disabled><option value="">اختر</option><option value="male">ذكر</option><option value="female">أنثى</option></select>
+                <button type="button" class="pf-pencil" aria-label="تعديل النوع"><i class="fa-solid fa-pen"></i></button>
+              </div>
+            </div>
+            <div class="form-group pf-wide">
+              <div class="pf-field pf-edit">
+                <label for="nationality">الجنسية</label>
+                <select id="nationality" disabled><option value="">اختر الجنسية</option><option>مصري</option><option>سعودي</option><option>إماراتي</option><option>كويتي</option><option>قطري</option><option>بحريني</option><option>عماني</option><option>أردني</option><option>لبناني</option><option>سوري</option><option>فلسطيني</option><option>عراقي</option><option>يمني</option><option>ليبي</option><option>تونسي</option><option>جزائري</option><option>مغربي</option><option>سوداني</option><option>أخرى</option></select>
+                <button type="button" class="pf-pencil" aria-label="تعديل الجنسية"><i class="fa-solid fa-pen"></i></button>
+              </div>
+              <small class="pf-help">عناوين التوصيل بتتدار من صفحة <a href="account-addresses.html">العناوين</a></small>
             </div>
           </div>
+        </div>
 
-          <div class="form-group">
-            <label for="governorate">المحافظة</label>
-            <select id="governorate">
-              <option value="">اختر المحافظة</option>
-              <option>القاهرة</option>
-              <option>الجيزة</option>
-            </select>
-          </div>
-
-          <div class="form-group">
-            <label for="city">المدينة / المنطقة</label>
-            <input type="text" id="city" placeholder="مثال: مدينة نصر">
-          </div>
-
-          <div class="form-group">
-            <label for="address">العنوان بالتفصيل</label>
-            <textarea id="address" rows="3" placeholder="اسم الشارع، رقم المبنى، رقم الشقة..."></textarea>
-          </div>
-
+        <div class="pf-savebar" id="pfSaveBar" hidden>
           <button type="submit" class="btn-primary" id="saveProfileBtn">
             <i class="fa-solid fa-check"></i>
             حفظ التعديلات
           </button>
-        </form>
-      </div>
+          <button type="button" class="pf-cancel" id="pfCancel">إلغاء</button>
+        </div>
+      </form>
     </div>
 
     </div>
@@ -152,5 +185,6 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="account-shell.js"></script>
 <script src="account.js"></script>
+<script src="account-profile-ui.js"></script>
 </body>
 </html>
