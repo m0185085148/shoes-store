@@ -250,6 +250,106 @@ async function searchOrder(orderId, phone) {
     }
 }
 
+
+// ========================================
+// STEPS BAR (عرض فقط - بيعتمد على الحالات الموجودة)
+// ========================================
+
+const TRACK_STEPS = [
+    { label: "تم استلام الطلب", icon: "fa-receipt", statuses: ["pending"] },
+    { label: "قيد التحضير", icon: "fa-box-open", statuses: ["preparing"] },
+    { label: "تم الشحن", icon: "fa-truck", statuses: ["shipped"] },
+    { label: "تم التوصيل", icon: "fa-circle-check", statuses: ["delivered"] }
+];
+
+const TRACK_AFTER_PATHS = {
+    return: {
+        title: "مسار الاسترجاع",
+        path: ["return_requested", "return_received", "refunded"]
+    },
+    exchange: {
+        title: "مسار الاستبدال",
+        path: ["exchange_requested", "exchange_received", "exchange_shipped", "exchanged"]
+    }
+};
+
+function trackStepIndex(status) {
+    if (status === "payment_pending") return -1;
+    if (status === "pending") return 0;
+    if (status === "preparing") return 1;
+    if (status === "shipped") return 2;
+    // delivered وكل حالات ما بعد التسليم
+    return 3;
+}
+
+function renderTrackSteps(order) {
+    const stepsEl = $("trackSteps");
+    const afterEl = $("trackAfter");
+    if (!stepsEl || !afterEl) return;
+
+    const status = order.status;
+    afterEl.innerHTML = "";
+
+    if (status === "cancelled") {
+        stepsEl.innerHTML = `
+            <div class="track-cancel-card">
+                <i class="fa-solid fa-circle-xmark"></i>
+                <span>ملغى</span>
+            </div>`;
+        return;
+    }
+
+    const cur = trackStepIndex(status);
+    const history = Array.isArray(order.status_history) ? order.status_history : [];
+
+    const stepDate = step => {
+        const entry = history.find(h => step.statuses.includes(h.status));
+        return entry && entry.at ? formatDate(entry.at) : "";
+    };
+
+    const payTag = status === "payment_pending"
+        ? `<div style="text-align:center;"><span class="track-pay-tag">بانتظار الدفع</span></div>`
+        : "";
+
+    stepsEl.innerHTML = payTag + `<div class="track-steps">` + TRACK_STEPS.map((step, i) => {
+        const done = i < cur || (i === cur && i === TRACK_STEPS.length - 1);
+        const current = i === cur && !done;
+        const cls = ["track-step", done ? "done" : current ? "current" : "todo"];
+        if (i < cur) cls.push("line-done");
+        const date = (done || current) ? stepDate(step) : "";
+        return `
+            <div class="${cls.join(" ")}">
+                <div class="track-step-dot"><i class="fa-solid ${done ? "fa-check" : step.icon}"></i></div>
+                <div class="track-step-text">
+                    <div class="track-step-label">${escapeHTML(step.label)}</div>
+                    <div class="track-step-date">${escapeHTML(date)}</div>
+                </div>
+            </div>`;
+    }).join("") + `</div>`;
+
+    // مسار الاسترجاع / الاستبدال بعد التسليم
+    const kind = TRACK_AFTER_PATHS.return.path.includes(status)
+        ? "return"
+        : TRACK_AFTER_PATHS.exchange.path.includes(status) ? "exchange" : null;
+
+    if (kind) {
+        const cfg = TRACK_AFTER_PATHS[kind];
+        const idx = cfg.path.indexOf(status);
+        const lastDone = idx === cfg.path.length - 1;
+        afterEl.innerHTML = `
+            <div class="track-after">
+                <h4>${escapeHTML(cfg.title)}</h4>
+                <div class="track-after-path">
+                    ${cfg.path.map((s, i) => {
+                        const c = i < idx || (i === idx && lastDone) ? "done" : i === idx ? "current" : "";
+                        const t = (STATUS_CONFIG[s] && STATUS_CONFIG[s].text) || s;
+                        return `<span class="track-after-chip ${c}">${escapeHTML(t)}</span>`;
+                    }).join("")}
+                </div>
+            </div>`;
+    }
+}
+
 // ========================================
 // RENDER RESULT
 // ========================================
@@ -280,6 +380,9 @@ function renderResult(order) {
     badge.textContent = statusInfo.text;
     badge.style.background = statusInfo.badgeBg;
     badge.style.color = statusInfo.badgeColor;
+
+    // ===== STEPS =====
+    renderTrackSteps(order);
 
     // ===== TIMELINE =====
     const history = Array.isArray(order.status_history)
