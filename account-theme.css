@@ -1,0 +1,31 @@
+/* STEP account area: brand navy / cream / teal. Colours only, loaded after account.css and login-theme.css. */
+:root{--ac-ink:#14213D;--ac-deep:#0B1F3A;--ac-cream:#F7F5F0;--ac-line:#E0DDD4;--ac-soft:#E8ECF3;--ac-acc:#2F4B7C;--ac-teal:#1F8A8A}
+.account-header-card{background:linear-gradient(135deg,var(--ac-deep),var(--ac-ink))}
+.account-avatar{background:rgba(255,255,255,.1);border-color:rgba(127,214,214,.5);color:#fff}
+.account-header-card p{color:#B9C6E0}
+.logout-btn{background:rgba(255,255,255,.12)}
+.logout-btn:hover{background:var(--ac-teal)}
+.info-card,.account-side{border-color:var(--ac-line)}
+.account-tab:hover{background:var(--ac-soft)}
+.account-tab.active,.account-side .account-tab.active{background:var(--ac-ink);color:#fff}
+.orders-count-badge{background:var(--ac-soft);color:var(--ac-ink)}
+.order-card{border-color:var(--ac-line)}
+.order-card-total{color:var(--ac-ink)}
+.order-action-btn.view{background:var(--ac-soft);color:var(--ac-ink)}
+.order-action-btn.view:hover{background:#D5DCE9}
+.order-details-close:hover{background:var(--ac-ink)}
+.timeline-item::before{background:var(--ac-acc)}
+.toast-notification{background:var(--ac-ink)}
+.top-announcement{background:var(--ac-ink)}
+.btn-primary{background:var(--ac-ink)}
+.btn-primary:hover{background:var(--ac-acc)}
+.info-row-value,.order-card-id{color:var(--ac-ink)}
+.claim-code{background:var(--ac-cream);border-color:var(--ac-acc)}
+.claim-form input,.info-card input,.info-card select,.info-card textarea{background:var(--ac-cream);border-color:var(--ac-line)}
+.info-card input:focus,.info-card select:focus,.info-card textarea:focus{border-color:var(--ac-ink);background:#fff;box-shadow:0 0 0 3px rgba(31,138,138,.22)}
+.footer{background:var(--ac-ink);color:#EEF1F7}
+.footer p{color:#B9C6E0}
+.footer-links a{color:#EEF1F7}
+.footer-links a:hover{color:#7FD6D6}
+.footer-bottom{border-top:1px solid rgba(255,255,255,.12)}
+.footer-bottom p{color:#8FA0C2}
