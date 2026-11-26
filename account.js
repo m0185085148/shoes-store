@@ -565,6 +565,10 @@ function updatePhoneReminder(phone) {
             renderOrdersList();
         });
     });
+    document.getElementById("ordersSearch")?.addEventListener("input", e => {
+        ordersQuery = e.target.value;
+        renderOrdersList();
+    });
     AccountShell.init();
     if (document.getElementById("ordersList")) loadCustomerOrders();
 
@@ -717,9 +721,36 @@ async function loadCustomerOrders() {
 // 12. RENDER ORDERS LIST
 // ========================================
 
+let ordersQuery = "";
+
+const ORDER_PROGRESS = {
+    pending: { pct: 20, label: "بنراجع طلبك" },
+    preparing: { pct: 45, label: "بنجهّز طلبك" },
+    shipped: { pct: 75, label: "في الطريق إليك" },
+    delivered: { pct: 100, label: "تم التوصيل" }
+};
+
+function updateOrdersChrome() {
+    const sum = document.getElementById("ordersSummary");
+    const counts = {};
+    Object.keys(ORDER_FILTERS).forEach(k => {
+        counts[k] = customerOrders.filter(o => ORDER_FILTERS[k](o.status)).length;
+    });
+    document.querySelectorAll(".orders-filter").forEach(btn => {
+        const c = btn.querySelector(".of-count");
+        if (c) c.textContent = counts[btn.dataset.filter] ?? 0;
+    });
+    if (sum) {
+        sum.hidden = !customerOrders.length;
+        sum.innerHTML = [["all", "كل الطلبات"], ["active", "جارية"], ["delivered", "تم التوصيل"]]
+            .map(([k, l]) => `<div><b><bdi>${counts[k]}</bdi></b><span>${l}</span></div>`).join("");
+    }
+}
+
 function renderOrdersList() {
     const ordersList = document.getElementById("ordersList");
     if (!ordersList) return;
+    updateOrdersChrome();
 
     if (!customerOrders.length) {
         ordersList.innerHTML = `
@@ -740,7 +771,9 @@ function renderOrdersList() {
     }
 
     const filterFn = ORDER_FILTERS[ordersFilter] || ORDER_FILTERS.all;
-    const shownOrders = customerOrders.filter(o => filterFn(o.status));
+    const q = (ordersQuery || "").replace(/[^0-9]/g, "");
+    const shownOrders = customerOrders.filter(o =>
+        filterFn(o.status) && (!q || String(o.id).includes(q)));
     if (!shownOrders.length) {
         ordersList.innerHTML = `
             <div class="account-empty">
@@ -753,69 +786,56 @@ function renderOrdersList() {
 
     ordersList.innerHTML = shownOrders.map(order => {
         const items = Array.isArray(order.items) ? order.items : [];
-        const totalItems = items.reduce(
-            (sum, i) => sum + Number(i.quantity || 0), 0
-        );
-
         const canCancel = CUSTOMER_CANCELLABLE.includes(order.status);
-        const thumbsHTML = items.length ? `
-            <div class="order-card-thumbs">
-                ${items.slice(0, 4).map(i => `<div class="order-thumb" style="background-image:url('${escapeHTML(i.image || "")}')"></div>`).join("")}
-                ${items.length > 4 ? `<div class="order-thumb-more">+${items.length - 4}</div>` : ""}
-            </div>` : "";
+        const prog = ORDER_PROGRESS[order.status];
         const trackHref = order.customer_phone
             ? `track.html?id=${encodeURIComponent(order.id)}&phone=${encodeURIComponent(order.customer_phone)}`
             : "";
+        const firstPid = items.find(i => i && i.product_id);
+        const againHref = firstPid
+            ? `product.html?id=${encodeURIComponent(firstPid.product_id)}`
+            : "index.html#productsSection";
+
+        const itemsHTML = items.slice(0, 3).map(i => `
+            <div class="oc-item">
+                <div class="oc-thumb" style="background-image:url('${escapeHTML(i.image || "")}')"></div>
+                <div class="oc-item-info">
+                    <b>${escapeHTML(i.name || "منتج")}</b>
+                    <span>${i.size ? `مقاس <bdi>${escapeHTML(i.size)}</bdi> · ` : ""}<bdi>${Number(i.quantity || 1)}</bdi> قطعة</span>
+                </div>
+            </div>`).join("") +
+            (items.length > 3 ? `<div class="oc-more">+<bdi>${items.length - 3}</bdi> منتجات تانية</div>` : "");
+
+        const progHTML = prog ? `
+            <div class="oc-prog">
+                <div class="oc-bar"><i style="width:${prog.pct}%"></i></div>
+                <div class="oc-bar-label">${prog.label}</div>
+            </div>` : "";
+
+        const primary = order.status === "delivered"
+            ? `<a class="oc-btn primary" href="${againHref}"><i class="fa-solid fa-rotate-right"></i> اطلب مرة تانية</a>`
+            : (trackHref ? `<a class="oc-btn primary" href="${trackHref}"><i class="fa-solid fa-route"></i> تتبّع</a>` : "");
 
         return `
-            <div class="order-card">
-                <div class="order-card-header">
+            <div class="order-card oc">
+                <div class="oc-head">
                     <div>
                         <div class="order-card-id">طلب #${escapeHTML(order.id)}</div>
-                        <div class="order-card-date">
-                            ${formatDate(order.created_at)}
-                        </div>
+                        <div class="order-card-date">${formatDate(order.created_at)}</div>
                     </div>
                     ${getCustomerStatusBadge(order.status)}
                 </div>
-
-                ${thumbsHTML}
-
-                <div class="order-card-body">
-                    <div class="order-card-info">
-                        <div class="order-card-info-item">
-                            <strong>${totalItems}</strong> قطعة
-                        </div>
-                        <div class="order-card-info-item">
-                            <strong>${escapeHTML(order.governorate || "-")}</strong>
-                        </div>
-                    </div>
-                    <div class="order-card-total">
-                        ${formatPrice(order.total_amount)} ج
-                    </div>
+                <div class="oc-body">
+                    ${itemsHTML}
+                    ${progHTML}
                 </div>
-
-                <div class="order-card-actions">
-                    <button class="order-action-btn view"
-                        onclick="viewOrderDetails(${Number(order.id)})">
-                        <i class="fa-solid fa-eye"></i>
-                        عرض التفاصيل
-                    </button>
-
-                    ${trackHref ? `
-                        <a class="order-action-btn track" href="${trackHref}">
-                            <i class="fa-solid fa-route"></i>
-                            تتبّع
-                        </a>
-                    ` : ""}
-
-                    ${canCancel ? `
-                        <button class="order-action-btn cancel"
-                            onclick="cancelOrder(${Number(order.id)}, this)">
-                            <i class="fa-solid fa-xmark"></i>
-                            إلغاء الطلب
-                        </button>
-                    ` : ""}
+                <div class="oc-foot">
+                    <div class="oc-total"><bdi>${formatPrice(order.total_amount)}</bdi> ج</div>
+                    <div class="oc-actions">
+                        ${canCancel ? `<button type="button" class="oc-cancel" onclick="cancelOrder(${Number(order.id)}, this)">إلغاء الطلب</button>` : ""}
+                        <button type="button" class="oc-btn" onclick="viewOrderDetails(${Number(order.id)})">التفاصيل</button>
+                        ${primary}
+                    </div>
                 </div>
             </div>
         `;
