@@ -2,11 +2,22 @@
 //  - the side menu on account screens (links, one screen per item)
 //  - the header dropdown on every storefront page
 // To add a screen later (for example "الدفع"), add one item here and create its page.
-const ACCOUNT_MENU = [
-    { id: "orders", label: "طلباتي", icon: "fa-box", href: "account.html" },
-    { id: "returns", label: "المرتجعات", icon: "fa-rotate-left", href: "account-returns.html" },
-    { id: "profile", label: "بياناتي", icon: "fa-user", href: "account-profile.html" }
+const ACCOUNT_GROUPS = [
+    { title: "", items: [
+        { id: "orders", label: "طلباتي", icon: "fa-box", href: "account.html" },
+        { id: "returns", label: "المرتجعات", icon: "fa-rotate-left", href: "account-returns.html" },
+        { id: "favorites", label: "المفضلة", icon: "fa-heart", href: "account-favorites.html" }
+    ] },
+    { title: "حسابي", items: [
+        { id: "profile", label: "بياناتي", icon: "fa-user", href: "account-profile.html" },
+        { id: "addresses", label: "العناوين", icon: "fa-location-dot", href: "account-addresses.html" }
+    ] },
+    { title: "أخرى", items: [
+        { id: "notifications", label: "الإشعارات", icon: "fa-bell", href: "account-notifications.html" },
+        { id: "security", label: "إعدادات الأمان", icon: "fa-shield-halved", href: "account-security.html" }
+    ] }
 ];
+const ACCOUNT_MENU = ACCOUNT_GROUPS.reduce((all, g) => all.concat(g.items), []);
 
 const AccountShell = {
     currentUser() {
@@ -28,12 +39,46 @@ const AccountShell = {
         const side = document.getElementById("accountSide");
         if (!side) return;
         const cur = document.body.dataset.screen || "";
-        side.innerHTML = ACCOUNT_MENU.map(item => `
-            <a class="account-tab${item.id === cur ? " active" : ""}" href="${item.href}">
-                <i class="fa-solid ${item.icon}"></i>
-                <span class="account-tab-label">${item.label}</span>
-            </a>
-        `).join("");
+        const user = this.currentUser();
+        const name = user && ((user.user_metadata && (user.user_metadata.full_name || user.user_metadata.name)) || (user.email || "").split("@")[0]) || "حسابي";
+        const initial = Array.from(name.trim())[0] || "؟";
+        const item = i => `
+            <a class="asm-item${i.id === cur ? " active" : ""}" href="${i.href}"${i.id === cur ? ' aria-current="page"' : ""}>
+                <i class="fa-solid ${i.icon}"></i><span>${i.label}</span>
+            </a>`;
+        side.innerHTML = `
+            <div class="asm-user">
+                <span class="asm-avatar">${this.esc(initial)}</span>
+                <span class="asm-user-text"><b>${this.esc(name)}</b>${user && user.email ? `<small>${this.esc(user.email)}</small>` : ""}</span>
+            </div>
+            ${ACCOUNT_GROUPS.map(g => `
+                ${g.title ? `<div class="asm-label">${g.title}</div>` : ""}
+                <nav class="asm-card">${g.items.map(item).join("")}</nav>`).join("")}
+            <nav class="asm-card asm-out">
+                <a class="asm-item" href="account.html?logout=1"><i class="fa-solid fa-right-from-bracket"></i><span>تسجيل الخروج</span></a>
+            </nav>`;
+        this.injectSideCss();
+    },
+    injectSideCss() {
+        if (document.getElementById("asm-css")) return;
+        const st = document.createElement("style");
+        st.id = "asm-css";
+        st.textContent = `
+.account-side{background:none!important;border:0!important;box-shadow:none!important;padding:0!important;display:flex!important;flex-direction:column!important;gap:0!important;overflow:visible!important;position:static}
+.asm-user{display:flex;align-items:center;gap:12px;padding:4px 6px 14px}
+.asm-avatar{width:46px;height:46px;border-radius:50%;background:#14213D;color:#fff;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:18px;flex:none}
+.asm-user-text{display:flex;flex-direction:column;min-width:0}
+.asm-user-text b{color:#14213D;font-size:16px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.asm-user-text small{color:#6b7280;font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.asm-label{font-size:12px;font-weight:800;color:#6b7280;padding:6px 8px;letter-spacing:.3px}
+.asm-card{background:#fff;border:1px solid #E0DDD4;border-radius:18px;padding:8px;margin-bottom:12px;display:flex;flex-direction:column;gap:2px}
+.asm-item{display:flex;align-items:center;gap:14px;padding:12px 12px;border-radius:12px;color:#14213D;text-decoration:none;font-weight:700;font-size:14px}
+.asm-item i{width:20px;text-align:center;color:#1F8A8A;font-size:15px}
+.asm-item:hover{background:#F7F5F0}
+.asm-item.active{background:#E8ECF3;font-weight:800}
+.asm-out .asm-item i{color:#b42318}
+`;
+        document.head.appendChild(st);
     },
     renderDropdown() {
         const trigger = document.querySelector('.header-actions a.icon-button[href="account.html"]');
