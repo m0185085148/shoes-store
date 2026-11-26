@@ -19,6 +19,8 @@ const ACCOUNT_GROUPS = [
 ];
 const ACCOUNT_MENU = ACCOUNT_GROUPS.reduce((all, g) => all.concat(g.items), []);
 
+function shellInitials(n){const p=String(n||'').trim().split(/\s+/).filter(Boolean);if(!p.length)return '؟';return (Array.from(p[0])[0]+(p[1]?Array.from(p[1])[0]:'')).toUpperCase();}
+
 const AccountShell = {
     currentUser() {
         try {
@@ -47,10 +49,10 @@ const AccountShell = {
                 <i class="fa-solid ${i.icon}"></i><span>${i.label}</span>
             </a>`;
         side.innerHTML = `
-            <div class="asm-user">
-                <span class="asm-avatar">${this.esc(initial)}</span>
-                <span class="asm-user-text"><b>${this.esc(name)}</b>${user && user.email ? `<small>${this.esc(user.email)}</small>` : ""}</span>
-            </div>
+            <a class="asm-user" href="account-profile.html" aria-label="ملفي الشخصي">
+                <span class="asm-avatar">${this.esc(shellInitials(name))}</span>
+                <span class="asm-user-text"><b>${this.esc(name)}</b><small>ملفي الشخصي <i class="fa-solid fa-chevron-left"></i></small></span>
+            </a>
             ${ACCOUNT_GROUPS.map(g => `
                 ${g.title ? `<div class="asm-label">${g.title}</div>` : ""}
                 <nav class="asm-card">${g.items.map(item).join("")}</nav>`).join("")}
@@ -65,11 +67,13 @@ const AccountShell = {
         st.id = "asm-css";
         st.textContent = `
 .account-side{background:none!important;border:0!important;box-shadow:none!important;padding:0!important;display:flex!important;flex-direction:column!important;gap:0!important;overflow:visible!important;position:static}
-.asm-user{display:flex;align-items:center;gap:12px;padding:4px 6px 14px}
-.asm-avatar{width:46px;height:46px;border-radius:50%;background:#14213D;color:#fff;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:18px;flex:none}
+.asm-user{display:flex;align-items:center;gap:12px;padding:4px 6px 14px;text-decoration:none}
+.asm-avatar{width:46px;height:46px;border-radius:50%;background:#14213D;color:#fff;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:16px;flex:none;letter-spacing:.5px}
 .asm-user-text{display:flex;flex-direction:column;min-width:0}
 .asm-user-text b{color:#14213D;font-size:16px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.asm-user-text small{color:#6b7280;font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.asm-user-text small{color:#1F8A8A;font-size:13px;font-weight:700;white-space:nowrap}
+.asm-user-text small i{font-size:10px;margin-inline-start:4px}
+.asm-user:hover .asm-user-text small{text-decoration:underline}
 .asm-label{font-size:12px;font-weight:800;color:#6b7280;padding:6px 8px;letter-spacing:.3px}
 .asm-card{background:#fff;border:1px solid #E0DDD4;border-radius:18px;padding:8px;margin-bottom:12px;display:flex;flex-direction:column;gap:2px}
 .asm-item{display:flex;align-items:center;gap:14px;padding:12px 12px;border-radius:12px;color:#14213D;text-decoration:none;font-weight:700;font-size:14px}
@@ -87,8 +91,9 @@ const AccountShell = {
         const user = this.currentUser();
         const name = user && ((user.user_metadata && (user.user_metadata.full_name || user.user_metadata.name)) || (user.email || "").split("@")[0]);
         const link = (href, icon, label) => `<a class="acm-item" href="${href}"><i class="fa-solid ${icon}"></i><span>${label}</span></a>`;
+        const DD = ["orders", "returns", "favorites", "addresses"];
         const items = user
-            ? ACCOUNT_MENU.map(i => link(i.href, i.icon, i.label)).join("") +
+            ? ACCOUNT_MENU.filter(i => DD.indexOf(i.id) > -1).map(i => link(i.href, i.icon, i.label)).join("") +
               link("track.html", "fa-truck-fast", "تتبّع طلب") +
               '<div class="acm-sep"></div>' +
               link("account.html?logout=1", "fa-right-from-bracket", "تسجيل الخروج")
@@ -105,7 +110,7 @@ const AccountShell = {
         const panel = document.createElement("div");
         panel.className = "acm-panel";
         panel.setAttribute("role", "menu");
-        panel.innerHTML = (user ? `<div class="acm-head">${this.esc(name || "حسابي")}</div>` : "") + items;
+        panel.innerHTML = (user ? `<a class="acm-head" href="account-profile.html"><span class="acm-av">${this.esc(shellInitials(name))}</span><span class="acm-ht"><b>${this.esc(name || "حسابي")}</b><small>ملفي الشخصي <i class="fa-solid fa-chevron-left"></i></small></span></a>` : "") + items;
         wrap.appendChild(panel);
 
         const close = () => { wrap.classList.remove("open"); trigger.setAttribute("aria-expanded", "false"); };
@@ -120,12 +125,19 @@ const AccountShell = {
         const st = document.createElement("style");
         st.textContent = `
 .acm-wrap{position:relative;display:inline-flex}
-.acm-panel{display:none;position:absolute;top:calc(100% + 8px);left:0;min-width:210px;background:#fff;border:1px solid #E0DDD4;border-radius:14px;box-shadow:0 14px 36px rgba(20,33,61,.16);padding:8px;z-index:3000;text-align:right}
+.acm-panel{display:none;position:absolute;top:calc(100% + 8px);left:0;min-width:250px;background:#fff;border:1px solid #E0DDD4;border-radius:14px;box-shadow:0 14px 36px rgba(20,33,61,.16);padding:8px;z-index:3000;text-align:right}
 .acm-wrap.open .acm-panel{display:block}
-.acm-head{padding:10px 12px 8px;font-weight:800;font-size:14px;color:#14213D;border-bottom:1px solid #E0DDD4;margin-bottom:6px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:240px}
+.acm-head{display:flex;align-items:center;gap:12px;padding:10px 10px 12px;border-bottom:1px solid #E0DDD4;margin-bottom:6px;text-decoration:none;border-radius:10px}
+.acm-head:hover{background:#F7F5F0}
+.acm-av{width:42px;height:42px;border-radius:50%;background:#14213D;color:#fff;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:14px;flex:none}
+.acm-ht{display:flex;flex-direction:column;min-width:0}
+.acm-ht b{color:#14213D;font-size:15px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:190px}
+.acm-ht small{color:#1F8A8A;font-size:12.5px;font-weight:700}
+.acm-ht small i{font-size:9px;margin-inline-start:4px}
 .acm-item{display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:10px;font-size:14px;font-weight:700;color:#14213D;text-decoration:none;white-space:nowrap}
 .acm-item i{width:18px;text-align:center;color:#1F8A8A}
 .acm-item:hover{background:#E8ECF3}
+.acm-item[href*="logout"]{color:#b42318}.acm-item[href*="logout"] i{color:#b42318}
 .acm-sep{height:1px;background:#E0DDD4;margin:6px 4px}
 @media(max-width:700px){.acm-panel{position:fixed;top:78px;inset-inline-start:12px;inset-inline-end:12px;min-width:0}}`;
         document.head.appendChild(st);
