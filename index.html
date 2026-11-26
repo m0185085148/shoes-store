@@ -9,6 +9,7 @@
 <link rel="stylesheet" href="hero-banner.css">
 <link rel="stylesheet" href="brand-header.css">
 <link rel="stylesheet" href="footer-theme.css">
+<link rel="stylesheet" href="checkout-v2.css">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800&display=swap" rel="stylesheet">
 </head>
@@ -165,126 +166,120 @@
 
 <!-- ORDER FORM MODAL -->
 <div id="orderModal" class="order-modal">
-  <div class="order-modal-content">
-    <div class="order-header">
-      <div>
-        <span class="cart-header-small">STEP STORE</span>
-        <h2>بيانات التوصيل</h2>
-      </div>
-      <button id="closeOrderBtn" class="close-btn" type="button">
-        <i class="fa-solid fa-xmark"></i>
-      </button>
-    </div>
-
-    <form id="orderForm" class="order-form">
-
-      <div id="loginPrompt" class="login-prompt" style="display:none;">
+  <div class="order-modal-content co-sheet" id="coSheet">
+    <form id="orderForm" class="co-form" novalidate>
+    <div class="main">
+      <div class="head">
         <div>
-          <i class="fa-solid fa-user-circle"></i>
-          <span>عندك حساب؟</span>
+          <small>STEP STORE</small>
+          <h2>بيانات التوصيل</h2>
         </div>
-        <a href="account-login.html">
-          <i class="fa-solid fa-right-to-bracket"></i>
-          تسجيل الدخول
-        </a>
+        <button id="closeOrderBtn" class="x" type="button" aria-label="إغلاق"><i class="fa-solid fa-xmark"></i></button>
       </div>
 
-      <div class="form-group">
-        <label for="customerName">الاسم بالكامل *</label>
-        <input type="text" id="customerName" required placeholder="مثال: أحمد محمد">
+      <div class="steps">
+        <div class="st done"><span class="dot"><i class="fa-solid fa-check"></i></span>السلة</div><span class="bar"></span>
+        <div class="st on"><span class="dot">2</span>التوصيل</div><span class="bar"></span>
+        <div class="st"><span class="dot">3</span>الدفع والتأكيد</div>
       </div>
 
-      <div class="form-group">
-        <label for="customerPhone">رقم الهاتف *</label>
-        <input type="tel" id="customerPhone" required placeholder="01xxxxxxxxx" pattern="01[0-9]{9}">
+      <div id="loginPrompt" class="guest co-guest" style="display:none;">
+        <div><b>عندك حساب؟</b><small>سجّل دخولك واختار من عناوينك المحفوظة بضغطة</small></div>
+        <a href="account-login.html">تسجيل الدخول</a>
       </div>
 
-      <div class="form-row">
-        <div class="form-group">
-          <label for="governorate">المحافظة *</label>
-          <select id="governorate" required>
-            <option value="">اختر المحافظة</option>
-            <option>القاهرة</option>
-            <option>الجيزة</option>
-          </select>
+      <div id="coSaved" class="hide">
+        <div class="sec-t"><i class="fa-solid fa-location-dot"></i>وصّلها فين؟</div>
+        <div class="tickets" id="coTickets"></div>
+      </div>
+
+      <div id="coContact" class="fgrid" style="margin-top:0;margin-bottom:12px">
+        <div class="fld">
+          <label for="customerName">الاسم بالكامل</label>
+          <input type="text" id="customerName" required placeholder="مثال: أحمد محمد" autocomplete="name">
         </div>
-
-        <div class="form-group">
-          <label for="city">المدينة / المنطقة</label>
-          <input type="text" id="city" placeholder="مثال: مدينة نصر">
+        <div class="fld">
+          <label for="customerPhone">رقم الهاتف</label>
+          <input type="tel" id="customerPhone" required placeholder="01xxxxxxxxx" dir="ltr" style="text-align:right" autocomplete="tel">
         </div>
       </div>
 
-      <div class="form-group">
-        <label for="customerAddress">العنوان بالتفصيل *</label>
-        <textarea id="customerAddress" required rows="3" placeholder="اسم الشارع، رقم المبنى، رقم الشقة، علامة مميزة..."></textarea>
+      <div id="coAddr">
+        <div class="sec-t" id="coAddrT"><i class="fa-solid fa-pen-ruler"></i>بيانات التوصيل</div>
+        <div class="fgrid" style="margin-top:0">
+          <div class="full">
+            <div class="seg" id="coSeg">
+              <button type="button" data-g="القاهرة"><i class="fa-solid fa-city"></i>القاهرة</button>
+              <button type="button" data-g="الجيزة"><i class="fa-solid fa-landmark"></i>الجيزة</button>
+            </div>
+            <select id="governorate" class="hide" tabindex="-1" aria-hidden="true">
+              <option value="">اختر المحافظة</option>
+              <option>القاهرة</option>
+              <option>الجيزة</option>
+            </select>
+          </div>
+          <div class="full combo" id="coCombo">
+            <div class="fld" id="coAreaFld" tabindex="0" role="button">
+              <label>المنطقة</label>
+              <div class="val"><span class="ph2" id="coAreaTxt">اختار منطقتك</span><i class="fa-solid fa-chevron-down"></i></div>
+            </div>
+            <div class="pop">
+              <div class="grab"></div>
+              <div class="sh-t">اختار المنطقة<span id="coGovTag"></span></div>
+              <div class="srch"><i class="fa-solid fa-magnifying-glass"></i><input id="coQ" placeholder="ابحث عن منطقتك" autocomplete="off"></div>
+              <div class="cnt" id="coCnt"></div>
+              <ul id="coAreaList"></ul>
+              <div class="empty" id="coEmpty">مفيش منطقة بالاسم ده</div>
+            </div>
+            <div id="bk"></div>
+            <input type="hidden" id="city">
+          </div>
+          <div class="fld full">
+            <label for="customerAddress">العنوان بالتفصيل</label>
+            <textarea id="customerAddress" required rows="2" placeholder="اسم الشارع، رقم المبنى، الدور، رقم الشقة"></textarea>
+          </div>
+          <div class="fld full">
+            <label for="coLandmark">أقرب علامة مميزة</label>
+            <input type="text" id="coLandmark" placeholder="مثال: جنب مسجد النور، قدام صيدلية العزبي" autocomplete="off">
+          </div>
+        </div>
+        <label class="tg-wrap hide" id="coSaveRow"><input type="checkbox" id="coSaveAddr" checked><span class="tg"></span>احفظ العنوان ده في حسابي</label>
       </div>
 
-      <div class="form-group">
+      <div class="fld" style="margin-top:12px">
         <label for="orderNotes">ملاحظات إضافية</label>
         <textarea id="orderNotes" rows="2" placeholder="أي تفاصيل تحب تضيفها (اختياري)"></textarea>
       </div>
 
-      <div class="form-group">
-        <label>طريقة الدفع *</label>
-        <div class="payment-methods">
-          <label class="payment-option">
-            <input type="radio" name="paymentMethod" value="cash" checked>
-            <div class="payment-option-content">
-              <i class="fa-solid fa-money-bill-wave"></i>
-              <div>
-                <strong>كاش عند الاستلام</strong>
-                <small>ادفع لما توصلك</small>
-              </div>
-            </div>
-          </label>
-
-          <label class="payment-option">
-            <input type="radio" name="paymentMethod" value="instapay">
-            <div class="payment-option-content">
-              <i class="fa-solid fa-mobile-screen"></i>
-              <div>
-                <strong>InstaPay</strong>
-                <small>تحويل فوري</small>
-              </div>
-            </div>
-          </label>
-        </div>
+      <div class="sec-t" style="margin-top:22px"><i class="fa-solid fa-wallet"></i>طريقة الدفع</div>
+      <div class="pay">
+        <label class="po">
+          <input type="radio" name="paymentMethod" value="cash" checked>
+          <i class="fa-solid fa-money-bill-wave"></i>
+          <div><b>كاش عند الاستلام</b><small>ادفع لما توصلك</small></div>
+        </label>
+        <label class="po">
+          <input type="radio" name="paymentMethod" value="instapay">
+          <i class="fa-solid fa-mobile-screen"></i>
+          <div><b>InstaPay</b><small>تحويل فوري</small></div>
+        </label>
       </div>
+    </div>
 
-      <div id="shippingHint" style="
-        display:none;
-        padding:10px 14px;
-        border-radius:10px;
-        font-size:13px;
-        font-weight:700;
-        text-align:center;
-        margin-bottom:14px;
-      "></div>
-
-      <div class="order-summary">
-        <div class="order-summary-row">
-          <span>عدد المنتجات</span>
-          <span id="summaryCount">0</span>
-        </div>
-        <div class="order-summary-row">
-          <span>المنتجات</span>
-          <span id="summarySubtotal">0 جنيه</span>
-        </div>
-        <div class="order-summary-row">
-          <span>الشحن</span>
-          <span id="summaryShipping">-</span>
-        </div>
-        <div class="order-summary-row total">
-          <span>الإجمالي</span>
-          <span id="summaryTotal">0 جنيه</span>
-        </div>
+    <div class="side">
+      <h3><i class="fa-solid fa-bag-shopping"></i>ملخص الطلب</h3>
+      <div id="coItems"></div>
+      <div class="rows">
+        <div><span>عدد المنتجات</span><span id="summaryCount">0</span></div>
+        <div><span>المنتجات</span><span id="summarySubtotal">0 جنيه</span></div>
+        <div><span>الشحن</span><span id="summaryShipping">-</span></div>
       </div>
-
-      <button type="submit" class="submit-order-btn" id="submitOrderBtn">
-        <i class="fa-solid fa-check"></i>
-        تأكيد الطلب
-      </button>
+      <div class="ship"><i class="fa-solid fa-truck-fast"></i><span>توصيل داخل القاهرة والجيزة · شحن ثابت <bdi>80</bdi> جنيه</span></div>
+      <div id="shippingHint" style="display:none"></div>
+      <div class="tot"><span>الإجمالي</span><span id="summaryTotal">0 جنيه</span></div>
+      <button type="submit" class="go" id="submitOrderBtn"><i class="fa-solid fa-circle-check"></i> تأكيد الطلب</button>
+      <div class="safe"><i class="fa-solid fa-lock"></i> بياناتك بتتحفظ بأمان</div>
+    </div>
     </form>
   </div>
 </div>
@@ -383,6 +378,8 @@
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="script.js"></script>
+<script src="areas-v2.js"></script>
+<script src="checkout-v2.js"></script>
 <script src="storefront-v2.js"></script>
 <script src="favorites-hearts.js"></script>
 <script src="account-shell.js"></script>
