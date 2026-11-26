@@ -8304,7 +8304,8 @@ function getUniqueCustomers() {
 
         const c = map.get(key);
         c.ordersCount++;
-        c.totalSpent += Number(o.total_amount || 0);
+        // ✅ الإنفاق = الطلبات المسلّمة فقط وبدون الشحن
+        if (SOLD_STATUSES.includes(o.status)) c.totalSpent += orderGoodsAmount(o);
     });
 
     return Array.from(map.values()).sort((a, b) => b.totalSpent - a.totalSpent);
@@ -9913,7 +9914,11 @@ async function loadCustomersScreen() {
 
             const c = map.get(key);
             c.ordersCount++;
-            c.totalSpent += Number(o.total_amount || 0);
+            // ✅ إجمالي الشراء = الطلبات المسلّمة فقط وبدون الشحن (عدد الطلبات وسجلها يفضلوا كاملين)
+            if (SOLD_STATUSES.includes(o.status)) {
+                c.totalSpent += orderGoodsAmount(o);
+                c.soldCount = (c.soldCount || 0) + 1;
+            }
             c.orders.push(o);
 
             if (new Date(o.created_at) < new Date(c.firstOrderAt)) {
@@ -10224,7 +10229,7 @@ function openCustomerFileModal(key) {
         : `مسجل منذ ${formatDate(c.lastOrderAt || new Date())}`;
 
     const initial = String(c.name || "؟").trim().charAt(0).toUpperCase();
-    const aov = c.ordersCount > 0 ? c.totalSpent / c.ordersCount : 0;
+    const aov = (c.soldCount || 0) > 0 ? c.totalSpent / c.soldCount : 0;
 
     let tagLabel = "عميل عادي";
     let tagClass = "";
