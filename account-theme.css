@@ -29,3 +29,6 @@
 .footer-links a:hover{color:#7FD6D6}
 .footer-bottom{border-top:1px solid rgba(255,255,255,.12)}
 .footer-bottom p{color:#8FA0C2}
+
+/* Welcome banner removed: name, email and sign-out live in the side menu */
+.account-header-card{display:none!important}
