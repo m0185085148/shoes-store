@@ -1107,6 +1107,7 @@ async function protectAdminDashboard() {
 
     currentSessionToken = sessionToken;
     startHeartbeat();
+    document.getElementById("adminGuardStyle")?.remove();
 
     if (adminUsername) adminUsername.textContent = admin.username || admin.email || "Admin";
     if (adminRole) adminRole.textContent = getRoleName(admin.role);
