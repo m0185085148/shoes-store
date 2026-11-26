@@ -101,6 +101,15 @@ const CUSTOMER_STATUS = {
     cancelled: { text: "ملغى", bg: "#f3f4f6", color: "#4b5563" }
 };
 
+let ordersFilter = "all";
+const ORDER_FILTERS = {
+    all: () => true,
+    active: s => ["pending", "preparing", "shipped", "return_requested", "return_received",
+        "exchange_requested", "exchange_received", "exchange_shipped"].includes(s),
+    delivered: s => ["delivered", "exchanged", "refunded"].includes(s),
+    cancelled: s => s === "cancelled"
+};
+
 const CUSTOMER_CANCELLABLE = ["pending", "preparing"];
 
 function getCustomerStatusBadge(status) {
@@ -534,27 +543,20 @@ function updatePhoneReminder(phone) {
     });
 
     // ============================
-    // TABS
+    // ACCOUNT SHELL (side menu)
     // ============================
-    document.querySelectorAll(".account-tab").forEach(tab => {
-        tab.addEventListener("click", () => {
-            const target = tab.dataset.tab;
-
-            document.querySelectorAll(".account-tab").forEach(t => {
-                t.classList.remove("active");
+    document.querySelectorAll(".orders-filter").forEach(btn => {
+        btn.addEventListener("click", () => {
+            ordersFilter = btn.dataset.filter;
+            document.querySelectorAll(".orders-filter").forEach(b => {
+                b.classList.toggle("active", b === btn);
             });
-            tab.classList.add("active");
-
-            document.querySelectorAll(".tab-panel").forEach(p => {
-                p.classList.remove("active");
-            });
-            document.getElementById(
-                target === "profile" ? "tabProfile" : "tabOrders"
-            )?.classList.add("active");
-
-            if (target === "orders") loadCustomerOrders();
+            renderOrdersList();
         });
     });
+    AccountShell.init(id => {
+        if (id === "orders") loadCustomerOrders();
+    }, "orders");
 
     // ============================
     // SAVE PROFILE
@@ -727,13 +729,33 @@ function renderOrdersList() {
         return;
     }
 
-    ordersList.innerHTML = customerOrders.map(order => {
+    const filterFn = ORDER_FILTERS[ordersFilter] || ORDER_FILTERS.all;
+    const shownOrders = customerOrders.filter(o => filterFn(o.status));
+    if (!shownOrders.length) {
+        ordersList.innerHTML = `
+            <div class="account-empty">
+                <i class="fa-solid fa-box-open"></i>
+                <p>مفيش طلبات في القسم ده</p>
+            </div>
+        `;
+        return;
+    }
+
+    ordersList.innerHTML = shownOrders.map(order => {
         const items = Array.isArray(order.items) ? order.items : [];
         const totalItems = items.reduce(
             (sum, i) => sum + Number(i.quantity || 0), 0
         );
 
         const canCancel = CUSTOMER_CANCELLABLE.includes(order.status);
+        const thumbsHTML = items.length ? `
+            <div class="order-card-thumbs">
+                ${items.slice(0, 4).map(i => `<div class="order-thumb" style="background-image:url('${escapeHTML(i.image || "")}')"></div>`).join("")}
+                ${items.length > 4 ? `<div class="order-thumb-more">+${items.length - 4}</div>` : ""}
+            </div>` : "";
+        const trackHref = order.customer_phone
+            ? `track.html?id=${encodeURIComponent(order.id)}&phone=${encodeURIComponent(order.customer_phone)}`
+            : "";
 
         return `
             <div class="order-card">
@@ -746,6 +768,8 @@ function renderOrdersList() {
                     </div>
                     ${getCustomerStatusBadge(order.status)}
                 </div>
+
+                ${thumbsHTML}
 
                 <div class="order-card-body">
                     <div class="order-card-info">
@@ -767,6 +791,13 @@ function renderOrdersList() {
                         <i class="fa-solid fa-eye"></i>
                         عرض التفاصيل
                     </button>
+
+                    ${trackHref ? `
+                        <a class="order-action-btn track" href="${trackHref}">
+                            <i class="fa-solid fa-route"></i>
+                            تتبّع
+                        </a>
+                    ` : ""}
 
                     ${canCancel ? `
                         <button class="order-action-btn cancel"
