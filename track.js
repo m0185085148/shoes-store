@@ -291,10 +291,14 @@ function renderTrackSteps(order) {
     afterEl.innerHTML = "";
 
     if (status === "cancelled") {
+        const hist = Array.isArray(order.status_history) ? order.status_history : [];
+        const cancelEntry = [...hist].reverse().find(h => h.status === "cancelled");
+        const cancelReason = cancelEntry && cancelEntry.reason ? cancelEntry.reason : "";
         stepsEl.innerHTML = `
             <div class="track-cancel-card">
                 <i class="fa-solid fa-circle-xmark"></i>
                 <span>ملغى</span>
+                ${cancelReason ? `<small class="track-cancel-reason">السبب: ${escapeHTML(cancelReason)}</small>` : ""}
             </div>`;
         return;
     }
@@ -385,53 +389,8 @@ function renderResult(order) {
     renderTrackSteps(order);
 
     // ===== TIMELINE =====
-    const history = Array.isArray(order.status_history)
-        ? order.status_history
-        : [];
-
-    if (history.length) {
-        $("trackTimelineSection").style.display = "block";
-
-        $("trackTimeline").innerHTML = history
-            .map((entry, index) => {
-                const entryInfo = STATUS_CONFIG[entry.status] || {
-                    text: entry.status
-                };
-                const isLast = index === history.length - 1;
-                const isCurrent = isLast &&
-                    !["delivered", "cancelled", "refunded", "exchanged"]
-                        .includes(entry.status);
-
-                const classes = [
-                    "track-timeline-item",
-                    isCurrent ? "current" : "done"
-                ].join(" ");
-
-                return `
-                    <div class="${classes}">
-                        <div class="track-timeline-status">
-                            ${escapeHTML(entryInfo.text)}
-                        </div>
-                        ${entry.reason ? `
-                            <div class="track-timeline-reason">
-                                السبب: ${escapeHTML(entry.reason)}
-                            </div>
-                        ` : ""}
-                        ${entry.notes ? `
-                            <div class="track-timeline-notes">
-                                ${escapeHTML(entry.notes)}
-                            </div>
-                        ` : ""}
-                        <div class="track-timeline-meta">
-                            ${formatDate(entry.at)}
-                        </div>
-                    </div>
-                `;
-            })
-            .join("");
-    } else {
-        $("trackTimelineSection").style.display = "none";
-    }
+    // The steps bar above shows the full path, so the duplicate status list is hidden.
+    $("trackTimelineSection").style.display = "none";
 
     // ===== ITEMS =====
     const items = Array.isArray(order.items) ? order.items : [];
