@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>حسابي - STEP Store</title>
+<title>طلباتي - STEP Store</title>
 <link rel="stylesheet" href="account.css">
 <link rel="stylesheet" href="login-theme.css">
 <link rel="stylesheet" href="account-theme.css">
@@ -11,7 +11,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="steps.css">
 </head>
-<body>
+<body data-screen="orders">
 
 <div class="top-announcement">
   <i class="fa-solid fa-truck-fast"></i>
@@ -55,78 +55,8 @@
     <aside class="account-side" id="accountSide" aria-label="قائمة الحساب"></aside>
     <div class="account-content">
 
-    <!-- PROFILE TAB -->
-    <div class="tab-panel active" id="tabProfile">
-
-      <!-- ✅ بانر تذكير رقم الهاتف -->
-      <div id="phoneReminderBanner" class="phone-reminder-banner" style="display:none;">
-        <div class="phone-reminder-icon">
-          <i class="fa-solid fa-phone"></i>
-        </div>
-        <div class="phone-reminder-content">
-          <h4>لسه مضفتش رقم هاتفك!</h4>
-          <p>ضيف رقمك عشان نقدر نتواصل معك بخصوص طلباتك</p>
-        </div>
-        <button type="button" class="phone-reminder-btn" id="addPhoneBtn">
-          <i class="fa-solid fa-plus"></i>
-          ضيف رقمك
-        </button>
-      </div>
-
-      <div class="info-card">
-        <h2>
-          <i class="fa-solid fa-user-pen"></i>
-          بياناتي الشخصية
-        </h2>
-
-        <div id="profileMessage" class="auth-message"></div>
-
-        <form id="profileForm" class="auth-form">
-          <div class="form-group">
-            <label for="fullName">الاسم بالكامل</label>
-            <div class="input-icon-wrapper">
-              <i class="fa-solid fa-user"></i>
-              <input type="text" id="fullName" required placeholder="الاسم">
-            </div>
-          </div>
-
-          <div class="form-group">
-            <label for="phone">رقم الهاتف</label>
-            <div class="input-icon-wrapper">
-              <i class="fa-solid fa-phone"></i>
-              <input type="tel" id="phone" placeholder="01xxxxxxxxx" pattern="01[0-9]{9}">
-            </div>
-          </div>
-
-          <div class="form-group">
-            <label for="governorate">المحافظة</label>
-            <select id="governorate">
-              <option value="">اختر المحافظة</option>
-              <option>القاهرة</option>
-              <option>الجيزة</option>
-            </select>
-          </div>
-
-          <div class="form-group">
-            <label for="city">المدينة / المنطقة</label>
-            <input type="text" id="city" placeholder="مثال: مدينة نصر">
-          </div>
-
-          <div class="form-group">
-            <label for="address">العنوان بالتفصيل</label>
-            <textarea id="address" rows="3" placeholder="اسم الشارع، رقم المبنى، رقم الشقة..."></textarea>
-          </div>
-
-          <button type="submit" class="btn-primary" id="saveProfileBtn">
-            <i class="fa-solid fa-check"></i>
-            حفظ التعديلات
-          </button>
-        </form>
-      </div>
-    </div>
-
     <!-- ORDERS TAB -->
-    <div class="tab-panel" id="tabOrders">
+    <div class="tab-panel active" id="tabOrders">
       <div class="info-card">
         <div class="orders-header">
           <h2>
