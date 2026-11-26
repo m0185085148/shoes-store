@@ -1,0 +1,25 @@
+/* Addresses screen */
+.address-top{flex-wrap:wrap;display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:14px}
+.address-add{white-space:nowrap;background:#1F8A8A;color:#fff;border:0;border-radius:10px;padding:10px 16px;font:inherit;font-weight:800;font-size:13px;cursor:pointer}
+.address-add[hidden]{display:none}
+.address-card{background:#fff;border:1px solid #E0DDD4;border-radius:16px;padding:14px 16px;margin-bottom:12px}
+.address-card.is-default{border-color:#1F8A8A;box-shadow:0 0 0 1px #1F8A8A33}
+.address-head{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:6px;color:#14213D}
+.address-badge{background:#E6F4F4;color:#14666a;border-radius:999px;padding:4px 10px;font-size:12px;font-weight:800}
+.address-line{font-size:14px;color:#374151;line-height:1.7}
+.address-actions{display:flex;gap:14px;margin-top:10px;padding-top:10px;border-top:1px solid #E0DDD4}
+.addr-link{background:none;border:0;padding:0;font:inherit;font-size:13px;font-weight:700;color:#14213D;text-decoration:underline;cursor:pointer}
+.addr-link.danger{color:#b42318}
+.address-form-wrap{background:#F7F5F0;border:1px solid #E0DDD4;border-radius:16px;padding:16px;margin-bottom:14px}
+.address-form-wrap[hidden]{display:none}
+.address-form-wrap h3{margin:0 0 12px;font-size:16px;color:#14213D}
+.address-form .field{display:flex;flex-direction:column;gap:6px;margin-bottom:12px}
+.address-form label{font-size:13px;font-weight:800;color:#14213D}
+.address-form input[type=text],.address-form select,.address-form textarea{border:1px solid #E0DDD4;background:#fff;border-radius:12px;padding:10px 12px;font:inherit;font-size:14px;width:100%;box-sizing:border-box}
+.address-check{display:flex;align-items:center;gap:8px;font-size:14px;margin-bottom:12px}
+.address-check input{accent-color:#1F8A8A}
+.address-btns{display:flex;gap:8px}
+.address-btns button{border:0;border-radius:10px;padding:10px 18px;font:inherit;font-weight:800;font-size:13px;cursor:pointer;background:#E8ECF3;color:#14213D}
+.address-btns .primary{background:#1F8A8A;color:#fff}
+.address-msg{font-size:13px;margin-bottom:8px;min-height:0}
+.address-msg.bad{color:#b42318}
