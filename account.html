@@ -7,6 +7,7 @@
 <link rel="stylesheet" href="account.css">
 <link rel="stylesheet" href="login-theme.css">
 <link rel="stylesheet" href="account-theme.css">
+<link rel="stylesheet" href="account-orders.css">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="steps.css">
@@ -66,11 +67,13 @@
           <span class="orders-count-badge" id="ordersCount">0</span>
         </div>
 
+        <div class="orders-summary" id="ordersSummary" hidden></div>
+        <input type="search" class="orders-search" id="ordersSearch" inputmode="numeric" placeholder="ابحث برقم الطلب" aria-label="ابحث برقم الطلب">
         <div class="orders-filters" id="ordersFilters">
-          <button type="button" class="orders-filter active" data-filter="all">الكل</button>
-          <button type="button" class="orders-filter" data-filter="active">جارية</button>
-          <button type="button" class="orders-filter" data-filter="delivered">تم التوصيل</button>
-          <button type="button" class="orders-filter" data-filter="cancelled">ملغاة</button>
+          <button type="button" class="orders-filter active" data-filter="all">الكل <small class="of-count"></small></button>
+          <button type="button" class="orders-filter" data-filter="active">جارية <small class="of-count"></small></button>
+          <button type="button" class="orders-filter" data-filter="delivered">تم التوصيل <small class="of-count"></small></button>
+          <button type="button" class="orders-filter" data-filter="cancelled">ملغاة <small class="of-count"></small></button>
         </div>
 
         <div id="ordersList">
