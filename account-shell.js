@@ -149,3 +149,6 @@ const AccountShell = {
 };
 
 document.addEventListener("DOMContentLoaded", () => AccountShell.renderDropdown());
+
+// "تتبّع طلب" popup (loads track-modal.js once on any page)
+(function(){if(window.__stepTrackModal)return;var s=document.createElement("script");s.src="track-modal.js";document.head.appendChild(s);})();
