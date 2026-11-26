@@ -49,22 +49,9 @@
       </button>
     </div>
 
-    <!-- TABS -->
-    <div class="account-tabs">
-      <button class="account-tab active" data-tab="profile" type="button">
-        <i class="fa-solid fa-user"></i>
-        بياناتي
-      </button>
-      <button class="account-tab" data-tab="orders" type="button">
-        <i class="fa-solid fa-box"></i>
-        طلباتي
-        <span id="ordersTabCount" style="
-          background:#2563eb;color:#fff;font-size:11px;
-          padding:2px 8px;border-radius:10px;font-weight:800;
-          display:none;
-        ">0</span>
-      </button>
-    </div>
+    <div class="account-layout">
+    <aside class="account-side" id="accountSide" aria-label="قائمة الحساب"></aside>
+    <div class="account-content">
 
     <!-- PROFILE TAB -->
     <div class="tab-panel active" id="tabProfile">
@@ -138,11 +125,6 @@
 
     <!-- ORDERS TAB -->
     <div class="tab-panel" id="tabOrders">
-      <div class="info-card claim-card">
-        <h2><i class="fa-solid fa-link"></i> اربط طلباتك القديمة</h2>
-        <div id="claimBox"></div>
-      </div>
-
       <div class="info-card">
         <div class="orders-header">
           <h2>
@@ -152,6 +134,13 @@
           <span class="orders-count-badge" id="ordersCount">0</span>
         </div>
 
+        <div class="orders-filters" id="ordersFilters">
+          <button type="button" class="orders-filter active" data-filter="all">الكل</button>
+          <button type="button" class="orders-filter" data-filter="active">جارية</button>
+          <button type="button" class="orders-filter" data-filter="delivered">تم التوصيل</button>
+          <button type="button" class="orders-filter" data-filter="cancelled">ملغاة</button>
+        </div>
+
         <div id="ordersList">
           <div class="account-empty">
             <i class="fa-solid fa-spinner fa-spin"></i>
@@ -159,6 +148,14 @@
           </div>
         </div>
       </div>
+
+      <div class="info-card claim-card">
+        <h2><i class="fa-solid fa-link"></i> اربط طلباتك القديمة</h2>
+        <div id="claimBox"></div>
+      </div>
+    </div>
+
+    </div>
     </div>
 
   </div>
@@ -194,6 +191,7 @@
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="account-shell.js"></script>
 <script src="account.js"></script>
 <script src="account-claims.js"></script>
 </body>
