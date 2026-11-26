@@ -6415,7 +6415,7 @@ function _inProgressSummaryRow(orders, colspan) {
     });
     return `
             <tr class="in-progress-row">
-                <td colspan="${colspan}" style="color:#92400e;background:#fffbeb;font-weight:700;">قيد التنفيذ (مش محسوب في المبيعات لحد التسليم): ${orders.length} طلب، ${Math.round(total).toLocaleString("en-US")} ج</td>
+                <td colspan="${colspan}" style="color:#92400e;background:#fffbeb;font-weight:700;"><div style="max-width:320px;white-space:normal;line-height:1.7;">قيد التنفيذ (مش محسوب في المبيعات لحد التسليم): ${orders.length} طلب، ${Math.round(total).toLocaleString("en-US")} ج</div></td>
             </tr>`;
 }
 
