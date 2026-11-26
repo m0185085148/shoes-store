@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>العناوين - STEP Store</title>
+<link rel="stylesheet" href="account.css">
+<link rel="stylesheet" href="login-theme.css">
+<link rel="stylesheet" href="account-theme.css">
+<link rel="stylesheet" href="account-returns.css">
+<link rel="stylesheet" href="account-addresses.css">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+<link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="steps.css">
+</head>
+<body data-screen="addresses">
+
+<div class="top-announcement">
+  <i class="fa-solid fa-truck-fast"></i>
+  توصيل داخل القاهرة والجيزة، الشحن 80 جنيه ثابت لكل طلب
+</div>
+
+<header class="header">
+  <div class="container header-content">
+    <a href="index.html" class="logo">STEP</a>
+    <nav class="main-nav">
+      <a href="index.html">الرئيسية</a>
+      <a href="index.html#productsSection">الأحذية</a>
+    </nav>
+    <div class="header-actions">
+      <a href="index.html#productsSection" class="icon-button" title="المتجر">
+        <i class="fa-solid fa-bag-shopping"></i>
+      </a>
+    </div>
+  </div>
+</header>
+
+<main class="account-wrapper">
+  <div class="container">
+
+    <!-- HEADER CARD -->
+    <div class="account-header-card">
+      <div class="account-greeting">
+        <div class="account-avatar" id="userAvatar">؟</div>
+        <div>
+          <h1 id="userGreeting">مرحباً بيك</h1>
+          <p id="userEmail">-</p>
+        </div>
+      </div>
+      <button class="logout-btn" id="logoutBtn" type="button">
+        <i class="fa-solid fa-right-from-bracket"></i>
+        تسجيل الخروج
+      </button>
+    </div>
+
+    <div class="account-layout">
+    <aside class="account-side" id="accountSide" aria-label="قائمة الحساب"></aside>
+    <div class="account-content">
+
+    <!-- ADDRESSES -->
+    <div class="tab-panel active" id="tabAddresses">
+      <div class="info-card">
+        <div class="orders-header">
+          <h2><i class="fa-solid fa-location-dot"></i> العناوين</h2>
+        </div>
+        <div class="address-top">
+          <span class="returns-intro" style="margin:0">عناوين التوصيل المحفوظة (حتى 5 عناوين).</span>
+          <button type="button" class="address-add" id="addAddressBtn">+ إضافة عنوان</button>
+        </div>
+        <div class="address-form-wrap" id="addressFormWrap" hidden>
+          <h3 id="addressFormTitle">إضافة عنوان جديد</h3>
+          <form class="address-form" id="addressForm" novalidate>
+            <div class="field"><label for="af-label">اسم العنوان (اختياري)</label><input type="text" id="af-label" name="label" maxlength="40" placeholder="مثال: البيت، الشغل"></div>
+            <div class="field"><label for="af-gov">المحافظة</label>
+              <select id="af-gov" name="governorate"><option value="">اختر المحافظة</option><option>القاهرة</option><option>الجيزة</option></select></div>
+            <div class="field"><label for="af-city">المدينة / المنطقة</label><select id="af-city" name="city"><option value="">اختر المنطقة</option></select></div>
+            <div class="field"><label for="af-addr">العنوان بالتفصيل</label><textarea id="af-addr" name="address" rows="3" maxlength="300" placeholder="اسم الشارع، رقم المبنى، رقم الشقة..."></textarea></div>
+            <label class="address-check"><input type="checkbox" name="is_default"> اجعله العنوان الأساسي</label>
+            <div class="address-msg" id="addressMsg" role="alert"></div>
+            <div class="address-btns">
+              <button type="submit" class="primary" id="addressSaveBtn">حفظ العنوان</button>
+              <button type="button" id="addressCancelBtn">إلغاء</button>
+            </div>
+          </form>
+        </div>
+        <div id="addressList"><div class="account-empty"><i class="fa-solid fa-spinner fa-spin"></i><p>جاري التحميل...</p></div></div>
+      </div>
+    </div>
+    </div>
+
+    </div>
+    </div>
+
+  </div>
+</main>
+
+<footer class="footer">
+  <div class="container footer-content">
+    <div>
+      <div class="footer-logo">STEP</div>
+      <p>متجر أحذية عصرية.</p>
+    </div>
+    <div class="footer-links">
+      <a href="index.html">الرئيسية</a>
+      <a href="index.html#productsSection">الأحذية</a>
+    </div>
+  </div>
+  <div class="container footer-bottom">
+    <p>© 2026 STEP. جميع الحقوق محفوظة.</p>
+  </div>
+</footer>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="account-shell.js"></script>
+<script src="account.js"></script>
+<script src="store-areas.js"></script>
+<script src="account-addresses.js"></script>
+</body>
+</html>
