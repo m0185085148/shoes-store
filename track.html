@@ -384,6 +384,56 @@
   transform: translateY(-2px);
 }
 
+
+/* Steps bar */
+.track-steps{display:flex;direction:rtl;margin:6px 0 4px}
+.track-step{flex:1;text-align:center;position:relative;padding:0 4px}
+.track-step-dot{
+  width:40px;height:40px;border-radius:50%;margin:0 auto 10px;
+  display:flex;align-items:center;justify-content:center;
+  background:#eef0f3;color:#9aa1ab;font-size:16px;
+  position:relative;z-index:1;border:3px solid #fff;box-shadow:0 0 0 2px #e5e7eb
+}
+.track-step::after{
+  content:"";position:absolute;top:19px;left:-50%;width:100%;height:3px;
+  background:#e5e7eb;z-index:0
+}
+.track-step:last-child::after{display:none}
+.track-step.line-done::after{background:#16a34a}
+.track-step.done .track-step-dot{background:#16a34a;color:#fff;box-shadow:0 0 0 2px #bbf7d0}
+.track-step.current .track-step-dot{background:#1F8A8A;color:#fff;box-shadow:0 0 0 2px #99d5d5,0 0 0 7px rgba(31,138,138,.15)}
+.track-step-label{font-size:13px;font-weight:700;color:#14213D;line-height:1.5}
+.track-step.todo .track-step-label{color:#9aa1ab;font-weight:600}
+.track-step-date{font-size:11px;color:#777;margin-top:3px;min-height:15px}
+.track-pay-tag{
+  display:inline-block;background:#dbeafe;color:#1e40af;font-size:12px;font-weight:700;
+  padding:5px 12px;border-radius:999px;margin-bottom:12px
+}
+.track-after{
+  margin-top:18px;padding:14px 16px;border-radius:12px;background:#fff7ed;
+  border:1px solid #fed7aa
+}
+.track-after h4{font-size:13px;color:#9a3412;margin:0 0 10px;font-weight:800}
+.track-after-path{display:flex;flex-wrap:wrap;gap:8px}
+.track-after-chip{
+  font-size:12px;font-weight:700;padding:6px 12px;border-radius:999px;
+  background:#f3f4f6;color:#9aa1ab
+}
+.track-after-chip.done{background:#dcfce7;color:#15803d}
+.track-after-chip.current{background:#1F8A8A;color:#fff}
+.track-cancel-card{
+  display:flex;align-items:center;gap:12px;padding:14px 16px;border-radius:12px;
+  background:#f3f4f6;color:#4b5563;font-weight:800;font-size:14px
+}
+.track-cancel-card i{font-size:20px}
+@media(max-width:600px){
+  .track-steps{flex-direction:column}
+  .track-step{display:flex;align-items:center;gap:14px;text-align:right;padding:0 0 22px}
+  .track-step:last-child{padding-bottom:0}
+  .track-step-dot{margin:0;flex-shrink:0}
+  .track-step::after{top:40px;left:auto;right:19px;width:3px;height:calc(100% - 40px)}
+  .track-step-text{display:flex;flex-direction:column;align-items:flex-start}
+}
 </style>
 <link rel="stylesheet" href="login-theme.css">
 <link rel="stylesheet" href="track-theme.css">
@@ -483,11 +533,21 @@
         <div class="track-status-badge" id="trackStatusBadge"></div>
       </div>
 
+      <!-- Steps -->
+      <div class="track-section" id="trackStepsSection">
+        <h3>
+          <i class="fa-solid fa-route"></i>
+          تتبع الطلب
+        </h3>
+        <div id="trackSteps"></div>
+        <div id="trackAfter"></div>
+      </div>
+
       <!-- Timeline -->
       <div class="track-section" id="trackTimelineSection">
         <h3>
           <i class="fa-solid fa-clock-rotate-left"></i>
-          مراحل الطلب
+          تفاصيل الطلب
         </h3>
         <div class="track-timeline" id="trackTimeline"></div>
       </div>
