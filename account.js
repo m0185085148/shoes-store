@@ -491,6 +491,13 @@ async function initAccountPage() {
     }
 
 
+    const fullName =
+        profile?.full_name ||
+        user.user_metadata?.full_name ||
+        user.user_metadata?.name ||
+        user.email?.split("@")[0] ||
+        "عميل";
+
     document.getElementById("userAvatar").textContent = getInitials(fullName);
     document.getElementById("userGreeting").textContent = `مرحباً ${fullName}`;
     document.getElementById("userEmail").textContent = user.email;
