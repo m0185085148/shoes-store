@@ -169,3 +169,5 @@
 .co-sheet #coContact{margin-top:14px!important}
 .co-sheet #coAddr{margin-top:14px}
 .co-sheet #coAddr.is-first{margin-top:0}
+/* phones: keep the order summary and confirm button reachable */
+@media(max-width:820px){.order-modal-content.co-sheet{grid-template-rows:max-content minmax(max-content,1fr)}.order-modal-content.co-sheet .side{padding-bottom:calc(26px + env(safe-area-inset-bottom,0px))}}
