@@ -1055,6 +1055,7 @@ async function openOrderModal() {
     }
 
     updateOrderSummary();
+    if (window.checkoutV2) { try { await window.checkoutV2.onOpen(); } catch (e) {} }
 
     orderModal?.classList.add('open');
     document.body.classList.add('cart-open');
@@ -1091,11 +1092,17 @@ async function submitOrder(event) {
     const phone = $('customerPhone').value.trim();
     const gov = $('governorate').value;
     const city = $('city').value.trim();
-    const address = $('customerAddress').value.trim();
+    const address = window.checkoutV2 ? window.checkoutV2.fullAddress() : $('customerAddress').value.trim();
     const notes = $('orderNotes').value.trim();
 
     if (!name || !phone || !gov || !address) {
         showToast('اكمل البيانات المطلوبة');
+        return;
+    }
+
+    if (!city) {
+        showToast('اختار المنطقة');
+        if (window.checkoutV2) window.checkoutV2.focusArea();
         return;
     }
 
@@ -1192,6 +1199,7 @@ async function submitOrder(event) {
             } catch (e) {}
         }
 
+        if (window.checkoutV2) { try { await window.checkoutV2.onSuccess(); } catch (e) {} }
         orderForm.reset();
         orderModal?.classList.remove('open');
 
