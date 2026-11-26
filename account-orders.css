@@ -1,0 +1,27 @@
+/* Orders screen: summary strip, search, order cards */
+.orders-summary{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin:0 0 14px}
+.orders-summary[hidden]{display:none}
+.orders-summary div{background:#fff;border:1px solid #E0DDD4;border-radius:14px;padding:12px 8px;text-align:center}
+.orders-summary b{display:block;font-size:22px;color:#14213D}
+.orders-summary span{font-size:12px;color:#6b7280;font-weight:700}
+.orders-search{width:100%;box-sizing:border-box;border:1px solid #E0DDD4;background:#fff;border-radius:999px;padding:10px 16px;font:inherit;font-size:13px;margin:0 0 12px}
+.orders-search:focus{outline:2px solid #1F8A8A33;border-color:#1F8A8A}
+.orders-filter .of-count{opacity:.7;margin-inline-start:2px}
+.order-card.oc{padding:0;overflow:hidden}
+.oc-head{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:14px 16px;background:#F7F5F0;border-bottom:1px solid #E0DDD4}
+.oc-body{padding:14px 16px;display:flex;flex-direction:column;gap:10px}
+.oc-item{display:flex;gap:12px;align-items:center}
+.oc-thumb{width:52px;height:52px;border-radius:10px;flex:none;background:#E8ECF3 center/cover no-repeat}
+.oc-item-info b{display:block;font-size:14px;color:#14213D}
+.oc-item-info span{font-size:12px;color:#6b7280}
+.oc-more{font-size:12px;color:#6b7280;font-weight:700}
+.oc-bar{height:6px;background:#E8ECF3;border-radius:6px;overflow:hidden}
+.oc-bar i{display:block;height:100%;background:#1F8A8A;border-radius:6px}
+.oc-bar-label{font-size:12px;color:#6b7280;font-weight:700;margin-top:4px}
+.oc-foot{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:12px 16px;border-top:1px solid #E0DDD4;flex-wrap:wrap}
+.oc-total{font-size:18px;font-weight:800;color:#14213D}
+.oc-actions{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.oc-btn{display:inline-flex;align-items:center;gap:6px;border:0;border-radius:10px;padding:10px 14px;font:inherit;font-weight:800;font-size:13px;background:#E8ECF3;color:#14213D;text-decoration:none;cursor:pointer}
+.oc-btn.primary{background:#1F8A8A;color:#fff;padding:10px 18px}
+.oc-cancel{background:none;border:0;padding:6px;font:inherit;font-size:12px;font-weight:700;color:#b42318;text-decoration:underline;cursor:pointer}
+@media(max-width:560px){.oc-foot{flex-direction:column;align-items:stretch}.oc-actions{justify-content:flex-end}.oc-total{text-align:right}}
