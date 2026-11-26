@@ -1,0 +1,38 @@
+/* Profile screen: contact info + personal info. Label sits inside each field box, pencil to edit. */
+.profile-form{display:flex;flex-direction:column;gap:18px}
+.profile-card{padding:26px 26px 28px!important;border-radius:22px!important;border:1px solid #E0DDD4!important;background:#fff!important;box-shadow:0 10px 30px rgba(20,33,61,.05)!important}
+.pf-head{display:flex;align-items:center;gap:14px;margin:0 0 22px;padding-bottom:18px;border-bottom:1px solid #EEEBE3}
+.pf-ico{flex:none;width:46px;height:46px;border-radius:14px;background:linear-gradient(145deg,#E3F3F3,#CFE9E9);color:#1F8A8A;display:flex;align-items:center;justify-content:center;font-size:18px}
+.pf-head h2{margin:0;font-size:18px;color:#14213D;font-weight:800}
+.pf-head p{margin:3px 0 0;font-size:12.5px;color:#6b7280}
+.pf-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.pf-grid .form-group{margin:0;min-width:0}
+.pf-wide{grid-column:1/-1}
+
+.pf-field{position:relative;display:grid;grid-template-columns:1fr auto;grid-template-areas:"l p" "c p";align-items:center;column-gap:8px;background:#F7F5F0;border:1.5px solid #ECE8DD;border-radius:16px;padding:10px 10px 10px 16px;min-height:66px;transition:border-color .15s,box-shadow .15s,background .15s}
+.pf-field label{grid-area:l;margin:0!important;font-size:11.5px!important;font-weight:700!important;color:#7a7f8c!important;letter-spacing:.2px;line-height:1.4}
+.pf-field>input,.pf-field>select,.pf-dobrow{grid-area:c}
+.pf-field input,.pf-field select{border:0!important;background:transparent!important;box-shadow:none!important;padding:2px 0 0!important;font:inherit;font-size:16px;font-weight:700;color:#14213D;outline:0;width:100%;min-width:0;text-align:start;border-radius:0}
+.pf-field input::placeholder{font-weight:500;color:#a6a9b3}
+.pf-field select{appearance:none;-webkit-appearance:none;cursor:pointer;background-image:none!important}
+.pf-field select:disabled{opacity:1;color:#14213D;-webkit-text-fill-color:#14213D}
+.pf-pencil{grid-area:p;flex:none;width:36px;height:36px;border:0;border-radius:50%;background:#fff;color:#1F8A8A;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:13px;box-shadow:0 1px 4px rgba(20,33,61,.12);transition:background .15s,color .15s}
+.pf-pencil:hover{background:#1F8A8A;color:#fff}
+.pf-edit{cursor:pointer}
+.pf-edit.editing{background:#fff;border-color:#1F8A8A;box-shadow:0 0 0 4px rgba(31,138,138,.14);cursor:auto}
+.pf-edit.editing .pf-pencil{display:none}
+.pf-locked{background:#F1EFE8;border-style:dashed;cursor:default}
+.pf-locked input{color:#5b6270;font-weight:600}
+.pf-lockico{grid-area:p;width:36px;height:36px;display:flex;align-items:center;justify-content:center;color:#9aa0ab;font-size:13px}
+.pf-dobrow{display:flex;align-items:center}
+.pf-dobrow select{flex:1;min-width:0;padding-inline:2px!important}
+.pf-dobrow select+select{border-inline-start:1px solid #E0DDD4!important;padding-inline-start:12px!important;margin-inline-start:10px}
+.pf-help{display:block;margin:8px 4px 0;color:#7a7f8c;font-size:12px;line-height:1.7}
+.pf-help a{color:#1F8A8A;font-weight:800}
+.pf-savebar{position:sticky;bottom:14px;display:flex;gap:10px;align-items:center;background:rgba(255,255,255,.96);backdrop-filter:blur(6px);border:1px solid #E0DDD4;border-radius:20px;padding:10px;box-shadow:0 14px 40px rgba(20,33,61,.2)}
+.pf-savebar[hidden]{display:none}
+.pf-savebar .btn-primary{flex:1;margin:0;border-radius:14px;min-height:50px}
+.pf-cancel{border:0;background:#EEF1F6;color:#14213D;border-radius:14px;min-height:50px;padding:0 22px;font:inherit;font-weight:800;cursor:pointer}
+@media(max-width:700px){.pf-grid{grid-template-columns:1fr}.profile-card{padding:20px 16px 22px!important}}
+.profile-card .pf-head h2{border:0!important;padding:0!important;margin:0!important;background:none!important}
+.profile-card .pf-head p{border:0!important;padding:0!important}
