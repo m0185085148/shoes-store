@@ -354,9 +354,11 @@ if (isLoginPage()) {
             const current = await getCurrentUserType();
 
             if (current?.type === "admin") {
+                // الأدمن له صفحة دخول مستقلة بتعمل جلسة الإدارة، فنخرج من جلسة العميل ونحوله لها
+                try { await supabaseClient.auth.signOut(); } catch (e) { console.warn("Admin signOut error:", e); }
                 showMessage("loginMessage",
-                    "هذا الحساب مسجل كأدمن. جاري تحويلك...", "info");
-                setTimeout(() => window.location.replace("admin.html"), 1000);
+                    "هذا حساب إدارة. جاري تحويلك لصفحة دخول الإدارة...", "info");
+                setTimeout(() => window.location.replace("admin-login.html"), 1200);
                 return;
             }
 
