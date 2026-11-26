@@ -4,6 +4,7 @@
 // To add a screen later (for example "الدفع"), add one item here and create its page.
 const ACCOUNT_MENU = [
     { id: "orders", label: "طلباتي", icon: "fa-box", href: "account.html" },
+    { id: "returns", label: "المرتجعات", icon: "fa-rotate-left", href: "account-returns.html" },
     { id: "profile", label: "بياناتي", icon: "fa-user", href: "account-profile.html" }
 ];
 
