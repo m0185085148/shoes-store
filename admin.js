@@ -168,12 +168,32 @@ let currentInvoiceOrder = null;
 const SOLD_STATUSES = [
     "delivered",
     "return_requested",
-    "return_received",
     "exchange_requested",
     "exchange_received",
     "exchange_shipped",
     "exchanged"
 ];
+
+// ✅ مرتجع مستلم: بيتخصم من المبيعات (مش "قيد التنفيذ") ويظهر في سطر منفصل في التقارير
+const RETURN_DEDUCTED_STATUSES = ["return_received"];
+
+// ✅ قيمة البضاعة بدون الشحن (الشحن بيظهر في سطر منفصل)
+function orderGoodsAmount(o) {
+    return Math.max(0, Number(o.total_amount || 0) - Number(o.shipping_cost || 0));
+}
+
+// ✅ سطر صغير "الشحن (منفصل)" تحت الرقم
+function _setShipNote(el, shipping) {
+    if (!el) return;
+    let n = el.parentElement && el.parentElement.querySelector(".ship-note");
+    if (!n) {
+        n = document.createElement("small");
+        n.className = "ship-note";
+        n.style.cssText = "display:block;font-size:11px;color:#64748b;font-weight:700;margin-top:2px;";
+        el.insertAdjacentElement("afterend", n);
+    }
+    n.textContent = `+ شحن منفصل: ${Math.round(shipping).toLocaleString("en-US")} ج`;
+}
 
 // ========================================
 // 11. HELPERS
@@ -5644,34 +5664,38 @@ function updateDashboard() {
     const soldOrders = adminOrders.filter(o => SOLD_STATUSES.includes(o.status));
 
     const totalRevenue = soldOrders.reduce(
-        (sum, o) => sum + Number(o.total_amount || 0), 0
+        (sum, o) => sum + orderGoodsAmount(o), 0
     );
+    const totalShipping = soldOrders.reduce((s, o) => s + Number(o.shipping_cost || 0), 0);
 
     if (dashStatRevenue) {
         dashStatRevenue.textContent = `${totalRevenue.toLocaleString("en-US")} ج.م`;
+        _setShipNote(dashStatRevenue, totalShipping);
     }
 
     // مبيعات اليوم
     const today = new Date();
     today.setHours(0, 0, 0, 0);
-    const todaySales = soldOrders
-        .filter(o => new Date(o.created_at) >= today)
-        .reduce((sum, o) => sum + Number(o.total_amount || 0), 0);
+    const todayOrders = soldOrders.filter(o => new Date(o.created_at) >= today);
+    const todaySales = todayOrders.reduce((sum, o) => sum + orderGoodsAmount(o), 0);
+    const todayShipping = todayOrders.reduce((s, o) => s + Number(o.shipping_cost || 0), 0);
 
     if (dashStatTodaySales) {
         dashStatTodaySales.textContent = `${todaySales.toLocaleString("en-US")} ج.م`;
+        _setShipNote(dashStatTodaySales, todayShipping);
     }
 
     // ✅ مبيعات الشهر
     const monthStart = new Date();
     monthStart.setDate(1);
     monthStart.setHours(0, 0, 0, 0);
-    const monthSales = soldOrders
-        .filter(o => new Date(o.created_at) >= monthStart)
-        .reduce((sum, o) => sum + Number(o.total_amount || 0), 0);
+    const monthOrders = soldOrders.filter(o => new Date(o.created_at) >= monthStart);
+    const monthSales = monthOrders.reduce((sum, o) => sum + orderGoodsAmount(o), 0);
+    const monthShipping = monthOrders.reduce((s, o) => s + Number(o.shipping_cost || 0), 0);
 
     if (dashStatMonthSales) {
         dashStatMonthSales.textContent = `${monthSales.toLocaleString("en-US")} ج.م`;
+        _setShipNote(dashStatMonthSales, monthShipping);
     }
 
     // ✅ متوسط قيمة الطلب (AOV)
@@ -5741,9 +5765,9 @@ function computeTopCustomer() {
 
     const map = {};
 
-    // ✅ نستثني الطلبات الملغية والمرتجعة نهائيًا
+    // ✅ الحساب عند التسليم فقط (SOLD_STATUSES) وبدون الشحن
     adminOrders
-        .filter(o => !["cancelled", "refunded"].includes(o.status))
+        .filter(o => SOLD_STATUSES.includes(o.status))
         .forEach(o => {
             const key = o.customer_id
                 ? `id:${o.customer_id}`
@@ -5756,7 +5780,7 @@ function computeTopCustomer() {
                     total: 0
                 };
             }
-            map[key].total += Number(o.total_amount || 0);
+            map[key].total += orderGoodsAmount(o);
         });
 
     const sorted = Object.values(map).sort((a, b) => b.total - a.total);
@@ -5800,7 +5824,7 @@ function renderSparkline() {
                 const d = new Date(o.created_at);
                 return d >= day && d < next;
             })
-            .reduce((sum, o) => sum + Number(o.total_amount || 0), 0);
+            .reduce((sum, o) => sum + orderGoodsAmount(o), 0);
     });
 
     // إعداد الـ canvas
@@ -6385,10 +6409,12 @@ async function loadSalesReport() {
 
         // ✅ المبيعات = الطلبات المسلّمة (SOLD_STATUSES). الباقي يظهر في سطر "قيد التنفيذ" منفصل
         if (!salesReportFilters.status || salesReportFilters.status === "all") {
-            salesReportInProgress = filtered.filter(o => !SOLD_STATUSES.includes(o.status));
+            salesReportInProgress = filtered.filter(o => !SOLD_STATUSES.includes(o.status) && !RETURN_DEDUCTED_STATUSES.includes(o.status));
+            salesReportReturned = filtered.filter(o => RETURN_DEDUCTED_STATUSES.includes(o.status));
             filtered = filtered.filter(o => SOLD_STATUSES.includes(o.status));
         } else {
             salesReportInProgress = [];
+            salesReportReturned = [];
         }
 
         salesReportOrders = filtered;
@@ -6405,6 +6431,20 @@ async function loadSalesReport() {
 
 // ✅ طلبات قيد التنفيذ (غير داخلة في المبيعات إلا بعد التسليم) - سطر منفصل في التقارير
 let salesReportInProgress = [];
+let salesReportReturned = [];
+function _returnedSummaryRow(orders, colspan) {
+    if (!orders || !orders.length) return "";
+    let total = 0;
+    orders.forEach(o => {
+        const oItems = Array.isArray(o.items) ? o.items : [];
+        const g = oItems.reduce((s, i) => s + Number(i.price || 0) * Number(i.quantity || 0), 0);
+        total += g - Number(o.discount_total || 0);
+    });
+    return `
+            <tr class="returned-row">
+                <td colspan="${colspan}" style="color:#9a3412;background:#fff7ed;font-weight:700;"><div style="max-width:320px;white-space:normal;line-height:1.7;">مرتجع مستلم (متخصم من المبيعات): ${orders.length} طلب، ${Math.round(total).toLocaleString("en-US")} ج</div></td>
+            </tr>`;
+}
 function _inProgressSummaryRow(orders, colspan) {
     if (!orders || !orders.length) return "";
     let total = 0;
@@ -6465,7 +6505,7 @@ function renderSalesOrdersTable() {
 
     if (!salesReportOrders.length) {
         listEl.innerHTML = `<tr><td colspan="10" style="text-align:center;padding:35px;color:#64748b;">لا توجد طلبات</td></tr>`;
-        if (totalsEl) totalsEl.innerHTML = _inProgressSummaryRow(salesReportInProgress, 10);
+        if (totalsEl) totalsEl.innerHTML = _inProgressSummaryRow(salesReportInProgress, 10) + _returnedSummaryRow(salesReportReturned, 10);
         return;
     }
 
@@ -6515,7 +6555,7 @@ function renderSalesOrdersTable() {
                 <td class="totals-value" style="color:#2563eb;">${t.total.toLocaleString("en-US")} ج</td>
                 <td></td>
             </tr>
-        ` + _inProgressSummaryRow(salesReportInProgress, 10);
+        ` + _inProgressSummaryRow(salesReportInProgress, 10) + _returnedSummaryRow(salesReportReturned, 10);
     }
 }
 
@@ -6696,7 +6736,8 @@ async function loadDailyReport() {
         );
         // ✅ المبيعات = الطلبات المسلّمة (SOLD_STATUSES). الباقي سطر "قيد التنفيذ" منفصل
         const orders = _live.filter(o => SOLD_STATUSES.includes(o.status));
-        const _inProg = _live.filter(o => !SOLD_STATUSES.includes(o.status));
+        const _inProg = _live.filter(o => !SOLD_STATUSES.includes(o.status) && !RETURN_DEDUCTED_STATUSES.includes(o.status));
+        const _retRec = _live.filter(o => RETURN_DEDUCTED_STATUSES.includes(o.status));
 
         // ✅ تجميع حسب اليوم
         const map = {};
@@ -6753,7 +6794,7 @@ async function loadDailyReport() {
 
         if (!list.length) {
             if (el) el.innerHTML = `<tr><td colspan="7" style="text-align:center;padding:35px;color:#64748b;">لا توجد بيانات</td></tr>`;
-            if (totalsEl) totalsEl.innerHTML = _inProgressSummaryRow(_inProg, 7);
+            if (totalsEl) totalsEl.innerHTML = _inProgressSummaryRow(_inProg, 7) + _returnedSummaryRow(_retRec, 7);
             return;
         }
 
@@ -6797,7 +6838,7 @@ async function loadDailyReport() {
                     <td class="totals-value">${Math.round(totals.shipping).toLocaleString("en-US")} ج</td>
                     <td class="totals-value" style="color:#2563eb;">${Math.round(totals.total).toLocaleString("en-US")} ج</td>
                 </tr>
-            ` + _inProgressSummaryRow(_inProg, 7);
+            ` + _inProgressSummaryRow(_inProg, 7) + _returnedSummaryRow(_retRec, 7);
         }
     } catch (err) {
         console.error("Daily Report Error:", err);
@@ -6823,7 +6864,8 @@ async function loadGovernorateReport() {
             const g = o.governorate || "غير محدد";
             if (!map[g]) map[g] = { gov: g, orders: 0, items: 0, revenue: 0 };
             map[g].orders++;
-            map[g].revenue += Number(o.total_amount || 0);
+            map[g].revenue += orderGoodsAmount(o);
+            map[g].shipping = (map[g].shipping || 0) + Number(o.shipping_cost || 0);
             (Array.isArray(o.items) ? o.items : []).forEach(i => map[g].items += Number(i.quantity || 0));
         });
         const list = Object.values(map).sort((a, b) => b.revenue - a.revenue);
@@ -6833,6 +6875,7 @@ async function loadGovernorateReport() {
         set("govKpiCount", list.length);
         set("govKpiTop", list[0]?.gov || "-");
         set("govKpiRevenue", totalRev.toLocaleString("en-US"));
+        _setShipNote(document.getElementById("govKpiRevenue"), list.reduce((s, x) => s + (x.shipping || 0), 0));
 
         if (!list.length) { el.innerHTML = `<tr><td colspan="7" style="text-align:center;padding:35px;color:#64748b;">لا توجد بيانات</td></tr>`; return; }
 
@@ -6871,9 +6914,9 @@ async function loadCustomersReport() {
         ]);
         if (ordersRes.error) throw ordersRes.error;
 
-        // ✅ نستثني الطلبات الملغية والمرتجعة نهائيًا
+        // ✅ العملاء: الحساب عند التسليم فقط (SOLD_STATUSES) وبدون الشحن
         const orders = (ordersRes.data || []).filter(o => 
-            !["cancelled", "refunded"].includes(o.status)
+            SOLD_STATUSES.includes(o.status)
         );
         const profiles = profilesRes.data || [];
 
@@ -6889,7 +6932,7 @@ async function loadCustomersReport() {
             }
             const c = map.get(k);
             c.ordersCount++;
-            c.totalSpent += Number(o.total_amount || 0);
+            c.totalSpent += orderGoodsAmount(o);
             c.orders.push(o);
             if (new Date(o.created_at) < new Date(c.firstOrderAt)) c.firstOrderAt = o.created_at;
             if (new Date(o.created_at) > new Date(c.lastOrderAt)) c.lastOrderAt = o.created_at;
@@ -11359,7 +11402,7 @@ function renderDashboardSalesChart() {
                 const d = new Date(o.created_at);
                 return d >= day && d < next;
             })
-            .reduce((sum, o) => sum + Number(o.total_amount || 0), 0);
+            .reduce((sum, o) => sum + orderGoodsAmount(o), 0);
     });
 
     // ✅ إحصائيات الرسم
@@ -11550,7 +11593,7 @@ function renderWeekComparison() {
     });
 
     const currentTotal = currentOrders.reduce(
-        (sum, o) => sum + Number(o.total_amount || 0),
+        (sum, o) => sum + orderGoodsAmount(o),
         0
     );
 
@@ -11561,7 +11604,7 @@ function renderWeekComparison() {
     });
 
     const previousTotal = previousOrders.reduce(
-        (sum, o) => sum + Number(o.total_amount || 0),
+        (sum, o) => sum + orderGoodsAmount(o),
         0
     );
 
@@ -11638,7 +11681,7 @@ function renderDashboardInsights() {
         const d = new Date(o.created_at);
         const dayName = dayNames[d.getDay()];
         if (!dayMap[dayName]) dayMap[dayName] = { revenue: 0, count: 0 };
-        dayMap[dayName].revenue += Number(o.total_amount || 0);
+        dayMap[dayName].revenue += orderGoodsAmount(o);
         dayMap[dayName].count++;
     });
 
@@ -11694,8 +11737,8 @@ function renderDashboardInsights() {
     soldOrders.forEach(o => {
         const gov = o.governorate || "غير محدد";
         if (!govMap[gov]) govMap[gov] = 0;
-        govMap[gov] += Number(o.total_amount || 0);
-        totalRevenue += Number(o.total_amount || 0);
+        govMap[gov] += orderGoodsAmount(o);
+        totalRevenue += orderGoodsAmount(o);
     });
 
     const bestGovEntry = Object.entries(govMap).sort((a, b) => b[1] - a[1])[0];
